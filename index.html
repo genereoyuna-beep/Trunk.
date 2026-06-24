@@ -4,9 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="旅行プランナー">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Trunk.">
 <meta name="theme-color" id="themeColor" content="#4F7DF3">
-<title>旅行プランナー</title>
+<title>Trunk.</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -657,7 +660,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 <div class="ph" id="ph"></div>
 
 <header class="topbar">
-  <div class="logo">✈</div>
+  <div class="logo" style="font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;letter-spacing:-.5px;border-radius:10px">T.</div>
   <input class="trip-title" id="tripTitle" type="text" placeholder="旅行タイトルを入力">
   <div class="tb-r" id="tbR"></div>
 </header>
@@ -1187,7 +1190,7 @@ function renderAll(){
   rViewBanner();rTopbar();rMeta();rDayNav();rNowBar();rDays();rCommentPanel();rPackingPrint();
   const _ph=document.getElementById('ph');
   const _phDates=D.startDate?(D.endDate?`${D.startDate} → ${D.endDate}`:D.startDate):'';
-  _ph.innerHTML=`<div class="ph-logo">✈ Travel Planner</div><div class="ph-eyebrow">旅行プラン</div><div class="ph-title">${esc(D.title||'旅行プラン')}</div>${_phDates?`<div class="ph-dates">📅 ${esc(_phDates)}</div>`:''}  `;
+  _ph.innerHTML=`<div class="ph-logo">Trunk.</div><div class="ph-eyebrow">旅行プラン</div><div class="ph-title">${esc(D.title||'旅行プラン')}</div>${_phDates?`<div class="ph-dates">📅 ${esc(_phDates)}</div>`:''}  `;
 }
 function rViewBanner(){document.getElementById('viewBanner').classList.toggle('hide',editMode)}
 function rTopbar(){

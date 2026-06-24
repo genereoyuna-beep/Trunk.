@@ -265,8 +265,8 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .e-acts{padding:8px 7px 8px 0;display:flex;flex-direction:column;align-items:center;gap:2px}
 .e-acts .btn-del,.e-acts .btn-icon{opacity:0;transition:opacity var(--tr)}
 .entry:hover .e-acts .btn-del,.entry:hover .e-acts .btn-icon{opacity:1}
-.etype-ico-btn{font-size:15px;background:transparent;border:none;cursor:pointer;padding:3px;border-radius:5px;line-height:1;display:flex;align-items:center;justify-content:center;width:26px;height:26px;opacity:.4;transition:all var(--tr)}
-.etype-ico-btn:hover{background:var(--bg);opacity:1;transform:scale(1.15)}
+.etype-ico-btn{font-size:10px;font-weight:600;background:transparent;border:1px solid var(--border);cursor:pointer;padding:2px 7px;border-radius:20px;line-height:1.6;display:flex;align-items:center;gap:3px;white-space:nowrap;color:var(--muted);opacity:.65;transition:all var(--tr)}
+.etype-ico-btn:hover{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
 
 /* ── ADD ENTRY ── */
 .add-entry{padding:9px 12px;border-top:1px dashed var(--border);display:flex}
@@ -1342,7 +1342,7 @@ function rEntry(dayId,e,ns){
   const badge=isCur?`<div class="now-badge">▶ 今ここ</div>`:isNxt?`<div class="now-badge">⏱ 次の予定</div>`:'';
   const imgBtn=editMode?`<button class="btn-icon" style="font-size:13px" title="画像" onclick="openImg('${dayId}','${e.id}')">🖼</button>`:'';
 
-  const etypeBtn=editMode?`<button class="etype-ico-btn" title="${e.isTransport?'スポットに変更':'移動に変更'}" onclick="toggleEntryType('${dayId}','${e.id}')">${e.isTransport?'🚗':'📍'}</button>`:'';
+  const etypeBtn=editMode?`<button class="etype-ico-btn" onclick="toggleEntryType('${dayId}','${e.id}')">${e.isTransport?'🚗 移動':'📍 地点'}</button>`:'';
   return`<div class="entry${isCur?' is-now':''}${e.isTransport?' is-transport':''}" data-eid="${e.id}" data-did="${dayId}" ${editMode?'draggable="true"':''}>
     <div class="e-ico">${editMode?`<button class="ic-b" onclick="openIcPick('${dayId}','${e.id}',this)">${icon}</button>`:`<span style="font-size:20px;line-height:1">${icon}</span>`}</div>
     <div class="e-time">

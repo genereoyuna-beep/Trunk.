@@ -186,6 +186,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .entry{display:grid;grid-template-columns:34px 104px 1fr auto;border-bottom:1px solid var(--border);min-height:52px;position:relative;transition:background var(--tr)}
 .entry:last-child{border-bottom:none}
 .entry:hover{background:var(--surface2)}
+.entry.is-transport{background:var(--accent-bg)!important;border-left:3px solid var(--accent)}
 .entry.is-now{background:var(--now-bg)!important;border-left:3px solid var(--now-b)}
 .entry.entry-drag-over{border-top:2px solid var(--accent)}
 .entry.entry-dragging{opacity:.3}
@@ -261,8 +262,11 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .entry-img{margin-top:5px;border-radius:7px;overflow:hidden;max-height:120px;display:flex}
 .entry-img img{width:100%;height:120px;object-fit:cover;border-radius:7px}
 .now-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:var(--warn);background:var(--warn-bg);border:1px solid var(--now-b);padding:1px 7px;border-radius:20px;margin-top:3px;width:fit-content}
-.e-acts{padding:8px 7px 8px 0;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0;transition:opacity var(--tr)}
-.entry:hover .e-acts{opacity:1}
+.e-acts{padding:8px 7px 8px 0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.e-acts .btn-del,.e-acts .btn-icon{opacity:0;transition:opacity var(--tr)}
+.entry:hover .e-acts .btn-del,.entry:hover .e-acts .btn-icon{opacity:1}
+.etype-ico-btn{font-size:15px;background:transparent;border:none;cursor:pointer;padding:3px;border-radius:5px;line-height:1;display:flex;align-items:center;justify-content:center;width:26px;height:26px;opacity:.4;transition:all var(--tr)}
+.etype-ico-btn:hover{background:var(--bg);opacity:1;transform:scale(1.15)}
 
 /* ── ADD ENTRY ── */
 .add-entry{padding:9px 12px;border-top:1px dashed var(--border);display:flex}
@@ -509,6 +513,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
     background:var(--accent);box-shadow:0 0 0 3px #fff
   }
   .entry:hover{background:transparent!important}
+  .entry.is-transport{background:transparent!important;border-left:none!important}
   .entry:last-child{border-bottom:none!important}
 
   /* icon */
@@ -647,6 +652,9 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 
   /* now-badge */
   .now-badge{font-size:10px;padding:2px 6px}
+
+  /* e-acts は常時表示 */
+  .e-acts .btn-del,.e-acts .btn-icon{opacity:1}
 }
 </style>
 </head>
@@ -835,7 +843,7 @@ let D={
   days:[]
 };
 let editMode=true;
-let iconTgt=null,imgTgt=null;
+let iconTgt=null,iconAnchor=null,imgTgt=null;
 let activeIcPop=null,activeThPop=null,activeAcPop=null;
 let calState={mode:'day',dayId:null,yr:null,mo:null,anchor:null};
 let dayDragIdx=null,entDragId=null,entDragDayId=null;
@@ -1014,7 +1022,10 @@ function pickDate(yr,mo,d){
   }
 }
 function closeCal(){document.getElementById('calPop')?.remove()}
-function dismissCal(e){if(!document.getElementById('calPop')?.contains(e.target))closeCal()}
+function dismissCal(e){
+  if(calState.anchor&&(calState.anchor===e.target||calState.anchor.contains(e.target)))return;
+  if(!document.getElementById('calPop')?.contains(e.target))closeCal();
+}
 
 /* ══ PLACES AUTOCOMPLETE (event delegation) ══ */
 let acTimer=null;
@@ -1331,7 +1342,8 @@ function rEntry(dayId,e,ns){
   const badge=isCur?`<div class="now-badge">▶ 今ここ</div>`:isNxt?`<div class="now-badge">⏱ 次の予定</div>`:'';
   const imgBtn=editMode?`<button class="btn-icon" style="font-size:13px" title="画像" onclick="openImg('${dayId}','${e.id}')">🖼</button>`:'';
 
-  return`<div class="entry${isCur?' is-now':''}" data-eid="${e.id}" data-did="${dayId}" ${editMode?'draggable="true"':''}>
+  const etypeBtn=editMode?`<button class="etype-ico-btn" title="${e.isTransport?'スポットに変更':'移動に変更'}" onclick="toggleEntryType('${dayId}','${e.id}')">${e.isTransport?'🚗':'📍'}</button>`:'';
+  return`<div class="entry${isCur?' is-now':''}${e.isTransport?' is-transport':''}" data-eid="${e.id}" data-did="${dayId}" ${editMode?'draggable="true"':''}>
     <div class="e-ico">${editMode?`<button class="ic-b" onclick="openIcPick('${dayId}','${e.id}',this)">${icon}</button>`:`<span style="font-size:20px;line-height:1">${icon}</span>`}</div>
     <div class="e-time">
       <div class="tw"><input class="ti" type="text" value="${esc(e.startTime||'')}" placeholder="09:00" ${ed} onchange="updEnt('${dayId}','${e.id}','startTime',this.value)"></div>
@@ -1339,8 +1351,6 @@ function rEntry(dayId,e,ns){
       ${(()=>{const dur=calcDuration(e.startTime,e.endTime);return dur?`<div class="dur-badge">${dur}</div>`:''})()}
     </div>
     <div class="e-body">
-      ${editMode?`<button class="etype-btn${e.isTransport?' on':''}" onclick="toggleEntryType('${dayId}','${e.id}')">${e.isTransport?'🚗 移動':'📍 スポット'}</button>`:
-        e.isTransport?`<span class="etype-view">🚗 移動</span>`:''}
       ${!e.isTransport?`<input class="name-in" type="text" value="${esc(e.name||'')}" placeholder="スポット名を入力..." ${ed} onchange="updEnt('${dayId}','${e.id}','name',this.value)">`:
         editMode?`<div class="transport-row">
           <input class="from-in" type="text" value="${esc(e.from||'')}" placeholder="出発地" onchange="updEnt('${dayId}','${e.id}','from',this.value)">
@@ -1355,7 +1365,7 @@ function rEntry(dayId,e,ns){
       <input class="note-in" type="text" value="${esc(e.note||'')}" placeholder="${e.isTransport?'便名・席番号など...':'メモを追加...'}" ${ed} onchange="updEnt('${dayId}','${e.id}','note',this.value)">
       ${linkHtml}${bookingHtml}${imgHtml}${badge}
     </div>
-    <div class="e-acts">${imgBtn}${editMode?`<button class="btn-del" onclick="delEnt('${dayId}','${e.id}')">✕</button>`:''}</div>
+    <div class="e-acts">${etypeBtn}${imgBtn}${editMode?`<button class="btn-del" onclick="delEnt('${dayId}','${e.id}')">✕</button>`:''}</div>
   </div>`;
 }
 
@@ -1517,7 +1527,7 @@ function bindEntDrag(){
 
 /* ══ ICON PICKER ══ */
 function openIcPick(dayId,eid,btn){
-  closeIcPick();iconTgt={dayId,eid};
+  closeIcPick();iconTgt={dayId,eid};iconAnchor=btn;
   const p=document.createElement('div');p.className='ic-pop';p.id='icPop';p.onclick=e=>e.stopPropagation();
   Object.entries(ICONS).forEach(([cat,icons])=>{
     const l=document.createElement('span');l.className='ic-cat';l.textContent=cat;p.appendChild(l);
@@ -1530,8 +1540,11 @@ function openIcPick(dayId,eid,btn){
   document.body.appendChild(p);activeIcPop=p;
   setTimeout(()=>document.addEventListener('click',dismissIcPick,{once:true}),0);
 }
-function closeIcPick(){activeIcPop?.remove();activeIcPop=null;iconTgt=null}
-function dismissIcPick(e){if(activeIcPop&&!activeIcPop.contains(e.target))closeIcPick()}
+function closeIcPick(){activeIcPop?.remove();activeIcPop=null;iconTgt=null;iconAnchor=null}
+function dismissIcPick(e){
+  if(iconAnchor&&(iconAnchor===e.target||iconAnchor.contains(e.target)))return;
+  if(activeIcPop&&!activeIcPop.contains(e.target))closeIcPick();
+}
 
 /* ══ THEME PICKER ══ */
 function toggleThPop(){
@@ -1549,7 +1562,11 @@ function toggleThPop(){
   setTimeout(()=>document.addEventListener('click',dismissThPop,{once:true}),0);
 }
 function closeThPop(){activeThPop?.remove();activeThPop=null}
-function dismissThPop(e){if(activeThPop&&!activeThPop.contains(e.target))closeThPop()}
+function dismissThPop(e){
+  const wrap=document.getElementById('thW');
+  if(wrap&&wrap.contains(e.target))return;
+  if(activeThPop&&!activeThPop.contains(e.target))closeThPop();
+}
 
 /* ══ IMAGE MODAL ══ */
 function openImg(dayId,eid){

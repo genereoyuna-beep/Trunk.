@@ -838,6 +838,7 @@ const ICONS={
 /* ══ STATE ══ */
 const SK='tp_v6';
 const MK_KEY='tp_maps_key';
+const MAPS_API_KEY='AIzaSyCoSparwsUgSrvu8koZ9hepKbmBr5APMsQ';
 let D={
   title:'',startDate:'',startDateIso:'',endDate:'',endDateIso:'',
   note:'',passphraseHash:'',theme:'light',_shared:false,
@@ -1052,7 +1053,7 @@ function applyTheme(id){
 }
 
 /* ══ GOOGLE MAPS ══ */
-function getMapsKey(){return localStorage.getItem(MK_KEY)||''}
+function getMapsKey(){return MAPS_API_KEY||localStorage.getItem(MK_KEY)||''}
 function saveMapsKey(){
   const k=document.getElementById('inMapsKey').value.trim();
   if(!k){toast('APIキーを入力してください');return}
@@ -1225,7 +1226,7 @@ function clearPlace(did,eid){
 /* ══ MAP VIEW ══ */
 const ROUTE_MODES=[{id:'DRIVING',label:'🚗 車'},{id:'TRANSIT',label:'🚃 電車'},{id:'WALKING',label:'🚶 徒歩'},{id:'BICYCLING',label:'🚲 自転車'}];
 function openMapView(){
-  if(!getMapsKey()){om('mMapsKey');return}
+  if(!getMapsKey())return;
   if(!window.google?.maps){loadMapsApi();setTimeout(()=>document.getElementById('mapPanel').classList.add('on'),800);}
   else document.getElementById('mapPanel').classList.add('on');
   mapDayIdx=Math.max(0,Math.min(mapDayIdx,D.days.length-1));
@@ -1255,7 +1256,7 @@ function rMapFoot(){
 function rMapContent(){
   const mapEl=document.getElementById('mapEl');
   if(!window.google?.maps){
-    mapEl.innerHTML=`<div class="no-maps"><div style="font-size:40px">🗺️</div><p>Google Maps APIキーを設定してください</p><button class="btn btn-primary" onclick="om('mMapsKey')">APIキーを設定する</button></div>`;
+    mapEl.innerHTML=`<div class="no-maps"><div style="font-size:40px">🗺️</div><p>地図を読み込み中...</p></div>`;
     return;
   }
   const day=D.days[mapDayIdx];
@@ -1444,7 +1445,7 @@ function rEntry(day,e,ns){
         ${editMode?`<button class="addr-clr" onclick="clearPlace('${dayId}','${e.id}')" title="クリア">✕</button>`:''}
       </div>`;
     }else if(!window.google?.maps?.places&&editMode){
-      addrHtml=`<div class="addr-row"><span class="addr-txt" style="color:var(--border2);cursor:pointer" onclick="om('mMapsKey')">🗺 Maps連携で住所を自動入力</span></div>`;
+      addrHtml=`<div class="addr-row"><span class="addr-txt" style="color:var(--border2)">🗺 Maps連携で住所を自動入力（読み込み中...）</span></div>`;
     }
   }
 

@@ -10,63 +10,86 @@
 <meta property="og:url" content="https://trunk-travelplanner.com/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--accent:#4F7DF3;--text:#1a1a2e;--muted:#6b7280;--bg:#f8f9ff;--surface:#fff;--border:#e5e7f0;--r:14px}
-body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','YuGothic',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+:root{
+  --navy:#18243d;
+  --accent:#0096c7;
+  --accent2:#48cae4;
+  --bg:#f5f8ff;
+  --surface:#ffffff;
+  --muted:#5a6a8a;
+  --border:#dce8f5;
+  --grid-color:rgba(24,36,61,.06);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--navy)}
 
 /* NAV */
-nav{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
-.nav-logo{font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 40px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.nav-logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-1px;color:var(--navy)}
 .nav-logo span{color:var(--accent)}
-.nav-cta{background:var(--accent);color:#fff;border:none;padding:9px 20px;border-radius:40px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;transition:opacity .15s}
-.nav-cta:hover{opacity:.85}
+.nav-btn{background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.2px;transition:opacity .15s;text-decoration:none;display:inline-block}
+.nav-btn:hover{opacity:.88}
 
 /* HERO */
-.hero{text-align:center;padding:80px 24px 60px;max-width:640px;margin:0 auto}
-.hero-badge{display:inline-block;background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.5px;margin-bottom:20px}
-.hero h1{font-size:clamp(32px,6vw,52px);font-weight:800;line-height:1.2;letter-spacing:-1px;margin-bottom:18px}
+.hero{padding:88px 24px 72px;text-align:center;position:relative;background:var(--bg);overflow:hidden}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:44px 44px;pointer-events:none}
+.badge{display:inline-block;background:rgba(0,150,199,.08);color:var(--accent);border:1.5px solid rgba(0,150,199,.2);font-size:11px;font-weight:600;padding:5px 14px;border-radius:4px;letter-spacing:1.5px;margin-bottom:28px;position:relative;z-index:1;text-transform:uppercase}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(40px,7vw,72px);font-weight:800;line-height:1.08;letter-spacing:-2.5px;margin-bottom:22px;position:relative;z-index:1}
 .hero h1 em{color:var(--accent);font-style:normal}
-.hero p{font-size:16px;color:var(--muted);line-height:1.7;margin-bottom:36px;max-width:480px;margin-left:auto;margin-right:auto}
-.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.btn-primary{background:var(--accent);color:#fff;border:none;padding:14px 32px;border-radius:40px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;transition:opacity .15s;box-shadow:0 4px 20px rgba(79,125,243,.3)}
-.btn-primary:hover{opacity:.85}
-.btn-ghost{background:transparent;color:var(--text);border:1.5px solid var(--border);padding:13px 28px;border-radius:40px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;transition:border-color .15s}
-.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.hero p{font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:40px;max-width:440px;margin-left:auto;margin-right:auto;position:relative;z-index:1}
+.btn-main{display:inline-block;background:var(--navy);color:#fff;border:none;padding:14px 40px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;position:relative;z-index:1;letter-spacing:.3px;transition:opacity .15s;text-decoration:none}
+.btn-main:hover{opacity:.88}
+.pin-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:44px;position:relative;z-index:1}
+.pin{display:flex;align-items:center;gap:8px;background:var(--surface);border:1.5px solid var(--border);border-radius:6px;padding:9px 16px;font-size:13px;font-weight:500;color:var(--navy);box-shadow:0 2px 8px rgba(24,36,61,.06)}
+.pin-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
 
 /* FEATURES */
-.features{padding:60px 24px;max-width:800px;margin:0 auto}
-.section-label{text-align:center;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:12px}
-.section-title{text-align:center;font-size:clamp(22px,4vw,32px);font-weight:800;margin-bottom:48px;letter-spacing:-0.5px}
-.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
-.feat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;transition:box-shadow .2s}
-.feat-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.07)}
-.feat-ico{font-size:28px;margin-bottom:14px}
-.feat-card h3{font-size:15px;font-weight:700;margin-bottom:8px}
-.feat-card p{font-size:13px;color:var(--muted);line-height:1.6}
+.features{background:var(--navy);padding:88px 24px;color:#fff}
+.sec-label{text-align:center;font-size:11px;font-weight:600;letter-spacing:2.5px;color:var(--accent2);margin-bottom:12px;text-transform:uppercase}
+.sec-title{font-family:'Syne',sans-serif;text-align:center;font-size:clamp(26px,4vw,36px);font-weight:800;margin-bottom:48px;letter-spacing:-1px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;max-width:860px;margin:0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.07);border-radius:10px;overflow:hidden}
+.card{background:var(--navy);padding:28px 26px}
+.card-ico{font-size:32px;margin-bottom:16px;line-height:1}
+.card h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:7px;letter-spacing:-.3px}
+.card p{font-size:13px;color:rgba(255,255,255,.42);line-height:1.65}
 
 /* HOW */
-.how{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:60px 24px}
-.how-inner{max-width:600px;margin:0 auto}
-.steps{display:flex;flex-direction:column;gap:24px;margin-top:40px}
-.step{display:flex;gap:16px;align-items:flex-start}
-.step-num{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
-.step h4{font-size:15px;font-weight:700;margin-bottom:4px}
-.step p{font-size:13px;color:var(--muted);line-height:1.6}
+.how{background:var(--bg);padding:88px 24px;position:relative;overflow:hidden}
+.how::before{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);background-size:44px 44px;pointer-events:none}
+.how-inner{max-width:600px;margin:0 auto;position:relative;z-index:1}
+.how .sec-label{color:var(--accent)}
+.how .sec-title{color:var(--navy)}
+.steps{display:flex;flex-direction:column;gap:16px;margin-top:44px}
+.step{display:flex;gap:18px;align-items:flex-start;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:20px 22px}
+.step-num{width:34px;height:34px;border-radius:6px;background:var(--navy);color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step h4{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:5px;letter-spacing:-.3px}
+.step p{font-size:13px;color:var(--muted);line-height:1.65}
 
 /* CTA */
-.cta{text-align:center;padding:72px 24px;max-width:480px;margin:0 auto}
-.cta h2{font-size:clamp(24px,4vw,34px);font-weight:800;margin-bottom:14px;letter-spacing:-0.5px}
-.cta p{font-size:15px;color:var(--muted);margin-bottom:32px;line-height:1.7}
+.cta{background:var(--navy);padding:88px 24px;text-align:center;color:#fff;position:relative;overflow:hidden}
+.cta::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 50% 120%,rgba(0,150,199,.18) 0%,transparent 70%);pointer-events:none}
+.cta h2{font-family:'Syne',sans-serif;font-size:clamp(28px,5vw,44px);font-weight:800;margin-bottom:14px;position:relative;z-index:1;letter-spacing:-1.5px}
+.cta p{color:rgba(255,255,255,.5);margin-bottom:32px;font-size:15px;position:relative;z-index:1}
+.btn-accent{display:inline-block;background:var(--accent);color:#fff;border:none;padding:14px 40px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:.3px;position:relative;z-index:1;box-shadow:0 6px 28px rgba(0,150,199,.35);transition:opacity .15s;text-decoration:none}
+.btn-accent:hover{opacity:.88}
 
-/* FOOTER */
-footer{text-align:center;padding:24px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
+footer{text-align:center;padding:24px;font-size:12px;color:rgba(255,255,255,.2);background:var(--navy);border-top:1px solid rgba(255,255,255,.06)}
+
+@media(max-width:640px){
+  .grid{grid-template-columns:1fr}
+  nav{padding:14px 20px}
+  .hero{padding:64px 20px 56px}
+  .features,.how,.cta{padding:64px 20px}
+}
 </style>
 </head>
 <body>
 
 <script>
-// 旧共有URL互換: #v1/... や #v2/... があればアプリにリダイレクト
 (function(){
   const h=location.hash;
   if(h.startsWith('#v1/')||h.startsWith('#v1s/')||h.startsWith('#v2/')){
@@ -77,59 +100,63 @@ footer{text-align:center;padding:24px;font-size:12px;color:var(--muted);border-t
 
 <nav>
   <div class="nav-logo">Trunk<span>.</span></div>
-  <a class="nav-cta" href="./app/">＋ 新規作成</a>
+  <a class="nav-btn" href="./app/">＋ 新規作成</a>
 </nav>
 
 <section class="hero">
-  <div class="hero-badge">無料・登録不要</div>
-  <h1>旅行プランを<br><em>URLひとつ</em>で共有</h1>
-  <p>日程・スポット・移動・予約をまとめて管理。リンクを送るだけで、友達や家族とリアルタイムで共有できます。</p>
-  <div class="hero-btns">
-    <a class="btn-primary" href="./app/">＋ 新規プランを作成</a>
+  <div class="grid-bg"></div>
+  <div class="badge">FREE · NO SIGN-UP</div>
+  <h1>地図を広げるように<br><em>旅を描こう</em></h1>
+  <p>行き先、乗り換え、ホテル、予約。旅のすべてをひとつにまとめて、URLを送るだけで仲間と共有。</p>
+  <a class="btn-main" href="./app/">＋ 旅行プランを作る</a>
+  <div class="pin-row">
+    <div class="pin"><div class="pin-dot"></div>📍 東京 → 京都</div>
+    <div class="pin"><div class="pin-dot"></div>✈️ 成田 → バンコク</div>
+    <div class="pin"><div class="pin-dot"></div>🚢 那覇 → 石垣</div>
   </div>
 </section>
 
 <section class="features">
-  <div class="section-label">Features</div>
-  <div class="section-title">旅行計画に必要なものが全部入り</div>
-  <div class="feat-grid">
-    <div class="feat-card">
-      <div class="feat-ico">📅</div>
+  <div class="sec-label">FEATURES</div>
+  <div class="sec-title">旅行計画に必要なものが全部入り</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-ico">📅</div>
       <h3>日程管理</h3>
-      <p>日ごとのスポットや移動をタイムライン形式で整理。時間・メモ・費用も一括管理。</p>
+      <p>スポット・移動・時間をタイムラインで整理。ドラッグで並べ替えも可能。</p>
     </div>
-    <div class="feat-card">
-      <div class="feat-ico">🔗</div>
-      <h3>URLで即共有</h3>
-      <p>アカウント不要。共有ボタンを押してURLを送るだけ。受け取った人もすぐ編集できます。</p>
+    <div class="card">
+      <div class="card-ico">🔗</div>
+      <h3>URLで共有</h3>
+      <p>アカウント不要。リンクを送るだけで全員がすぐに閲覧・編集できる。</p>
     </div>
-    <div class="feat-card">
-      <div class="feat-ico">✅</div>
+    <div class="card">
+      <div class="card-ico">✅</div>
       <h3>予約管理</h3>
-      <p>要予約・予約済みをワンタップで切り替え。確認番号や予約URLもまとめて保存。</p>
+      <p>要予約→予約済みをワンタップで切り替え。確認番号や予約URLも保存。</p>
     </div>
-    <div class="feat-card">
-      <div class="feat-ico">🗺</div>
-      <h3>ルート確認</h3>
-      <p>移動エントリーの🗺ボタンで区間ルートをすぐ表示。車・電車・徒歩を切り替え可能。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">💰</div>
-      <h3>費用精算</h3>
-      <p>立替払いを記録しておくと、旅行後の精算金額を自動計算。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">🌍</div>
+    <div class="card">
+      <div class="card-ico">🌍</div>
       <h3>海外旅行対応</h3>
-      <p>タイムゾーンを日ごとに設定でき、現地時間と日本時間を自動で変換表示。</p>
+      <p>タイムゾーンを日ごとに設定。現地時間と日本時間をDST込みで自動変換。</p>
+    </div>
+    <div class="card">
+      <div class="card-ico">🗺️</div>
+      <h3>ルート表示</h3>
+      <p>移動エントリーの地図ボタンで区間ルートをすぐ確認。車・電車・徒歩対応。</p>
+    </div>
+    <div class="card">
+      <div class="card-ico">💰</div>
+      <h3>費用精算</h3>
+      <p>立替払いを記録して旅行後の精算額を自動計算。割り勘もスムーズ。</p>
     </div>
   </div>
 </section>
 
 <section class="how">
   <div class="how-inner">
-    <div class="section-label">How it works</div>
-    <div class="section-title">3ステップで使える</div>
+    <div class="sec-label">HOW IT WORKS</div>
+    <div class="sec-title">3ステップで使える</div>
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
@@ -157,14 +184,12 @@ footer{text-align:center;padding:24px;font-size:12px;color:var(--muted);border-t
 </section>
 
 <section class="cta">
-  <h2>さっそく旅行プランを作ろう</h2>
-  <p>無料・登録不要。ブラウザだけで使えます。</p>
-  <a class="btn-primary" href="./app/">＋ 新規プランを作成</a>
+  <h2>次の目的地はどこですか？</h2>
+  <p>無料・登録不要。スマホからでも使えます。</p>
+  <a class="btn-accent" href="./app/">＋ 旅行プランを作る</a>
 </section>
 
-<footer>
-  <p>© 2026 Trunk. All rights reserved.</p>
-</footer>
+<footer>© 2026 Trunk. All rights reserved.</footer>
 
 </body>
 </html>

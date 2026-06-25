@@ -735,6 +735,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
     <h2>🔗 プランを共有</h2>
     <p class="modal-sub">このURLを送ると相手はプランを閲覧できます。</p>
     <div class="share-url-row"><input type="text" id="shareUrl" readonly><button class="btn btn-primary" onclick="copyUrl()">コピー</button></div>
+    <div class="modal-row" style="margin-bottom:8px"><button class="btn btn-primary" style="width:100%" onclick="window.open(document.getElementById('shareUrl').value,'_blank')">🔗 新しいタブで開いて確認</button></div>
     <div class="share-note">💡 リンクにはプランデータが含まれます。相手が編集した場合は更新後のURLを送り返してもらってください。</div>
     <div class="modal-row"><button class="btn btn-ghost" onclick="cm('mShare')">閉じる</button></div>
   </div>
@@ -1833,6 +1834,13 @@ async function init(){
   });
   window.addEventListener('afterprint', () => {
     if(_printWasEdit){ editMode = true; rDays(); }
+  });
+
+  // Reload data when URL hash changes (e.g. pasting share URL in same tab)
+  window.addEventListener('hashchange', async()=>{
+    if(location.hash.startsWith('#v2/')||location.hash.startsWith('#v1')){
+      if(await loadHashAsync()){renderAll();toast('共有プランを読み込みました');}
+    }
   });
 }
 init();

@@ -867,14 +867,51 @@ function getMembers(){return(D.memberNames||[]).filter(Boolean)}
 /* ══ URL SHARING ══ */
 function encode(d){try{return btoa(unescape(encodeURIComponent(JSON.stringify(d))))}catch{return null}}
 function decode(s){try{return JSON.parse(decodeURIComponent(escape(atob(s))))}catch{return null}}
-function getShareUrl(){const e=encode(D);return e?location.origin+location.pathname+'#v1/'+e:null}
-function refreshShareUrl(){const el=document.getElementById('shareUrl');if(el)el.value=getShareUrl()||''}
+async function deflateEncode(d){
+  const json=JSON.stringify(d);
+  const bytes=new TextEncoder().encode(json);
+  const cs=new CompressionStream('deflate-raw');
+  const w=cs.writable.getWriter();w.write(bytes);w.close();
+  const chunks=[];const r=cs.readable.getReader();
+  while(true){const{done,value}=await r.read();if(done)break;chunks.push(value);}
+  const out=new Uint8Array(chunks.reduce((a,b)=>a+b.length,0));
+  let off=0;for(const c of chunks){out.set(c,off);off+=c.length;}
+  return btoa(String.fromCharCode(...out)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function inflateDecode(s){
+  const b64=s.replace(/-/g,'+').replace(/_/g,'/');
+  const pad=(4-b64.length%4)%4;
+  const bin=atob(b64+'='.repeat(pad));
+  const data=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)data[i]=bin.charCodeAt(i);
+  const ds=new DecompressionStream('deflate-raw');
+  const w=ds.writable.getWriter();w.write(data);w.close();
+  const chunks=[];const r=ds.readable.getReader();
+  while(true){const{done,value}=await r.read();if(done)break;chunks.push(value);}
+  const out=new Uint8Array(chunks.reduce((a,b)=>a+b.length,0));
+  let off=0;for(const c of chunks){out.set(c,off);off+=c.length;}
+  return new TextDecoder().decode(out);
+}
+async function getShareUrl(){
+  try{const e=await deflateEncode(D);return location.origin+location.pathname+'#v2/'+e;}
+  catch{const e=encode(D);return e?location.origin+location.pathname+'#v1/'+e:null;}
+}
+async function refreshShareUrl(){const el=document.getElementById('shareUrl');if(el)el.value=(await getShareUrl())||''}
 
 /* ══ PERSISTENCE ══ */
 function save(){if(editMode)localStorage.setItem(SK,JSON.stringify(D))}
 function loadLocal(){try{const s=localStorage.getItem(SK);if(s){D=JSON.parse(s);migrate();return true}}catch{}return false}
+async function loadHashAsync(){
+  const h=location.hash;
+  if(h.startsWith('#v2/')){
+    try{const json=await inflateDecode(h.slice(4));const d=JSON.parse(json);if(d&&d.days){D=d;editMode=false;migrate();return true;}}catch{}
+  }
+  if(h.startsWith('#v1/')){const d=decode(h.slice(4));if(d&&d.days){D=d;editMode=false;migrate();return true;}}
+  return false;
+}
 function loadHash(){
-  const h=location.hash;if(!h.startsWith('#v1/'))return false;
+  const h=location.hash;
+  if(!h.startsWith('#v1/'))return false;
   const d=decode(h.slice(4));if(!d||!d.days)return false;
   D=d;editMode=false;migrate();return true;
 }
@@ -1712,8 +1749,8 @@ function renderBudgetModal(){
 }
 
 /* ══ SHARE / PASSPHRASE ══ */
-function openShare(){if(!D._shared){om('mSetPass');document.getElementById('inSetPass').value='';}else{om('mShare');refreshShareUrl();}}
-async function doSetPass(){const v=document.getElementById('inSetPass').value.trim();D.passphraseHash=v?await sha256(v):'';D._shared=true;save();cm('mSetPass');om('mShare');refreshShareUrl();}
+async function openShare(){if(!D._shared){om('mSetPass');document.getElementById('inSetPass').value='';}else{om('mShare');await refreshShareUrl();}}
+async function doSetPass(){const v=document.getElementById('inSetPass').value.trim();D.passphraseHash=v?await sha256(v):'';D._shared=true;save();cm('mSetPass');om('mShare');await refreshShareUrl();}
 function copyUrl(){navigator.clipboard.writeText(document.getElementById('shareUrl').value).then(()=>toast('URLをコピーしました ✓'))}
 function promptEdit(){if(!D.passphraseHash){isEdit(true);return}om('mAuth');document.getElementById('inAuth').value='';document.getElementById('authErr').style.display='none';setTimeout(()=>document.getElementById('inAuth').focus(),80)}
 async function doAuth(){const v=document.getElementById('inAuth').value;const h=await sha256(v);if(h===D.passphraseHash){cm('mAuth');isEdit(true);toast('編集モードになりました')}else document.getElementById('authErr').style.display='block'}
@@ -1736,8 +1773,8 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ══ INIT ══ */
-function init(){
-  if(!loadHash())loadLocal();
+async function init(){
+  if(!(await loadHashAsync()))loadLocal();
   bindMeta();
   renderAll();
   loadMapsApi();

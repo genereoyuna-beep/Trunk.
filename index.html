@@ -867,8 +867,13 @@ function getMembers(){return(D.memberNames||[]).filter(Boolean)}
 /* ══ URL SHARING ══ */
 function encode(d){try{return btoa(unescape(encodeURIComponent(JSON.stringify(d))))}catch{return null}}
 function decode(s){try{return JSON.parse(decodeURIComponent(escape(atob(s))))}catch{return null}}
-async function deflateEncode(d){
-  const json=JSON.stringify(d);
+function u8toB64url(u8){
+  // Safe btoa for large arrays (avoids spread call stack limit)
+  let s='';for(let i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function deflateEncode(json){
+  if(typeof CompressionStream==='undefined')throw new Error('no CompressionStream');
   const bytes=new TextEncoder().encode(json);
   const cs=new CompressionStream('deflate-raw');
   const w=cs.writable.getWriter();w.write(bytes);w.close();
@@ -876,7 +881,7 @@ async function deflateEncode(d){
   while(true){const{done,value}=await r.read();if(done)break;chunks.push(value);}
   const out=new Uint8Array(chunks.reduce((a,b)=>a+b.length,0));
   let off=0;for(const c of chunks){out.set(c,off);off+=c.length;}
-  return btoa(String.fromCharCode(...out)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  return u8toB64url(out);
 }
 async function inflateDecode(s){
   const b64=s.replace(/-/g,'+').replace(/_/g,'/');
@@ -894,7 +899,7 @@ async function inflateDecode(s){
 }
 function shrinkForShare(d){
   const s=JSON.parse(JSON.stringify(d));
-  delete s._shared;
+  // Note: keep _shared so auth flow works correctly when loading URL
   if(!s.note)delete s.note;
   if(!s.budget)delete s.budget;
   if(!s.comments||!s.comments.length)delete s.comments;
@@ -915,8 +920,14 @@ function shrinkForShare(d){
   return s;
 }
 async function getShareUrl(){
-  try{const e=await deflateEncode(shrinkForShare(D));return location.origin+location.pathname+'#v2/'+e;}
-  catch{const e=encode(D);return e?location.origin+location.pathname+'#v1/'+e:null;}
+  try{
+    const json=JSON.stringify(shrinkForShare(D));
+    const e=await deflateEncode(json);
+    return location.origin+location.pathname+'#v2/'+e;
+  }catch{
+    const e=encode(shrinkForShare(D));
+    return e?location.origin+location.pathname+'#v1s/'+e:null;
+  }
 }
 async function refreshShareUrl(){const el=document.getElementById('shareUrl');if(el)el.value=(await getShareUrl())||''}
 
@@ -926,9 +937,12 @@ function loadLocal(){try{const s=localStorage.getItem(SK);if(s){D=JSON.parse(s);
 async function loadHashAsync(){
   const h=location.hash;
   if(h.startsWith('#v2/')){
-    try{const json=await inflateDecode(h.slice(4));const d=JSON.parse(json);if(d&&d.days){D=d;editMode=false;migrate();return true;}}catch{}
+    try{const json=await inflateDecode(h.slice(4));const d=JSON.parse(json);if(d&&d.days){D=d;editMode=false;migrate();return true;}}catch(err){console.warn('v2 decode failed:',err);}
   }
-  if(h.startsWith('#v1/')){const d=decode(h.slice(4));if(d&&d.days){D=d;editMode=false;migrate();return true;}}
+  if(h.startsWith('#v1s/')||h.startsWith('#v1/')){
+    const payload=h.startsWith('#v1s/')?h.slice(5):h.slice(4);
+    const d=decode(payload);if(d&&d.days){D=d;editMode=false;migrate();return true;}
+  }
   return false;
 }
 function loadHash(){

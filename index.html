@@ -894,8 +894,7 @@ function shrinkForShare(d){
       if(e.lat==null)delete e.lat;
       if(e.lng==null)delete e.lng;
       if(!e.isTransport)delete e.isTransport;
-      if(!e.bookingRequired)delete e.bookingRequired;
-      if(!e.booked)delete e.booked;
+      if(!e.bookingStatus||e.bookingStatus==='none')delete e.bookingStatus;
       if(!e.prepaid)delete e.prepaid;
       if(!e.cost)delete e.cost;
     }
@@ -998,10 +997,12 @@ function migrate(){
   for(const day of D.days||[])if(!day.timezone)day.timezone='Asia/Tokyo';
   // Ensure entry fields exist
   for(const day of D.days||[])for(const e of day.entries||[]){
-    if(e.bookingRequired===undefined)e.bookingRequired=false;
     if(e.bookingUrl===undefined)e.bookingUrl='';
-    if(e.booked===undefined)e.booked=false;
     if(e.bookingRef===undefined)e.bookingRef='';
+    if(e.bookingStatus===undefined){
+      e.bookingStatus=e.booked?'booked':e.bookingRequired?'required':'none';
+      delete e.booked;delete e.bookingRequired;
+    }
     if(e.prepaid===undefined)e.prepaid=false;
     if(e.paidBy===undefined)e.paidBy='';
     if(e.cost===undefined)e.cost=0;
@@ -1386,18 +1387,18 @@ function rEntry(day,e,ns){
   const linkHtml=`<div class="link-row"><span class="link-ico">🔗</span><input class="link-in" type="url" value="${esc(e.link||'')}" placeholder="リンクを追加..." onchange="updEnt('${dayId}','${e.id}','link',this.value)"></div>`;
 
   // Booking & cost rows
-  const reqCls=e.bookingRequired?' on-req':'';
-  const bookedCls=e.booked?' on-booked':'';
+  const bkSt=e.bookingStatus||'none';
+  const bkCls=bkSt==='required'?' on-req':bkSt==='booked'?' on-booked':'';
+  const bkLabel=bkSt==='required'?'📅 要予約':bkSt==='booked'?'✅ 予約済':'📋 予約';
   const paidCls=e.prepaid?' on-paid':'';
   const members=getMembers();
   const mOpts=members.length
     ?`<option value="">--</option>`+members.map(m=>`<option value="${esc(m)}"${e.paidBy===m?' selected':''}>${esc(m)}</option>`).join('')
     :`<option value="${esc(e.paidBy||'')}">（名前未設定）</option>`;
   const bookingHtml=`<div class="bk-row">
-    <button class="tag-toggle${reqCls}" onclick="toggleBk('${dayId}','${e.id}')">📅 要予約</button>
-    <button class="tag-toggle${bookedCls}" onclick="toggleBooked('${dayId}','${e.id}')">✅ 予約済</button>
-    ${e.bookingRequired&&!e.booked?`<input class="bkurl-in" type="url" value="${esc(e.bookingUrl||'')}" placeholder="予約URL..." onchange="updEnt('${dayId}','${e.id}','bookingUrl',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`:``}
-    ${e.booked?`<input class="bkref-in" type="text" value="${esc(e.bookingRef||'')}" placeholder="確認番号..." onchange="updEnt('${dayId}','${e.id}','bookingRef',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`:``}</div>
+    <button class="tag-toggle${bkCls}" onclick="cycleBooking('${dayId}','${e.id}')">${bkLabel}</button>
+    ${bkSt==='required'?`<input class="bkurl-in" type="url" value="${esc(e.bookingUrl||'')}" placeholder="予約URL..." onchange="updEnt('${dayId}','${e.id}','bookingUrl',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`:``}
+    ${bkSt==='booked'?`<input class="bkref-in" type="text" value="${esc(e.bookingRef||'')}" placeholder="確認番号..." onchange="updEnt('${dayId}','${e.id}','bookingRef',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`:``}</div>
   <div class="cost-row">
     <span class="cost-lbl">¥</span>
     <input class="cost-in" type="number" min="0" step="1" value="${e.cost||''}" placeholder="0" onchange="updEnt('${dayId}','${e.id}','cost',Number(this.value))">
@@ -1515,7 +1516,7 @@ function addEntry(dayId){
   const e={id:uid(),icon:'📍',name:'',startTime:'',endTime:'',note:'',link:'',imageUrl:'',
     address:'',mapsUrl:'',placeId:'',lat:null,lng:null,
     isTransport:false,from:'',to:'',
-    bookingRequired:false,bookingUrl:'',booked:false,bookingRef:'',prepaid:false,paidBy:'',cost:0};
+    bookingStatus:'none',bookingUrl:'',bookingRef:'',prepaid:false,paidBy:'',cost:0};
   d.entries.push(e);save();rDays();
   setTimeout(()=>{const els=document.querySelectorAll(`#ent-${dayId} .name-in`);els[els.length-1]?.focus()},60);
 }
@@ -1529,8 +1530,7 @@ function toggleEntryType(dayId,eid){
   if(e.isTransport){e.address='';e.mapsUrl='';e.placeId='';e.lat=null;e.lng=null;}
   save();rDays();
 }
-function toggleBk(dayId,eid){const e=D.days.find(d=>d.id===dayId)?.entries.find(x=>x.id===eid);if(!e)return;e.bookingRequired=!e.bookingRequired;save();rDays()}
-function toggleBooked(dayId,eid){const e=D.days.find(d=>d.id===dayId)?.entries.find(x=>x.id===eid);if(!e)return;e.booked=!e.booked;save();rDays()}
+function cycleBooking(dayId,eid){const e=D.days.find(d=>d.id===dayId)?.entries.find(x=>x.id===eid);if(!e)return;const s=['none','required','booked'];e.bookingStatus=s[(s.indexOf(e.bookingStatus||'none')+1)%3];save();rDays()}
 function togglePrepaid(dayId,eid){const e=D.days.find(d=>d.id===dayId)?.entries.find(x=>x.id===eid);if(!e)return;e.prepaid=!e.prepaid;save();rDays()}
 
 /* ══ MEMBERS ══ */

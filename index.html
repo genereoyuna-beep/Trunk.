@@ -230,7 +230,11 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .tag-toggle:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
 .tag-toggle.on-req{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
 .tag-toggle.on-paid{background:var(--success-bg);border-color:var(--success);color:var(--success)}
+.tag-toggle.on-booked{background:var(--success-bg);border-color:var(--success);color:var(--success)}
 .badge-req{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--warn-bg);border:1px solid var(--warn);color:var(--warn);white-space:nowrap}
+.badge-booked{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--success-bg);border:1px solid var(--success);color:var(--success);white-space:nowrap}
+.bkref-in{font-size:12px;border:none;outline:none;background:transparent;color:var(--text);flex:1;min-width:80px;max-width:180px;padding:2px 4px;border-radius:4px}
+.bkref-in:focus{background:var(--bg);outline:2px solid var(--accent)}
 .badge-paid{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--success-bg);border:1px solid var(--success);color:var(--success);white-space:nowrap}
 .bkurl-in{font-size:12px;border:none;outline:none;background:transparent;color:var(--accent);flex:1;min-width:80px;max-width:200px;padding:2px 4px;border-radius:4px}
 .bkurl-in:focus{background:var(--bg);outline:2px solid var(--accent)}
@@ -572,7 +576,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
     border:none!important;padding:0!important;text-decoration:underline!important
   }
   .bk-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px}
-  .badge-req{font-size:7.5pt!important;padding:1px 7px!important;border-radius:3px!important}
+  .badge-req,.badge-booked{font-size:7.5pt!important;padding:1px 7px!important;border-radius:3px!important}
   .badge-cost{font-size:7.5pt!important;padding:1px 7px!important;border-radius:3px!important}
   .badge-paid{font-size:7.5pt!important;padding:1px 7px!important;border-radius:3px!important}
   .entry-img{margin-top:5px}
@@ -912,12 +916,13 @@ function shrinkForShare(d){
     if(day.routeMode==='DRIVING')delete day.routeMode;
     if(!day.timezone||day.timezone==='Asia/Tokyo')delete day.timezone;
     for(const e of day.entries||[]){
-      const emp=['note','link','imageUrl','address','mapsUrl','placeId','bookingUrl','paidBy','from','to'];
+      const emp=['note','link','imageUrl','address','mapsUrl','placeId','bookingUrl','paidBy','from','to','bookingRef'];
       emp.forEach(k=>{if(!e[k])delete e[k];});
       if(e.lat==null)delete e.lat;
       if(e.lng==null)delete e.lng;
       if(!e.isTransport)delete e.isTransport;
       if(!e.bookingRequired)delete e.bookingRequired;
+      if(!e.booked)delete e.booked;
       if(!e.prepaid)delete e.prepaid;
       if(!e.cost)delete e.cost;
     }
@@ -1022,6 +1027,8 @@ function migrate(){
   for(const day of D.days||[])for(const e of day.entries||[]){
     if(e.bookingRequired===undefined)e.bookingRequired=false;
     if(e.bookingUrl===undefined)e.bookingUrl='';
+    if(e.booked===undefined)e.booked=false;
+    if(e.bookingRef===undefined)e.bookingRef='';
     if(e.prepaid===undefined)e.prepaid=false;
     if(e.paidBy===undefined)e.paidBy='';
     if(e.cost===undefined)e.cost=0;
@@ -1428,6 +1435,7 @@ function rEntry(day,e,ns){
   let bookingHtml='';
   if(editMode){
     const reqCls=e.bookingRequired?' on-req':'';
+    const bookedCls=e.booked?' on-booked':'';
     const paidCls=e.prepaid?' on-paid':'';
     const members=getMembers();
     const mOpts=members.length
@@ -1435,7 +1443,9 @@ function rEntry(day,e,ns){
       :`<option value="${esc(e.paidBy||'')}">（名前未設定）</option>`;
     bookingHtml=`<div class="bk-row">
       <button class="tag-toggle${reqCls}" onclick="toggleBk('${dayId}','${e.id}')">📅 要予約</button>
-      ${e.bookingRequired?`<input class="bkurl-in" type="url" value="${esc(e.bookingUrl||'')}" placeholder="予約URL..." onchange="updEnt('${dayId}','${e.id}','bookingUrl',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`:''}</div>
+      <button class="tag-toggle${bookedCls}" onclick="toggleBooked('${dayId}','${e.id}')">✅ 予約済</button>
+      ${e.bookingRequired&&!e.booked?`<input class="bkurl-in" type="url" value="${esc(e.bookingUrl||'')}" placeholder="予約URL..." onchange="updEnt('${dayId}','${e.id}','bookingUrl',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`:``}
+      ${e.booked?`<input class="bkref-in" type="text" value="${esc(e.bookingRef||'')}" placeholder="確認番号..." onchange="updEnt('${dayId}','${e.id}','bookingRef',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`:``}</div>
     <div class="cost-row">
       <span class="cost-lbl">¥</span>
       <input class="cost-in" type="number" min="0" step="1" value="${e.cost||''}" placeholder="0" onchange="updEnt('${dayId}','${e.id}','cost',Number(this.value))">
@@ -1444,7 +1454,8 @@ function rEntry(day,e,ns){
     </div>`;
   }else{
     const parts=[];
-    if(e.bookingRequired)parts.push(`<span class="badge-req">📅 要予約</span>${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`);
+    if(e.booked)parts.push(`<span class="badge-booked">✅ 予約済${e.bookingRef?' · '+esc(e.bookingRef):''}</span>${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`);
+    else if(e.bookingRequired)parts.push(`<span class="badge-req">📅 要予約</span>${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`);
     if(Number(e.cost)>0)parts.push(`<span class="badge-cost">¥${Number(e.cost).toLocaleString()}</span>`);
     if(e.prepaid)parts.push(`<span class="badge-paid">💳 ${esc(e.paidBy||'立替あり')}</span>`);
     if(parts.length)bookingHtml=`<div class="bk-row">${parts.join('')}</div>`;
@@ -1568,7 +1579,7 @@ function addEntry(dayId){
   const e={id:uid(),icon:'📍',name:'',startTime:'',endTime:'',note:'',link:'',imageUrl:'',
     address:'',mapsUrl:'',placeId:'',lat:null,lng:null,
     isTransport:false,from:'',to:'',
-    bookingRequired:false,bookingUrl:'',prepaid:false,paidBy:'',cost:0};
+    bookingRequired:false,bookingUrl:'',booked:false,bookingRef:'',prepaid:false,paidBy:'',cost:0};
   d.entries.push(e);save();rDays();
   setTimeout(()=>{const els=document.querySelectorAll(`#ent-${dayId} .name-in`);els[els.length-1]?.focus()},60);
 }
@@ -1583,6 +1594,7 @@ function toggleEntryType(dayId,eid){
   save();rDays();
 }
 function toggleBk(dayId,eid){const e=D.days.find(d=>d.id===dayId)?.entries.find(x=>x.id===eid);if(!e)return;e.bookingRequired=!e.bookingRequired;save();rDays()}
+function toggleBooked(dayId,eid){const e=D.days.find(d=>d.id===dayId)?.entries.find(x=>x.id===eid);if(!e)return;e.booked=!e.booked;save();rDays()}
 function togglePrepaid(dayId,eid){const e=D.days.find(d=>d.id===dayId)?.entries.find(x=>x.id===eid);if(!e)return;e.prepaid=!e.prepaid;save();rDays()}
 
 /* ══ MEMBERS ══ */

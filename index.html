@@ -257,6 +257,9 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .tr-dim{font-size:11px;color:var(--border2)}
 /* duration badge in time col */
 .dur-badge{font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 4px;text-align:center;margin-top:2px;white-space:nowrap}
+.tz-select{font-size:11px;color:var(--text2);background:var(--bg);border:1px solid var(--border);cursor:pointer;padding:2px 5px;border-radius:6px;flex-shrink:0;max-width:160px}
+.day-tz-badge{font-size:11px;color:var(--accent);background:var(--accent-bg);border:1px solid var(--accent-bg);padding:1px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.tz-conv{font-size:10px;color:var(--accent);margin-top:2px;text-align:center;white-space:nowrap;line-height:1.4;opacity:.8}
 
 /* image / now-badge */
 .entry-img{margin-top:5px;border-radius:7px;overflow:hidden;max-height:120px;display:flex}
@@ -907,6 +910,7 @@ function shrinkForShare(d){
   for(const day of s.days||[]){
     if(!day.title)delete day.title;
     if(day.routeMode==='DRIVING')delete day.routeMode;
+    if(!day.timezone||day.timezone==='Asia/Tokyo')delete day.timezone;
     for(const e of day.entries||[]){
       const emp=['note','link','imageUrl','address','mapsUrl','placeId','bookingUrl','paidBy','from','to'];
       emp.forEach(k=>{if(!e[k])delete e[k];});
@@ -937,6 +941,47 @@ async function getShareUrl(){
   }
 }
 async function refreshShareUrl(){const el=document.getElementById('shareUrl');if(el)el.value=(await getShareUrl())||''}
+
+/* ══ TIMEZONE ══ */
+const TZ_LIST=[
+  {id:'Asia/Tokyo',         label:'🇯🇵 日本 JST'},
+  {id:'Asia/Seoul',         label:'🇰🇷 韓国 KST'},
+  {id:'Asia/Shanghai',      label:'🇨🇳 中国 CST'},
+  {id:'Asia/Taipei',        label:'🇹🇼 台湾 CST'},
+  {id:'Asia/Hong_Kong',     label:'🇭🇰 香港 HKT'},
+  {id:'Asia/Singapore',     label:'🇸🇬 シンガポール SGT'},
+  {id:'Asia/Bangkok',       label:'🇹🇭 タイ ICT'},
+  {id:'Asia/Dubai',         label:'🇦🇪 UAE GST'},
+  {id:'Europe/London',      label:'🇬🇧 英国 GMT/BST'},
+  {id:'Europe/Paris',       label:'🇪🇺 欧州中部 CET/CEST'},
+  {id:'Pacific/Honolulu',   label:'🌺 ハワイ HST'},
+  {id:'America/Los_Angeles',label:'🇺🇸 ロサンゼルス PST/PDT'},
+  {id:'America/Chicago',    label:'🇺🇸 シカゴ CST/CDT'},
+  {id:'America/New_York',   label:'🇺🇸 ニューヨーク EST/EDT'},
+  {id:'Australia/Sydney',   label:'🇦🇺 シドニー AEST/AEDT'},
+  {id:'Pacific/Auckland',   label:'🇳🇿 ニュージーランド NZST'},
+];
+function tzOffset(tz,dateStr){
+  try{const r=dateStr?new Date(dateStr):new Date();
+  const a=new Date(r.toLocaleString('en-US',{timeZone:'UTC'}));
+  const b=new Date(r.toLocaleString('en-US',{timeZone:tz}));
+  return Math.round((b-a)/60000);}catch{return 0;}
+}
+function convertTime(t,fromTz,toTz,dateStr){
+  if(!t||fromTz===toTz)return null;
+  const p=t.split(':');const h=parseInt(p[0]),m=parseInt(p[1]||0);
+  if(isNaN(h))return null;
+  const diff=tzOffset(toTz,dateStr)-tzOffset(fromTz,dateStr);
+  const tot=((h*60+m+diff)%(24*60)+24*60)%(24*60);
+  return`${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`;
+}
+function tzShort(tz){
+  const t=TZ_LIST.find(x=>x.id===tz);
+  if(!t)return tz.split('/').pop();
+  const m=t.label.match(/\b([A-Z]{2,5}(?:\/[A-Z]{2,5})?)\b/);
+  return m?m[1]:tz.split('/').pop();
+}
+function updDayTz(dayId,tz){const d=D.days.find(x=>x.id===dayId);if(d){d.timezone=tz;save();rDays();}}
 
 /* ══ PERSISTENCE ══ */
 function save(){if(editMode)localStorage.setItem(SK,JSON.stringify(D))}
@@ -971,6 +1016,8 @@ function migrate(){
   if(!D.comments)D.comments=[];
   if(!D.packingItems)D.packingItems=[];
   if(!D.budget)D.budget=0;
+  // Ensure day timezone
+  for(const day of D.days||[])if(!day.timezone)day.timezone='Asia/Tokyo';
   // Ensure entry fields exist
   for(const day of D.days||[])for(const e of day.entries||[]){
     if(e.bookingRequired===undefined)e.bookingRequired=false;
@@ -1354,24 +1401,38 @@ function rDays(){
 function rDay(day,di,ns){
   const ed=editMode?'':'disabled';
   const dateLabel=day.date||'日付を選択';
-  const entries=(day.entries||[]).map(e=>rEntry(day.id,e,ns)).join('');
+  const dayTz=day.timezone||'Asia/Tokyo';
+  const tzHtml=editMode
+    ?`<select class="tz-select" onchange="updDayTz('${day.id}',this.value)">${TZ_LIST.map(t=>`<option value="${t.id}"${dayTz===t.id?' selected':''}>${t.label}</option>`).join('')}</select>`
+    :dayTz!=='Asia/Tokyo'?`<span class="day-tz-badge">${tzShort(dayTz)}</span>`:'';
+  const entries=(day.entries||[]).map(e=>rEntry(day,e,ns)).join('');
   return`<div class="day-card" id="day-${day.id}" data-did="${day.id}" ${editMode?'draggable="true"':''}>
     <div class="day-hd">
       ${editMode?'<span class="day-grip">⠿</span>':''}
       <span class="day-num">Day ${di+1}</span>
       <input class="day-title" type="text" value="${esc(day.title)}" placeholder="日程タイトル" ${ed} onchange="updDay('${day.id}','title',this.value)">
       <button class="date-btn" ${editMode?`onclick="openCal('${day.id}',this)"`:''} ${ed}>${esc(dateLabel)}</button>
+      ${tzHtml}
       ${editMode?`<button class="btn-del" onclick="delDay('${day.id}')">✕</button>`:''}
     </div>
     <div class="entries" id="ent-${day.id}">${entries}</div>
     ${editMode?`<div class="add-entry"><button class="add-entry-btn" onclick="addEntry('${day.id}')">＋ エントリーを追加</button></div>`:''}
   </div>`;
 }
-function rEntry(dayId,e,ns){
+function rEntry(day,e,ns){
+  const dayId=day.id||day;
   const isCur=ns&&ns.eid===e.id&&ns.type==='now';
   const isNxt=ns&&ns.eid===e.id&&ns.type==='next';
   const icon=e.icon||'📍';
   const ed=editMode?'':'disabled';
+  const dayTz=(day.id&&day.timezone)||'Asia/Tokyo';
+  const tzConv=(()=>{
+    if(dayTz==='Asia/Tokyo')return'';
+    const sc=convertTime(e.startTime,dayTz,'Asia/Tokyo',day.dateIso);
+    const ec=convertTime(e.endTime,dayTz,'Asia/Tokyo',day.dateIso);
+    const parts=[sc,ec].filter(Boolean);
+    return parts.length?`<div class="tz-conv">🇯🇵 ${parts.join('–')} JST</div>`:'';
+  })();
 
   // Address row (only for spot entries)
   let addrHtml='';
@@ -1429,6 +1490,7 @@ function rEntry(dayId,e,ns){
       <div class="tw"><input class="ti" type="text" value="${esc(e.startTime||'')}" placeholder="09:00" ${ed} onchange="updEnt('${dayId}','${e.id}','startTime',this.value)"></div>
       <div class="tw"><span class="tsep">↓</span><input class="ti" type="text" value="${esc(e.endTime||'')}" placeholder="10:00" ${ed} onchange="updEnt('${dayId}','${e.id}','endTime',this.value)"></div>
       ${(()=>{const dur=calcDuration(e.startTime,e.endTime);return dur?`<div class="dur-badge">${dur}</div>`:''})()}
+      ${tzConv}
     </div>
     <div class="e-body">
       ${!e.isTransport?`<input class="name-in" type="text" value="${esc(e.name||'')}" placeholder="スポット名を入力..." ${ed} onchange="updEnt('${dayId}','${e.id}','name',this.value)">`:

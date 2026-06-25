@@ -920,14 +920,20 @@ function shrinkForShare(d){
   }
   return s;
 }
+function shareBase(){
+  // Always use web URL so the link works on other devices too
+  if(location.protocol==='file:')return'http://trunk-travelplanner.com/';
+  return location.origin+location.pathname;
+}
 async function getShareUrl(){
+  const base=shareBase();
   try{
     const json=JSON.stringify(shrinkForShare(D));
     const e=await deflateEncode(json);
-    return location.origin+location.pathname+'#v2/'+e;
+    return base+'#v2/'+e;
   }catch{
     const e=encode(shrinkForShare(D));
-    return e?location.origin+location.pathname+'#v1s/'+e:null;
+    return e?base+'#v1s/'+e:null;
   }
 }
 async function refreshShareUrl(){const el=document.getElementById('shareUrl');if(el)el.value=(await getShareUrl())||''}

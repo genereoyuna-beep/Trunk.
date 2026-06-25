@@ -666,10 +666,6 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 </head>
 <body>
 
-<div class="view-banner hide" id="viewBanner">
-  <span>👁 閲覧モード</span>
-  <button class="btn btn-primary" style="font-size:12px;padding:5px 13px" onclick="promptEdit()">✏️ 編集する</button>
-</div>
 
 <div class="ph" id="ph"></div>
 
@@ -682,9 +678,9 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 <div class="meta-bar">
   <div class="mf">
     <span class="ml">出発</span>
-    <button class="mi mi-cal" id="mStartBtn" onclick="editMode&&openCalTrip('start',this)">選択</button>
+    <button class="mi mi-cal" id="mStartBtn" onclick="openCalTrip('start',this)">選択</button>
     <span class="mi-sep">→</span>
-    <button class="mi mi-cal" id="mEndBtn" onclick="editMode&&openCalTrip('end',this)">選択</button>
+    <button class="mi mi-cal" id="mEndBtn" onclick="openCalTrip('end',this)">選択</button>
   </div>
   <div class="mf">
     <span class="ml">人数</span>
@@ -747,26 +743,6 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
   </div>
 </div>
 
-<!-- Set passphrase -->
-<div class="overlay" id="mSetPass" onclick="if(event.target===this)cm('mSetPass')">
-  <div class="modal">
-    <h2>🔑 合言葉の設定</h2>
-    <p class="modal-sub">共同編集用の合言葉を設定してください（省略可）。</p>
-    <input class="modal-inp" type="text" id="inSetPass" placeholder="例：山田家旅行2026">
-    <div class="modal-row"><button class="btn btn-ghost" onclick="cm('mSetPass')">キャンセル</button><button class="btn btn-primary" onclick="doSetPass()">設定して共有する</button></div>
-  </div>
-</div>
-
-<!-- Auth -->
-<div class="overlay" id="mAuth" onclick="if(event.target===this)cm('mAuth')">
-  <div class="modal">
-    <h2>🔑 合言葉を入力</h2>
-    <p class="modal-sub">このプランを編集するには合言葉が必要です。</p>
-    <input class="modal-inp" type="password" id="inAuth" placeholder="合言葉を入力..." onkeydown="if(event.key==='Enter'&&!event.isComposing)doAuth()">
-    <p id="authErr" style="color:var(--danger);font-size:12px;margin-bottom:8px;display:none">合言葉が違います</p>
-    <div class="modal-row"><button class="btn btn-ghost" onclick="cm('mAuth')">キャンセル</button><button class="btn btn-primary" onclick="doAuth()">編集する</button></div>
-  </div>
-</div>
 
 <!-- Image -->
 <div class="overlay" id="mImg" onclick="if(event.target===this)cm('mImg')">
@@ -844,13 +820,12 @@ const MK_KEY='tp_maps_key';
 const MAPS_API_KEY='AIzaSyCoSparwsUgSrvu8koZ9hepKbmBr5APMsQ';
 let D={
   title:'',startDate:'',startDateIso:'',endDate:'',endDateIso:'',
-  note:'',passphraseHash:'',theme:'light',_shared:false,
+  note:'',theme:'light',
   budget:0,numMembers:2,memberNames:['',''],
   comments:[],
   packingItems:[],
   days:[]
 };
-let editMode=true;
 let iconTgt=null,iconAnchor=null,imgTgt=null;
 let activeIcPop=null,activeThPop=null,activeAcPop=null;
 let calState={mode:'day',dayId:null,yr:null,mo:null,anchor:null};
@@ -862,7 +837,6 @@ let _placesSvc=null;
 /* ══ UTILS ══ */
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const esc=s=>!s?'':String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')}
 function fmtTime(iso){
   if(!iso)return'';
   const d=new Date(iso),now=new Date(),diff=Math.round((now-d)/60000);
@@ -907,7 +881,6 @@ async function inflateDecode(s){
 }
 function shrinkForShare(d){
   const s=JSON.parse(JSON.stringify(d));
-  // Note: keep _shared so auth flow works correctly when loading URL
   if(!s.note)delete s.note;
   if(!s.budget)delete s.budget;
   if(!s.comments||!s.comments.length)delete s.comments;
@@ -989,16 +962,16 @@ function tzShort(tz){
 function updDayTz(dayId,tz){const d=D.days.find(x=>x.id===dayId);if(d){d.timezone=tz;save();rDays();}}
 
 /* ══ PERSISTENCE ══ */
-function save(){if(editMode)localStorage.setItem(SK,JSON.stringify(D))}
+function save(){localStorage.setItem(SK,JSON.stringify(D))}
 function loadLocal(){try{const s=localStorage.getItem(SK);if(s){D=JSON.parse(s);migrate();return true}}catch{}return false}
 async function loadHashAsync(){
   const h=location.hash;
   if(h.startsWith('#v2/')){
-    try{const json=await inflateDecode(h.slice(4));const d=JSON.parse(json);if(d&&d.days){D=d;editMode=false;migrate();return true;}}catch(err){console.warn('v2 decode failed:',err);}
+    try{const json=await inflateDecode(h.slice(4));const d=JSON.parse(json);if(d&&d.days){D=d;migrate();return true;}}catch(err){console.warn('v2 decode failed:',err);}
   }
   if(h.startsWith('#v1s/')||h.startsWith('#v1/')){
     const payload=h.startsWith('#v1s/')?h.slice(5):h.slice(4);
-    const d=decode(payload);if(d&&d.days){D=d;editMode=false;migrate();return true;}
+    const d=decode(payload);if(d&&d.days){D=d;migrate();return true;}
   }
   return false;
 }
@@ -1006,7 +979,7 @@ function loadHash(){
   const h=location.hash;
   if(!h.startsWith('#v1/'))return false;
   const d=decode(h.slice(4));if(!d||!d.days)return false;
-  D=d;editMode=false;migrate();return true;
+  D=d;migrate();return true;
 }
 function migrate(){
   // From older data models
@@ -1305,49 +1278,36 @@ function getNowStatus(){
 /* ══ RENDER ══ */
 function renderAll(){
   applyTheme(D.theme||'light');
-  rViewBanner();rTopbar();rMeta();rDayNav();rNowBar();rDays();rCommentPanel();rPackingPrint();
+  rTopbar();rMeta();rDayNav();rNowBar();rDays();rCommentPanel();rPackingPrint();
   const _ph=document.getElementById('ph');
   const _phDates=D.startDate?(D.endDate?`${D.startDate} → ${D.endDate}`:D.startDate):'';
   _ph.innerHTML=`<div class="ph-logo">Trunk.</div><div class="ph-eyebrow">旅行プラン</div><div class="ph-title">${esc(D.title||'旅行プラン')}</div>${_phDates?`<div class="ph-dates">📅 ${esc(_phDates)}</div>`:''}  `;
 }
-function rViewBanner(){document.getElementById('viewBanner').classList.toggle('hide',editMode)}
 function rTopbar(){
   const r=document.getElementById('tbR');
   document.getElementById('tripTitle').value=D.title||'';
-  document.getElementById('tripTitle').disabled=!editMode;
-  if(editMode){
-    r.innerHTML=`<span class="edit-badge">✏️ 編集中</span>
-      <div style="position:relative" id="thW"><button class="btn-icon" title="テーマ" onclick="toggleThPop()">🎨</button></div>
-      <button class="btn btn-ghost" onclick="openBudget()">💰 <span class="tb-lbl">精算</span></button>
-      <button class="btn btn-ghost" onclick="openPacking()">🎒 <span class="tb-lbl">持ち物</span></button>
-      <button class="btn btn-ghost" onclick="window.print()">🖨</button>
-      <button class="btn-icon" onclick="toggleCP()" title="コメント">💬</button>
-      <button class="btn btn-primary" onclick="openShare()">🔗 <span class="tb-lbl">共有</span></button>`;
-  }else{
-    r.innerHTML=`<div style="position:relative" id="thW"><button class="btn-icon" onclick="toggleThPop()">🎨</button></div>
-      <button class="btn btn-ghost" onclick="openBudget()">💰</button>
-      <button class="btn btn-ghost" onclick="openPacking()">🎒</button>
-      <button class="btn btn-ghost" onclick="window.print()">🖨</button>
-      <button class="btn-icon" onclick="toggleCP()">💬</button>
-      <button class="btn btn-primary" onclick="promptEdit()">✏️ 編集する</button>`;
-  }
+  r.innerHTML=`<div style="position:relative" id="thW"><button class="btn-icon" title="テーマ" onclick="toggleThPop()">🎨</button></div>
+    <button class="btn btn-ghost" onclick="openBudget()">💰 <span class="tb-lbl">精算</span></button>
+    <button class="btn btn-ghost" onclick="openPacking()">🎒 <span class="tb-lbl">持ち物</span></button>
+    <button class="btn btn-ghost" onclick="window.print()">🖨</button>
+    <button class="btn-icon" onclick="toggleCP()" title="コメント">💬</button>
+    <button class="btn btn-primary" onclick="openShare()">🔗 <span class="tb-lbl">共有</span></button>`;
 }
 function rMeta(){
-  const dis=!editMode;
   const startLabel=D.startDate||'日付を選択';
   const endLabel=D.endDate||'選択';
   const sBtn=document.getElementById('mStartBtn'),eBtn=document.getElementById('mEndBtn');
-  if(sBtn){sBtn.textContent=startLabel;sBtn.disabled=dis;}
-  if(eBtn){eBtn.textContent=endLabel;eBtn.disabled=dis;}
+  if(sBtn)sBtn.textContent=startLabel;
+  if(eBtn)eBtn.textContent=endLabel;
   const mc=document.getElementById('mMemberCount');
-  if(mc){mc.value=String(D.numMembers||2);mc.disabled=dis;}
+  if(mc)mc.value=String(D.numMembers||2);
   const mn=document.getElementById('mNote');
-  if(mn&&document.activeElement!==mn){mn.value=D.note||'';mn.disabled=dis;}
+  if(mn&&document.activeElement!==mn)mn.value=D.note||'';
 }
 function rDayNav(){
   const nav=document.getElementById('dayNav');
   nav.innerHTML=(D.days||[]).map((d,i)=>`<button class="dnb" onclick="scrollToDay('day-${d.id}')">Day ${i+1}${d.date?' · '+d.date:''}</button>`).join('');
-  if(editMode)nav.innerHTML+=`<button class="dna" onclick="addDay()">＋</button>`;
+  nav.innerHTML+=`<button class="dna" onclick="addDay()">＋</button>`;
 }
 function scrollToDay(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})}
 function rNowBar(){
@@ -1368,33 +1328,30 @@ function rDays(){
   const list=document.getElementById('dayList'),add=document.getElementById('addDayBtn');
   refreshMembersDL();
   if(!(D.days||[]).length){
-    list.innerHTML=`<div class="empty"><div class="empty-ico">🗺️</div><p>まだ日程がありません</p>${editMode?'<button class="btn btn-primary" onclick="addDay()">＋ 日程を追加</button>':''}</div>`;
+    list.innerHTML=`<div class="empty"><div class="empty-ico">🗺️</div><p>まだ日程がありません</p><button class="btn btn-primary" onclick="addDay()">＋ 日程を追加</button></div>`;
     add.style.display='none';return;
   }
-  add.style.display=editMode?'flex':'none';
+  add.style.display='flex';
   const ns=getNowStatus();
   list.innerHTML=(D.days||[]).map((d,i)=>rDay(d,i,ns)).join('');
   bindDayDrag();bindEntDrag();
 }
 function rDay(day,di,ns){
-  const ed=editMode?'':'disabled';
   const dateLabel=day.date||'日付を選択';
   const dayTz=day.timezone||'Asia/Tokyo';
-  const tzHtml=editMode
-    ?`<select class="tz-select" onchange="updDayTz('${day.id}',this.value)">${TZ_LIST.map(t=>`<option value="${t.id}"${dayTz===t.id?' selected':''}>${t.label}</option>`).join('')}</select>`
-    :dayTz!=='Asia/Tokyo'?`<span class="day-tz-badge">${tzShort(dayTz)}</span>`:'';
+  const tzHtml=`<select class="tz-select" onchange="updDayTz('${day.id}',this.value)">${TZ_LIST.map(t=>`<option value="${t.id}"${dayTz===t.id?' selected':''}>${t.label}</option>`).join('')}</select>`;
   const entries=(day.entries||[]).map(e=>rEntry(day,e,ns)).join('');
-  return`<div class="day-card" id="day-${day.id}" data-did="${day.id}" ${editMode?'draggable="true"':''}>
+  return`<div class="day-card" id="day-${day.id}" data-did="${day.id}" draggable="true">
     <div class="day-hd">
-      ${editMode?'<span class="day-grip">⠿</span>':''}
+      <span class="day-grip">⠿</span>
       <span class="day-num">Day ${di+1}</span>
-      <input class="day-title" type="text" value="${esc(day.title)}" placeholder="日程タイトル" ${ed} onchange="updDay('${day.id}','title',this.value)">
-      <button class="date-btn" ${editMode?`onclick="openCal('${day.id}',this)"`:''} ${ed}>${esc(dateLabel)}</button>
+      <input class="day-title" type="text" value="${esc(day.title)}" placeholder="日程タイトル" onchange="updDay('${day.id}','title',this.value)">
+      <button class="date-btn" onclick="openCal('${day.id}',this)">${esc(dateLabel)}</button>
       ${tzHtml}
-      ${editMode?`<button class="btn-del" onclick="delDay('${day.id}')">✕</button>`:''}
+      <button class="btn-del" onclick="delDay('${day.id}')">✕</button>
     </div>
     <div class="entries" id="ent-${day.id}">${entries}</div>
-    ${editMode?`<div class="add-entry"><button class="add-entry-btn" onclick="addEntry('${day.id}')">＋ エントリーを追加</button></div>`:''}
+    <div class="add-entry"><button class="add-entry-btn" onclick="addEntry('${day.id}')">＋ エントリーを追加</button></div>
   </div>`;
 }
 function rEntry(day,e,ns){
@@ -1402,7 +1359,6 @@ function rEntry(day,e,ns){
   const isCur=ns&&ns.eid===e.id&&ns.type==='now';
   const isNxt=ns&&ns.eid===e.id&&ns.type==='next';
   const icon=e.icon||'📍';
-  const ed=editMode?'':'disabled';
   const dayTz=(day.id&&day.timezone)||'Asia/Tokyo';
   const tzConv=(()=>{
     if(dayTz==='Asia/Tokyo')return'';
@@ -1419,78 +1375,61 @@ function rEntry(day,e,ns){
       addrHtml=`<div class="addr-row">
         <span class="addr-txt" title="${esc(e.address)}">📍 ${esc(e.address)}</span>
         ${e.mapsUrl?`<a class="addr-link" href="${esc(e.mapsUrl)}" target="_blank" rel="noopener">Mapで開く →</a>`:''}
-        ${editMode?`<button class="addr-clr" onclick="clearPlace('${dayId}','${e.id}')" title="クリア">✕</button>`:''}
+        <button class="addr-clr" onclick="clearPlace('${dayId}','${e.id}')" title="クリア">✕</button>
       </div>`;
-    }else if(!window.google?.maps?.places&&editMode){
+    }else if(!window.google?.maps?.places){
       addrHtml=`<div class="addr-row"><span class="addr-txt" style="color:var(--border2)">🗺 Maps連携で住所を自動入力（読み込み中...）</span></div>`;
     }
   }
 
   // Link row
-  const linkHtml=editMode
-    ?`<div class="link-row"><span class="link-ico">🔗</span><input class="link-in" type="url" value="${esc(e.link||'')}" placeholder="リンクを追加..." ${ed} onchange="updEnt('${dayId}','${e.id}','link',this.value)"></div>`
-    :e.link?`<div class="link-row"><span class="link-ico">🔗</span><a class="link-open" href="${esc(e.link)}" target="_blank" rel="noopener">開く →</a></div>`:'';
+  const linkHtml=`<div class="link-row"><span class="link-ico">🔗</span><input class="link-in" type="url" value="${esc(e.link||'')}" placeholder="リンクを追加..." onchange="updEnt('${dayId}','${e.id}','link',this.value)"></div>`;
 
   // Booking & cost rows
-  let bookingHtml='';
-  if(editMode){
-    const reqCls=e.bookingRequired?' on-req':'';
-    const bookedCls=e.booked?' on-booked':'';
-    const paidCls=e.prepaid?' on-paid':'';
-    const members=getMembers();
-    const mOpts=members.length
-      ?`<option value="">--</option>`+members.map(m=>`<option value="${esc(m)}"${e.paidBy===m?' selected':''}>${esc(m)}</option>`).join('')
-      :`<option value="${esc(e.paidBy||'')}">（名前未設定）</option>`;
-    bookingHtml=`<div class="bk-row">
-      <button class="tag-toggle${reqCls}" onclick="toggleBk('${dayId}','${e.id}')">📅 要予約</button>
-      <button class="tag-toggle${bookedCls}" onclick="toggleBooked('${dayId}','${e.id}')">✅ 予約済</button>
-      ${e.bookingRequired&&!e.booked?`<input class="bkurl-in" type="url" value="${esc(e.bookingUrl||'')}" placeholder="予約URL..." onchange="updEnt('${dayId}','${e.id}','bookingUrl',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`:``}
-      ${e.booked?`<input class="bkref-in" type="text" value="${esc(e.bookingRef||'')}" placeholder="確認番号..." onchange="updEnt('${dayId}','${e.id}','bookingRef',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`:``}</div>
-    <div class="cost-row">
-      <span class="cost-lbl">¥</span>
-      <input class="cost-in" type="number" min="0" step="1" value="${e.cost||''}" placeholder="0" onchange="updEnt('${dayId}','${e.id}','cost',Number(this.value))">
-      <button class="tag-toggle${paidCls}" onclick="togglePrepaid('${dayId}','${e.id}')">💳 立替</button>
-      ${e.prepaid?`<select class="paid-who-sel" onchange="updEnt('${dayId}','${e.id}','paidBy',this.value)">${mOpts}</select>`:''}
-    </div>`;
-  }else{
-    const parts=[];
-    if(e.booked)parts.push(`<span class="badge-booked">✅ 予約済${e.bookingRef?' · '+esc(e.bookingRef):''}</span>${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`);
-    else if(e.bookingRequired)parts.push(`<span class="badge-req">📅 要予約</span>${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`);
-    if(Number(e.cost)>0)parts.push(`<span class="badge-cost">¥${Number(e.cost).toLocaleString()}</span>`);
-    if(e.prepaid)parts.push(`<span class="badge-paid">💳 ${esc(e.paidBy||'立替あり')}</span>`);
-    if(parts.length)bookingHtml=`<div class="bk-row">${parts.join('')}</div>`;
-  }
+  const reqCls=e.bookingRequired?' on-req':'';
+  const bookedCls=e.booked?' on-booked':'';
+  const paidCls=e.prepaid?' on-paid':'';
+  const members=getMembers();
+  const mOpts=members.length
+    ?`<option value="">--</option>`+members.map(m=>`<option value="${esc(m)}"${e.paidBy===m?' selected':''}>${esc(m)}</option>`).join('')
+    :`<option value="${esc(e.paidBy||'')}">（名前未設定）</option>`;
+  const bookingHtml=`<div class="bk-row">
+    <button class="tag-toggle${reqCls}" onclick="toggleBk('${dayId}','${e.id}')">📅 要予約</button>
+    <button class="tag-toggle${bookedCls}" onclick="toggleBooked('${dayId}','${e.id}')">✅ 予約済</button>
+    ${e.bookingRequired&&!e.booked?`<input class="bkurl-in" type="url" value="${esc(e.bookingUrl||'')}" placeholder="予約URL..." onchange="updEnt('${dayId}','${e.id}','bookingUrl',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`:``}
+    ${e.booked?`<input class="bkref-in" type="text" value="${esc(e.bookingRef||'')}" placeholder="確認番号..." onchange="updEnt('${dayId}','${e.id}','bookingRef',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`:``}</div>
+  <div class="cost-row">
+    <span class="cost-lbl">¥</span>
+    <input class="cost-in" type="number" min="0" step="1" value="${e.cost||''}" placeholder="0" onchange="updEnt('${dayId}','${e.id}','cost',Number(this.value))">
+    <button class="tag-toggle${paidCls}" onclick="togglePrepaid('${dayId}','${e.id}')">💳 立替</button>
+    ${e.prepaid?`<select class="paid-who-sel" onchange="updEnt('${dayId}','${e.id}','paidBy',this.value)">${mOpts}</select>`:''}
+  </div>`;
 
   const imgHtml=e.imageUrl?`<div class="entry-img"><img src="${esc(e.imageUrl)}" onerror="this.parentElement.remove()"></div>`:'';
   const badge=isCur?`<div class="now-badge">▶ 今ここ</div>`:isNxt?`<div class="now-badge">⏱ 次の予定</div>`:'';
-  const imgBtn=editMode?`<button class="btn-icon" style="font-size:13px" title="画像" onclick="openImg('${dayId}','${e.id}')">🖼</button>`:'';
-
-  const etypeBtn=editMode?`<button class="etype-ico-btn" onclick="toggleEntryType('${dayId}','${e.id}')">${e.isTransport?'🚗 移動':'📍 地点'}</button>`:'';
+  const imgBtn=`<button class="btn-icon" style="font-size:13px" title="画像" onclick="openImg('${dayId}','${e.id}')">🖼</button>`;
+  const etypeBtn=`<button class="etype-ico-btn" onclick="toggleEntryType('${dayId}','${e.id}')">${e.isTransport?'🚗 移動':'📍 地点'}</button>`;
   const routeBtn=e.isTransport&&(e.from||e.to)?`<button class="btn-icon" style="font-size:13px" title="ルートを地図で表示" onclick="openEntryRoute('${dayId}','${e.id}')">🗺</button>`:'';
-  return`<div class="entry${isCur?' is-now':''}${e.isTransport?' is-transport':''}" data-eid="${e.id}" data-did="${dayId}" ${editMode?'draggable="true"':''}>
-    <div class="e-ico">${editMode?`<button class="ic-b" onclick="openIcPick('${dayId}','${e.id}',this)">${icon}</button>`:`<span style="font-size:20px;line-height:1">${icon}</span>`}</div>
+  return`<div class="entry${isCur?' is-now':''}${e.isTransport?' is-transport':''}" data-eid="${e.id}" data-did="${dayId}" draggable="true">
+    <div class="e-ico"><button class="ic-b" onclick="openIcPick('${dayId}','${e.id}',this)">${icon}</button></div>
     <div class="e-time">
-      <div class="tw"><input class="ti" type="text" value="${esc(e.startTime||'')}" placeholder="09:00" ${ed} onchange="updEnt('${dayId}','${e.id}','startTime',this.value)"></div>
-      <div class="tw"><span class="tsep">↓</span><input class="ti" type="text" value="${esc(e.endTime||'')}" placeholder="10:00" ${ed} onchange="updEnt('${dayId}','${e.id}','endTime',this.value)"></div>
+      <div class="tw"><input class="ti" type="text" value="${esc(e.startTime||'')}" placeholder="09:00" onchange="updEnt('${dayId}','${e.id}','startTime',this.value)"></div>
+      <div class="tw"><span class="tsep">↓</span><input class="ti" type="text" value="${esc(e.endTime||'')}" placeholder="10:00" onchange="updEnt('${dayId}','${e.id}','endTime',this.value)"></div>
       ${(()=>{const dur=calcDuration(e.startTime,e.endTime);return dur?`<div class="dur-badge">${dur}</div>`:''})()}
       ${tzConv}
     </div>
     <div class="e-body">
-      ${!e.isTransport?`<input class="name-in" type="text" value="${esc(e.name||'')}" placeholder="スポット名を入力..." ${ed} onchange="updEnt('${dayId}','${e.id}','name',this.value)">`:
-        editMode?`<div class="transport-row">
+      ${!e.isTransport?`<input class="name-in" type="text" value="${esc(e.name||'')}" placeholder="スポット名を入力..." onchange="updEnt('${dayId}','${e.id}','name',this.value)">`:
+        `<div class="transport-row">
           <input class="from-in" type="text" value="${esc(e.from||'')}" placeholder="出発地" onchange="updEnt('${dayId}','${e.id}','from',this.value)">
           <span class="tr-arr">→</span>
           <input class="to-in" type="text" value="${esc(e.to||'')}" placeholder="到着地" onchange="updEnt('${dayId}','${e.id}','to',this.value)">
-        </div>`:(e.from||e.to?`<div class="transport-row">
-          ${e.from?`<span class="tr-place" style="font-weight:600;font-size:14px">${esc(e.from)}</span>`:''}
-          ${e.from&&e.to?`<span class="tr-arr" style="font-size:14px">→</span>`:''}
-          ${e.to?`<span class="tr-place" style="font-weight:600;font-size:14px">${esc(e.to)}</span>`:''}
-        </div>`:'')}
+        </div>`}
       ${addrHtml}
-      <input class="note-in" type="text" value="${esc(e.note||'')}" placeholder="${e.isTransport?'便名・席番号など...':'メモを追加...'}" ${ed} onchange="updEnt('${dayId}','${e.id}','note',this.value)">
+      <input class="note-in" type="text" value="${esc(e.note||'')}" placeholder="${e.isTransport?'便名・席番号など...':'メモを追加...'}" onchange="updEnt('${dayId}','${e.id}','note',this.value)">
       ${linkHtml}${bookingHtml}${imgHtml}${badge}
     </div>
-    <div class="e-acts">${etypeBtn}${routeBtn}${imgBtn}${editMode?`<button class="btn-del" onclick="delEnt('${dayId}','${e.id}')">✕</button>`:''}</div>
+    <div class="e-acts">${etypeBtn}${routeBtn}${imgBtn}<button class="btn-del" onclick="delEnt('${dayId}','${e.id}')">✕</button></div>
   </div>`;
 }
 
@@ -1521,7 +1460,7 @@ function rCPList(){
       <div class="c-meta">
         <span class="c-author">${esc(c.author)}</span>
         <span class="c-time">${fmtTime(c.at)}</span>
-        ${editMode?`<button class="c-del" onclick="delComment('${c.id}')">✕</button>`:''}
+        <button class="c-del" onclick="delComment('${c.id}')">✕</button>
       </div>
       <div class="c-text">${esc(c.text)}</div>
     </div>`).join('');
@@ -1562,19 +1501,16 @@ function delComment(id){
 
 /* ══ DATA OPS ══ */
 function addDay(){
-  if(!editMode)return;
   const d={id:uid(),title:'',date:'',dateIso:'',routeMode:'DRIVING',entries:[]};
   D.days.push(d);save();rDays();rDayNav();
   setTimeout(()=>{document.querySelectorAll('.day-title')[D.days.length-1]?.focus();scrollToDay('day-'+d.id)},60);
 }
 function delDay(id){
-  if(!editMode)return;
   if(D.days.length>1&&!confirm('この日程を削除しますか？'))return;
   D.days=D.days.filter(d=>d.id!==id);save();rDays();rDayNav();
 }
 function updDay(id,k,v){const d=D.days.find(x=>x.id===id);if(d){d[k]=v;save();rDayNav()}}
 function addEntry(dayId){
-  if(!editMode)return;
   const d=D.days.find(x=>x.id===dayId);if(!d)return;
   const e={id:uid(),icon:'📍',name:'',startTime:'',endTime:'',note:'',link:'',imageUrl:'',
     address:'',mapsUrl:'',placeId:'',lat:null,lng:null,
@@ -1837,13 +1773,9 @@ function renderBudgetModal(){
   document.getElementById('budgetContent').innerHTML=h;
 }
 
-/* ══ SHARE / PASSPHRASE ══ */
-async function openShare(){if(!D._shared){om('mSetPass');document.getElementById('inSetPass').value='';}else{om('mShare');await refreshShareUrl();}}
-async function doSetPass(){const v=document.getElementById('inSetPass').value.trim();D.passphraseHash=v?await sha256(v):'';D._shared=true;save();cm('mSetPass');om('mShare');await refreshShareUrl();}
+/* ══ SHARE ══ */
+async function openShare(){om('mShare');await refreshShareUrl();}
 function copyUrl(){navigator.clipboard.writeText(document.getElementById('shareUrl').value).then(()=>toast('URLをコピーしました ✓'))}
-function promptEdit(){if(!D.passphraseHash){isEdit(true);return}om('mAuth');document.getElementById('inAuth').value='';document.getElementById('authErr').style.display='none';setTimeout(()=>document.getElementById('inAuth').focus(),80)}
-async function doAuth(){const v=document.getElementById('inAuth').value;const h=await sha256(v);if(h===D.passphraseHash){cm('mAuth');isEdit(true);toast('編集モードになりました')}else document.getElementById('authErr').style.display='block'}
-function isEdit(v){editMode=v;save();renderAll()}
 
 /* ══ MODAL HELPERS ══ */
 function om(id){document.getElementById(id)?.classList.add('on')}
@@ -1855,7 +1787,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 /* ══ KEYBOARD ══ */
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    ['mShare','mSetPass','mAuth','mImg','mMapsKey','mBudget','mPacking'].forEach(cm);
+    ['mShare','mImg','mMapsKey','mBudget','mPacking'].forEach(cm);
     closeIcPick();closeThPop();closeCal();closeAC();
     if(document.getElementById('mapPanel').classList.contains('on'))closeMapView();
   }
@@ -1879,14 +1811,6 @@ async function init(){
   setInterval(()=>{rNowBar();rDays()},60000);
 
   // Print: render in view mode so empty fields are hidden
-  let _printWasEdit = false;
-  window.addEventListener('beforeprint', () => {
-    _printWasEdit = editMode;
-    if(editMode){ editMode = false; rDays(); }
-  });
-  window.addEventListener('afterprint', () => {
-    if(_printWasEdit){ editMode = true; rDays(); }
-  });
 
   // Reload data when URL hash changes (e.g. pasting share URL in same tab)
   window.addEventListener('hashchange', async()=>{

@@ -316,10 +316,9 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .map-hd::-webkit-scrollbar{display:none}
 .map-close{font-size:18px;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px 6px;border-radius:6px;transition:all var(--tr);flex-shrink:0}
 .map-close:hover{background:var(--bg);color:var(--text)}
-.map-day-btn{font-size:12px;font-weight:500;background:none;border:none;cursor:pointer;padding:5px 10px;border-radius:20px;color:var(--muted);white-space:nowrap;flex-shrink:0;transition:all var(--tr)}
-.map-day-btn:hover{color:var(--accent)}
-.map-day-btn.on{background:var(--accent);color:#fff}
-.map-vsep{color:var(--border2);font-size:14px;flex-shrink:0}
+.map-route-title{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text);overflow:hidden;flex:1;min-width:0}
+.map-route-title span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+.map-arr{color:var(--accent);flex-shrink:0}
 .route-btns{display:flex;gap:3px;flex-shrink:0;margin-left:auto}
 .route-btn{font-size:12px;background:none;border:1px solid var(--border);cursor:pointer;padding:4px 9px;border-radius:20px;color:var(--muted);white-space:nowrap;transition:all var(--tr)}
 .route-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -853,7 +852,7 @@ let activeIcPop=null,activeThPop=null,activeAcPop=null;
 let calState={mode:'day',dayId:null,yr:null,mo:null,anchor:null};
 let dayDragIdx=null,entDragId=null,entDragDayId=null;
 let mapInst=null,dirRenderer=null,mapMarkers=[];
-let mapDayIdx=0;
+let mapEntDayId=null,mapEntId=null,mapEntMode='DRIVING';
 let _placesSvc=null;
 
 /* ══ UTILS ══ */
@@ -1225,67 +1224,40 @@ function clearPlace(did,eid){
 
 /* ══ MAP VIEW ══ */
 const ROUTE_MODES=[{id:'DRIVING',label:'🚗 車'},{id:'TRANSIT',label:'🚃 電車'},{id:'WALKING',label:'🚶 徒歩'},{id:'BICYCLING',label:'🚲 自転車'}];
-function openMapView(){
-  if(!getMapsKey())return;
-  if(!window.google?.maps){loadMapsApi();setTimeout(()=>document.getElementById('mapPanel').classList.add('on'),800);}
-  else document.getElementById('mapPanel').classList.add('on');
-  mapDayIdx=Math.max(0,Math.min(mapDayIdx,D.days.length-1));
-  rMapHd();rMapFoot();rMapContent();
+function openEntryRoute(dayId,entId){
+  mapEntDayId=dayId;mapEntId=entId;
+  if(!window.google?.maps){loadMapsApi();setTimeout(()=>{document.getElementById('mapPanel').classList.add('on');rMapHd();rMapFoot();rMapContent();},800);}
+  else{document.getElementById('mapPanel').classList.add('on');rMapHd();rMapFoot();rMapContent();}
 }
 function closeMapView(){document.getElementById('mapPanel').classList.remove('on')}
 function rMapHd(){
   const hd=document.getElementById('mapHd');
-  const day=D.days[mapDayIdx],rm=day?.routeMode||'DRIVING';
-  const tabs=(D.days||[]).map((d,i)=>`<button class="map-day-btn${i===mapDayIdx?' on':''}" onclick="switchMapDay(${i})">Day ${i+1}${d.date?' · '+d.date:''}</button>`).join('');
-  const rtBtns=ROUTE_MODES.map(m=>`<button class="route-btn${rm===m.id?' on':''}" onclick="setRouteMode('${m.id}')">${m.label}</button>`).join('');
-  hd.innerHTML=`<button class="map-close" onclick="closeMapView()">✕</button>${tabs}<span class="map-vsep">｜</span><div class="route-btns">${rtBtns}</div>`;
+  const day=D.days.find(d=>d.id===mapEntDayId);
+  const ent=(day?.entries||[]).find(e=>e.id===mapEntId);
+  const from=esc(ent?.from||'出発地');const to=esc(ent?.to||'到着地');
+  const rtBtns=ROUTE_MODES.map(m=>`<button class="route-btn${mapEntMode===m.id?' on':''}" onclick="setRouteMode('${m.id}')">${m.label}</button>`).join('');
+  hd.innerHTML=`<button class="map-close" onclick="closeMapView()">✕</button><div class="map-route-title"><span>${from}</span><span class="map-arr">→</span><span>${to}</span></div><div class="route-btns">${rtBtns}</div>`;
 }
-function switchMapDay(idx){mapDayIdx=idx;rMapHd();rMapFoot();rMapContent()}
-function setRouteMode(mode){const day=D.days[mapDayIdx];if(day){day.routeMode=mode;save();rMapHd();rMapContent();}}
-function rMapFoot(){
-  const foot=document.getElementById('mapFoot'),day=D.days[mapDayIdx];
-  if(!day){foot.innerHTML='';return}
-  foot.innerHTML=(day.entries||[]).map((e,i)=>`
-    <div class="map-chip${!(e.lat&&e.lng)?' no-pos':''}">
-      <div class="mc-num">📍 ${i+1}</div>
-      <div class="mc-name">${esc(e.icon||'')} ${esc(e.name||'(未入力)')}</div>
-      <div class="mc-time">${[e.startTime,e.endTime].filter(Boolean).join('–')}</div>
-      ${!(e.lat&&e.lng)?'<div class="mc-nopos">住所未確定</div>':''}
-    </div>`).join('');
-}
+function setRouteMode(mode){mapEntMode=mode;rMapHd();rMapContent();}
+function rMapFoot(){document.getElementById('mapFoot').innerHTML='';}
 function rMapContent(){
   const mapEl=document.getElementById('mapEl');
   if(!window.google?.maps){
     mapEl.innerHTML=`<div class="no-maps"><div style="font-size:40px">🗺️</div><p>地図を読み込み中...</p></div>`;
     return;
   }
-  const day=D.days[mapDayIdx];
-  const spots=(day?.entries||[]).filter(e=>e.lat&&e.lng);
+  const day=D.days.find(d=>d.id===mapEntDayId);
+  const ent=(day?.entries||[]).find(e=>e.id===mapEntId);
   if(!mapInst)mapInst=new google.maps.Map(mapEl,{center:{lat:35.6812,lng:139.7671},zoom:13,mapTypeControl:false,streetViewControl:false});
   mapMarkers.forEach(m=>m.setMap(null));mapMarkers=[];
   if(dirRenderer){dirRenderer.setMap(null);dirRenderer=null;}
-  if(!spots.length)return;
-  if(spots.length===1){
-    mapInst.setCenter({lat:spots[0].lat,lng:spots[0].lng});mapInst.setZoom(15);
-    mapMarkers.push(new google.maps.Marker({position:{lat:spots[0].lat,lng:spots[0].lng},map:mapInst,label:{text:'1',color:'#fff',fontWeight:'bold'}}));
-    return;
-  }
+  if(!ent||(!ent.from&&!ent.to))return;
   dirRenderer=new google.maps.DirectionsRenderer();dirRenderer.setMap(mapInst);
-  const rm=day?.routeMode||'DRIVING';
-  const req={
-    origin:{lat:spots[0].lat,lng:spots[0].lng},
-    destination:{lat:spots[spots.length-1].lat,lng:spots[spots.length-1].lng},
-    waypoints:spots.slice(1,-1).map(e=>({location:{lat:e.lat,lng:e.lng},stopover:true})),
-    travelMode:google.maps.TravelMode[rm]
-  };
-  if(rm==='TRANSIT')req.transitOptions={departureTime:new Date()};
+  const req={origin:ent.from||ent.to,destination:ent.to||ent.from,travelMode:google.maps.TravelMode[mapEntMode]};
+  if(mapEntMode==='TRANSIT')req.transitOptions={departureTime:new Date()};
   new google.maps.DirectionsService().route(req,(res,status)=>{
     if(status==='OK')dirRenderer.setDirections(res);
-    else{
-      dirRenderer.setMap(null);dirRenderer=null;
-      spots.forEach((e,i)=>mapMarkers.push(new google.maps.Marker({position:{lat:e.lat,lng:e.lng},map:mapInst,label:{text:String(i+1),color:'#fff',fontWeight:'bold'}})));
-      const bounds=new google.maps.LatLngBounds();spots.forEach(e=>bounds.extend({lat:e.lat,lng:e.lng}));mapInst.fitBounds(bounds);
-    }
+    else{dirRenderer.setMap(null);dirRenderer=null;toast('ルートを取得できませんでした');}
   });
 }
 
@@ -1340,7 +1312,6 @@ function rTopbar(){
     r.innerHTML=`<span class="edit-badge">✏️ 編集中</span>
       <div style="position:relative" id="thW"><button class="btn-icon" title="テーマ" onclick="toggleThPop()">🎨</button></div>
       <button class="btn btn-ghost" onclick="openBudget()">💰 <span class="tb-lbl">精算</span></button>
-      <button class="btn btn-ghost" onclick="openMapView()">🗺 <span class="tb-lbl">マップ</span></button>
       <button class="btn btn-ghost" onclick="openPacking()">🎒 <span class="tb-lbl">持ち物</span></button>
       <button class="btn btn-ghost" onclick="window.print()">🖨</button>
       <button class="btn-icon" onclick="toggleCP()" title="コメント">💬</button>
@@ -1348,7 +1319,6 @@ function rTopbar(){
   }else{
     r.innerHTML=`<div style="position:relative" id="thW"><button class="btn-icon" onclick="toggleThPop()">🎨</button></div>
       <button class="btn btn-ghost" onclick="openBudget()">💰</button>
-      <button class="btn btn-ghost" onclick="openMapView()">🗺</button>
       <button class="btn btn-ghost" onclick="openPacking()">🎒</button>
       <button class="btn btn-ghost" onclick="window.print()">🖨</button>
       <button class="btn-icon" onclick="toggleCP()">💬</button>
@@ -1485,6 +1455,7 @@ function rEntry(day,e,ns){
   const imgBtn=editMode?`<button class="btn-icon" style="font-size:13px" title="画像" onclick="openImg('${dayId}','${e.id}')">🖼</button>`:'';
 
   const etypeBtn=editMode?`<button class="etype-ico-btn" onclick="toggleEntryType('${dayId}','${e.id}')">${e.isTransport?'🚗 移動':'📍 地点'}</button>`:'';
+  const routeBtn=e.isTransport&&(e.from||e.to)?`<button class="btn-icon" style="font-size:13px" title="ルートを地図で表示" onclick="openEntryRoute('${dayId}','${e.id}')">🗺</button>`:'';
   return`<div class="entry${isCur?' is-now':''}${e.isTransport?' is-transport':''}" data-eid="${e.id}" data-did="${dayId}" ${editMode?'draggable="true"':''}>
     <div class="e-ico">${editMode?`<button class="ic-b" onclick="openIcPick('${dayId}','${e.id}',this)">${icon}</button>`:`<span style="font-size:20px;line-height:1">${icon}</span>`}</div>
     <div class="e-time">
@@ -1508,7 +1479,7 @@ function rEntry(day,e,ns){
       <input class="note-in" type="text" value="${esc(e.note||'')}" placeholder="${e.isTransport?'便名・席番号など...':'メモを追加...'}" ${ed} onchange="updEnt('${dayId}','${e.id}','note',this.value)">
       ${linkHtml}${bookingHtml}${imgHtml}${badge}
     </div>
-    <div class="e-acts">${etypeBtn}${imgBtn}${editMode?`<button class="btn-del" onclick="delEnt('${dayId}','${e.id}')">✕</button>`:''}</div>
+    <div class="e-acts">${etypeBtn}${routeBtn}${imgBtn}${editMode?`<button class="btn-del" onclick="delEnt('${dayId}','${e.id}')">✕</button>`:''}</div>
   </div>`;
 }
 

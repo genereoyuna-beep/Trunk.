@@ -892,8 +892,30 @@ async function inflateDecode(s){
   let off=0;for(const c of chunks){out.set(c,off);off+=c.length;}
   return new TextDecoder().decode(out);
 }
+function shrinkForShare(d){
+  const s=JSON.parse(JSON.stringify(d));
+  delete s._shared;
+  if(!s.note)delete s.note;
+  if(!s.budget)delete s.budget;
+  if(!s.comments||!s.comments.length)delete s.comments;
+  for(const day of s.days||[]){
+    if(!day.title)delete day.title;
+    if(day.routeMode==='DRIVING')delete day.routeMode;
+    for(const e of day.entries||[]){
+      const emp=['note','link','imageUrl','address','mapsUrl','placeId','bookingUrl','paidBy','from','to'];
+      emp.forEach(k=>{if(!e[k])delete e[k];});
+      if(e.lat==null)delete e.lat;
+      if(e.lng==null)delete e.lng;
+      if(!e.isTransport)delete e.isTransport;
+      if(!e.bookingRequired)delete e.bookingRequired;
+      if(!e.prepaid)delete e.prepaid;
+      if(!e.cost)delete e.cost;
+    }
+  }
+  return s;
+}
 async function getShareUrl(){
-  try{const e=await deflateEncode(D);return location.origin+location.pathname+'#v2/'+e;}
+  try{const e=await deflateEncode(shrinkForShare(D));return location.origin+location.pathname+'#v2/'+e;}
   catch{const e=encode(D);return e?location.origin+location.pathname+'#v1/'+e:null;}
 }
 async function refreshShareUrl(){const el=document.getElementById('shareUrl');if(el)el.value=(await getShareUrl())||''}

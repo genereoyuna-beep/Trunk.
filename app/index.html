@@ -246,6 +246,10 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .cost-lbl{font-size:12px;color:var(--muted);flex-shrink:0}
 .badge-cost{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);white-space:nowrap}
 .curr-sel{font-size:12px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;background:var(--bg);color:var(--text);outline:none;max-width:72px}
+.aff-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;align-items:center}
+.aff-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:4px;background:rgba(0,150,199,.07);border:1px solid rgba(0,150,199,.18);color:var(--accent);text-decoration:none;transition:background .15s;white-space:nowrap}
+.aff-btn:hover{background:rgba(0,150,199,.15)}
+.aff-note{font-size:10px;color:var(--border2);margin-left:2px}
 .curr-sel:focus{border-color:var(--accent)}
 .curr-rate-row{display:flex;align-items:center;gap:6px;padding:5px 2px;font-size:13px;border-bottom:1px solid var(--border)}
 .curr-rate-row:last-of-type{border-bottom:none}
@@ -834,6 +838,12 @@ const ICONS={
 };
 
 /* ══ STATE ══ */
+// ── アフィリエイトID設定（各プログラム登録後にここを書き換える）──
+const AFF={
+  booking:'',   // booking.com パートナーID (aid=XXXXX)
+  agoda:'',     // Agoda CID
+  skyscanner:'',// Skyscanner パートナーID
+};
 const SK='tp_v6';
 const MK_KEY='tp_maps_key';
 const MAPS_API_KEY='AIzaSyCoSparwsUgSrvu8koZ9hepKbmBr5APMsQ';
@@ -1227,6 +1237,29 @@ function clearPlace(did,eid){
 
 /* ══ MAP VIEW ══ */
 const ROUTE_MODES=[{id:'DRIVING',label:'🚗 車'},{id:'TRANSIT',label:'🚃 電車'},{id:'WALKING',label:'🚶 徒歩'},{id:'BICYCLING',label:'🚲 自転車'}];
+function buildAffLinks(e){
+  const links=[];
+  if(!e.isTransport){
+    const q=encodeURIComponent(e.name||e.address||'');
+    if(q){
+      const bAid=AFF.booking?`&aid=${AFF.booking}`:'';
+      links.push(`<a class="aff-btn" href="https://www.booking.com/searchresults.ja.html?ss=${q}${bAid}" target="_blank" rel="noopener sponsored">🏨 booking.com</a>`);
+      const aCid=AFF.agoda?`&cid=${AFF.agoda}`:'';
+      links.push(`<a class="aff-btn" href="https://www.agoda.com/ja-jp/search?city=${q}${aCid}" target="_blank" rel="noopener sponsored">🏨 Agoda</a>`);
+    }
+  }else{
+    const from=encodeURIComponent(e.from||'');
+    const to=encodeURIComponent(e.to||'');
+    if(from||to){
+      const sAff=AFF.skyscanner?`&affiliateId=${AFF.skyscanner}`:'';
+      const ssUrl=`https://www.skyscanner.jp/transport/flights/${from||'anywhere'}/${to||'anywhere'}/?adults=1${sAff}`;
+      links.push(`<a class="aff-btn" href="${ssUrl}" target="_blank" rel="noopener sponsored">✈️ スカイスキャナー</a>`);
+      links.push(`<a class="aff-btn" href="https://www.his-j.com/tyo/air/list.aspx?dep=${from}&arr=${to}" target="_blank" rel="noopener sponsored">✈️ HIS</a>`);
+    }
+  }
+  if(!links.length)return'';
+  return`<div class="aff-row">${links.join('')}<span class="aff-note">PR</span></div>`;
+}
 function openEntryRoute(dayId,entId){
   mapEntDayId=dayId;mapEntId=entId;
   if(!window.google?.maps){loadMapsApi();setTimeout(()=>{document.getElementById('mapPanel').classList.add('on');rMapHd();rMapFoot();rMapContent();},800);}
@@ -1417,10 +1450,11 @@ function rEntry(day,e,ns){
   const mOpts=members.length
     ?`<option value="">--</option>`+members.map(m=>`<option value="${esc(m)}"${e.paidBy===m?' selected':''}>${esc(m)}</option>`).join('')
     :`<option value="${esc(e.paidBy||'')}">（名前未設定）</option>`;
+  const affHtml=bkSt==='required'?buildAffLinks(e):'';
   const bookingHtml=`<div class="bk-row">
     <button class="tag-toggle${bkCls}" onclick="cycleBooking('${dayId}','${e.id}')">${bkLabel}</button>
     ${bkSt==='required'?`<input class="bkurl-in" type="url" value="${esc(e.bookingUrl||'')}" placeholder="予約URL..." onchange="updEnt('${dayId}','${e.id}','bookingUrl',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`:``}
-    ${bkSt==='booked'?`<input class="bkref-in" type="text" value="${esc(e.bookingRef||'')}" placeholder="確認番号..." onchange="updEnt('${dayId}','${e.id}','bookingRef',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`:``}</div>
+    ${bkSt==='booked'?`<input class="bkref-in" type="text" value="${esc(e.bookingRef||'')}" placeholder="確認番号..." onchange="updEnt('${dayId}','${e.id}','bookingRef',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`:``}</div>${affHtml}
   ${(()=>{
     const curs=D.currencies||[];
     const currSel=curs.length>0

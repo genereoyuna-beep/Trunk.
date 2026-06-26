@@ -11,7 +11,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%234F7DF3'/%3E%3Ctext x='16' y='23' font-family='Arial,sans-serif' font-weight='bold' font-size='18' text-anchor='middle' fill='white'%3ET.%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="logo.new.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500&family=Syne:wght@800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 button,input,select,textarea,a{font-family:inherit}
@@ -88,7 +88,8 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 
 /* ── TOPBAR ── */
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);height:52px;padding:0 16px;z-index:300;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);flex-shrink:0}
-.logo{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.logo{display:flex;align-items:center;flex-shrink:0;font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.5px;white-space:nowrap}
+.logo span{color:var(--accent)}
 .trip-title{font-size:15px;font-weight:600;border:none;outline:none;background:transparent;color:var(--text);flex:1;min-width:0;padding:3px 6px;border-radius:5px}
 .trip-title:not(:disabled):hover{background:var(--bg)}
 .trip-title:not(:disabled):focus{background:var(--bg);outline:2px solid var(--accent)}
@@ -614,7 +615,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 @media(max-width:640px){
   /* トップバー */
   .topbar{padding:0 10px;gap:3px;height:48px}
-  .logo{width:28px;height:28px;border-radius:6px}
+  .logo{font-size:17px}
   .trip-title{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tb-r{gap:2px}
   .tb-r .btn{padding:6px 8px;font-size:12px}
@@ -688,7 +689,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 <div class="ph" id="ph"></div>
 
 <header class="topbar">
-  <div class="logo"><img src="../logo.new.png" alt="Trunk." style="width:100%;height:100%;object-fit:cover"></div>
+  <div class="logo">Trunk<span>.</span></div>
   <input class="trip-title" id="tripTitle" type="text" placeholder="旅行タイトルを入力">
   <div class="tb-r" id="tbR"></div>
 </header>

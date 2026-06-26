@@ -839,14 +839,15 @@ const ICONS={
 
 /* ══ STATE ══ */
 const AFF={
-  agoda:      'https://px.a8.net/svt/ejp?a8mat=4B650I+6CMH2Q+4X1W+5YRHE',
-  newt:       'https://px.a8.net/svt/ejp?a8mat=4B650I+6GSIB6+5GQS+5YJRM',
-  buyma:      'https://px.a8.net/svt/ejp?a8mat=4B650I+5O7P9U+54RO+BWVTE',
-  kkday:      'https://px.a8.net/svt/ejp?a8mat=4B650I+6KD3XU+52F8+60H7M',
-  nearme:     'https://px.a8.net/svt/ejp?a8mat=4B650I+5OT4VM+4Q64+5YRHE',
-  navitime:   'https://px.a8.net/svt/ejp?a8mat=4B650I+6P4KS2+4R8G+BWVTE',
-  skycar:     'https://px.a8.net/svt/ejp?a8mat=4B650I+6SP6EQ+2AIA+61RIA',
-  ryRental:   'https://px.a8.net/svt/ejp?a8mat=4B650I+5URGXE+3J30+5YJRM',
+  agoda:    'https://px.a8.net/svt/ejp?a8mat=4B650I+6CMH2Q+4X1W+5YRHE',
+  newt:     'https://px.a8.net/svt/ejp?a8mat=4B650I+6GSIB6+5GQS+5YJRM',
+  buyma:    'https://px.a8.net/svt/ejp?a8mat=4B650I+5O7P9U+54RO+BWVTE',
+  kkday:    'https://px.a8.net/svt/ejp?a8mat=4B650I+6KD3XU+52F8+60H7M',
+  nearme:   'https://px.a8.net/svt/ejp?a8mat=4B650I+5OT4VM+4Q64+5YRHE',
+  navitime: 'https://px.a8.net/svt/ejp?a8mat=4B650I+6P4KS2+4R8G+BWVTE',
+  skycar:   'https://px.a8.net/svt/ejp?a8mat=4B650I+6SP6EQ+2AIA+61RIA',
+  ryRental: 'https://px.a8.net/svt/ejp?a8mat=4B650I+5URGXE+3J30+5YJRM',
+  airtri:   'https://px.a8.net/svt/ejp?a8mat=4B650I+A7CH0Y+AD2+69P02',
 };
 const SK='tp_v6';
 const MK_KEY='tp_maps_key';
@@ -1242,18 +1243,41 @@ function clearPlace(did,eid){
 /* ══ MAP VIEW ══ */
 const ROUTE_MODES=[{id:'DRIVING',label:'🚗 車'},{id:'TRANSIT',label:'🚃 電車'},{id:'WALKING',label:'🚶 徒歩'},{id:'BICYCLING',label:'🚲 自転車'}];
 function buildAffLinks(e){
+  const ic=e.icon||'';
+  const a=(url,label)=>`<a class="aff-btn" href="${url}" target="_blank" rel="noopener sponsored">${label}</a>`;
   const links=[];
-  if(!e.isTransport){
-    if(AFF.agoda)     links.push(`<a class="aff-btn" href="${AFF.agoda}"    target="_blank" rel="noopener sponsored">🏨 Agoda</a>`);
-    if(AFF.newt)      links.push(`<a class="aff-btn" href="${AFF.newt}"     target="_blank" rel="noopener sponsored">✈️ NEWT</a>`);
-    if(AFF.kkday)     links.push(`<a class="aff-btn" href="${AFF.kkday}"    target="_blank" rel="noopener sponsored">🎫 KKday</a>`);
-    if(AFF.buyma)     links.push(`<a class="aff-btn" href="${AFF.buyma}"    target="_blank" rel="noopener sponsored">🗺 BUYMA TRAVEL</a>`);
-    if(AFF.ryRental)  links.push(`<a class="aff-btn" href="${AFF.ryRental}" target="_blank" rel="noopener sponsored">🧳 スーツケースレンタル</a>`);
+
+  if(['✈️'].includes(ic)){
+    if(AFF.airtri)  links.push(a(AFF.airtri,  '✈️ エアトリ'));
+    if(AFF.nearme)  links.push(a(AFF.nearme,  '🚐 空港送迎'));
+  }else if(['🚄','🚅','🚃','🚌','🚇'].includes(ic)){
+    if(AFF.navitime)links.push(a(AFF.navitime,'🚄 新幹線チケット'));
+  }else if(['🚗','🚕','🛺','🛻'].includes(ic)){
+    if(AFF.skycar)  links.push(a(AFF.skycar,  '🚗 レンタカー'));
+  }else if(['🏨','🏠','🏡','🛖','🛏️','🛎️','🔑'].includes(ic)){
+    if(AFF.agoda)   links.push(a(AFF.agoda,   '🏨 Agoda'));
+    if(AFF.newt)    links.push(a(AFF.newt,    '✈️ NEWT'));
+    if(AFF.ryRental)links.push(a(AFF.ryRental,'🧳 スーツケースレンタル'));
+  }else if(['🎿','🏊','🤿','🧗','🎣','🛶','⛷️','🪂','🎯','🎲','🎽','🏌️',
+             '🎡','🎢','🎠','🎪','🎭','🎨','🎤','🎵','🎶','🏟️','🎉'].includes(ic)){
+    if(AFF.kkday)   links.push(a(AFF.kkday,   '🎫 KKday'));
+    if(AFF.buyma)   links.push(a(AFF.buyma,   '🗺 BUYMA TRAVEL'));
+  }else if(['🍜','🍱','🍣','🍛','🍔','🍕','🥩','🦞','🦀','🍰','🍦','☕','🍺','🍷','🍶','🥗','🍲','🍤','🍙','🧆','🥐','🫕','🍸','🧋'].includes(ic)){
+    // 食事系は広告なし
   }else{
-    if(AFF.nearme)    links.push(`<a class="aff-btn" href="${AFF.nearme}"   target="_blank" rel="noopener sponsored">🚐 空港送迎</a>`);
-    if(AFF.navitime)  links.push(`<a class="aff-btn" href="${AFF.navitime}" target="_blank" rel="noopener sponsored">🚄 新幹線チケット</a>`);
-    if(AFF.skycar)    links.push(`<a class="aff-btn" href="${AFF.skycar}"   target="_blank" rel="noopener sponsored">🚗 レンタカー</a>`);
+    // アイコン未設定・観光・その他
+    if(e.isTransport){
+      if(AFF.airtri)  links.push(a(AFF.airtri,  '✈️ エアトリ'));
+      if(AFF.navitime)links.push(a(AFF.navitime,'🚄 新幹線'));
+      if(AFF.nearme)  links.push(a(AFF.nearme,  '🚐 空港送迎'));
+      if(AFF.skycar)  links.push(a(AFF.skycar,  '🚗 レンタカー'));
+    }else{
+      if(AFF.agoda)   links.push(a(AFF.agoda,   '🏨 Agoda'));
+      if(AFF.kkday)   links.push(a(AFF.kkday,   '🎫 KKday'));
+      if(AFF.buyma)   links.push(a(AFF.buyma,   '🗺 BUYMA TRAVEL'));
+    }
   }
+
   if(!links.length)return'';
   return`<div class="aff-row">${links.join('')}<span class="aff-note">PR</span></div>`;
 }

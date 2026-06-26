@@ -255,6 +255,13 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .curr-add-row{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
 .curr-code-in{font-size:12px;width:52px;border:1px solid var(--border);border-radius:4px;padding:2px 6px;background:var(--bg);color:var(--text);outline:none;text-transform:uppercase}
 .curr-code-in:focus{border-color:var(--accent)}
+.split-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:3px}
+.split-lbl{font-size:11px;color:var(--muted);flex-shrink:0}
+.split-chip{font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;line-height:1.5}
+.split-chip.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);font-weight:600}
+.wk-bal-row{display:flex;align-items:center;padding:4px 2px;font-size:12px;gap:6px}
+.wk-bal-name{flex:1;color:var(--text2)}
+.wk-bal-val{font-weight:600;flex-shrink:0}
 
 /* entry type toggle */
 .etype-btn{font-size:10px;font-weight:600;padding:1px 8px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;line-height:1.7;white-space:nowrap}
@@ -1019,6 +1026,7 @@ function migrate(){
     if(e.paidBy===undefined)e.paidBy='';
     if(e.cost===undefined)e.cost=0;
     if(e.currency===undefined)e.currency='JPY';
+    if(e.splitAmong===undefined)e.splitAmong=[];
     if(e.isTransport===undefined)e.isTransport=false;
     if(e.from===undefined)e.from='';
     if(e.to===undefined)e.to='';
@@ -1417,12 +1425,18 @@ function rEntry(day,e,ns){
     const currSel=curs.length>0
       ?`<select class="curr-sel" onchange="updEnt('${dayId}','${e.id}','currency',this.value)"><option value="JPY"${(e.currency||'JPY')==='JPY'?' selected':''}>¥ JPY</option>${curs.map(c=>`<option value="${esc(c.code)}"${e.currency===c.code?' selected':''}>${esc(c.code)}</option>`).join('')}</select>`
       :`<span class="cost-lbl">¥</span>`;
+    const splitRow=(()=>{
+      if(!e.prepaid||members.length<2)return'';
+      const active=e.splitAmong&&e.splitAmong.length?e.splitAmong:members;
+      const chips=members.map(m=>`<button class="split-chip${active.includes(m)?' on':''}" onclick="toggleSplitMember('${dayId}','${e.id}','${esc(m)}')">${esc(m)}</button>`).join('');
+      return`<div class="split-row"><span class="split-lbl">対象:</span>${chips}</div>`;
+    })();
     return`<div class="cost-row">
     ${currSel}
     <input class="cost-in" type="number" min="0" step="0.01" value="${e.cost||''}" placeholder="0" onchange="updEnt('${dayId}','${e.id}','cost',Number(this.value))">
     <button class="tag-toggle${paidCls}" onclick="togglePrepaid('${dayId}','${e.id}')">💳 立替</button>
     ${e.prepaid?`<select class="paid-who-sel" onchange="updEnt('${dayId}','${e.id}','paidBy',this.value)">${mOpts}</select>`:''}
-  </div>`;
+  </div>${splitRow}`;
   })()}`;
 
   const imgHtml=e.imageUrl?`<div class="entry-img"><img src="${esc(e.imageUrl)}" onerror="this.parentElement.remove()"></div>`:'';
@@ -1535,7 +1549,7 @@ function addEntry(dayId){
   const e={id:uid(),icon:'📍',name:'',startTime:'',endTime:'',note:'',link:'',imageUrl:'',
     address:'',mapsUrl:'',placeId:'',lat:null,lng:null,
     isTransport:false,from:'',to:'',
-    bookingStatus:'none',bookingUrl:'',bookingRef:'',prepaid:false,paidBy:'',cost:0,currency:'JPY'};
+    bookingStatus:'none',bookingUrl:'',bookingRef:'',prepaid:false,paidBy:'',cost:0,currency:'JPY',splitAmong:[]};
   d.entries.push(e);save();rDays();
   setTimeout(()=>{const els=document.querySelectorAll(`#ent-${dayId} .name-in`);els[els.length-1]?.focus()},60);
 }
@@ -1696,30 +1710,46 @@ function calcBudgetData(){
   }
   return{totalCost,prepaidItems,dayTotals};
 }
+function toggleSplitMember(dayId,eid,member){
+  const e=D.days.find(d=>d.id===dayId)?.entries.find(x=>x.id===eid);
+  if(!e)return;
+  const members=getMembers();
+  if(!e.splitAmong||!e.splitAmong.length)e.splitAmong=[...members];
+  const idx=e.splitAmong.indexOf(member);
+  if(idx>=0){
+    if(e.splitAmong.length>1)e.splitAmong.splice(idx,1);
+  }else{
+    e.splitAmong.push(member);
+    if(e.splitAmong.length===members.length)e.splitAmong=[];
+  }
+  save();rDays();
+}
 function calcWarikan(){
   const members=getMembers();
   if(members.length<2)return null;
-  const paid={};members.forEach(m=>paid[m]=0);
+  const bal={};members.forEach(m=>bal[m]=0);
   let total=0;
   for(const day of D.days||[])for(const e of day.entries||[]){
-    if(e.prepaid&&e.paidBy&&Number(e.cost)>0){
-      const jpy=toJPY(Number(e.cost),e.currency||'JPY');
-      paid[e.paidBy]=(paid[e.paidBy]||0)+jpy;total+=jpy;
-    }
+    if(!e.prepaid||!e.paidBy||!(Number(e.cost)>0))continue;
+    const jpy=toJPY(Number(e.cost),e.currency||'JPY');
+    const participants=(e.splitAmong&&e.splitAmong.length?e.splitAmong:members).filter(m=>members.includes(m));
+    if(!participants.length)continue;
+    bal[e.paidBy]=(bal[e.paidBy]||0)+jpy;
+    const share=jpy/participants.length;
+    for(const p of participants)bal[p]=(bal[p]||0)-share;
+    total+=jpy;
   }
-  if(total===0)return{members,paid,total:0,perPerson:0,settlements:[]};
-  const perPerson=total/members.length;
-  const bal={};members.forEach(m=>bal[m]=(paid[m]||0)-perPerson);
-  const cred=Object.entries(bal).filter(([,v])=>v>0.5).map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v);
-  const debt=Object.entries(bal).filter(([,v])=>v<-0.5).map(([n,v])=>({n,v:-v})).sort((a,b)=>b.v-a.v);
-  const settlements=[];let ci=0,di=0;
-  while(ci<cred.length&&di<debt.length){
-    const pay=Math.min(cred[ci].v,debt[di].v);
-    if(pay>0.5)settlements.push({from:debt[di].n,to:cred[ci].n,amount:Math.round(pay)});
-    cred[ci].v-=pay;debt[di].v-=pay;
-    if(cred[ci].v<0.5)ci++;if(debt[di].v<0.5)di++;
+  if(total===0)return{members,bal,total:0,settlements:[]};
+  const pos=Object.entries(bal).filter(([,v])=>v>0.5).map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v);
+  const neg=Object.entries(bal).filter(([,v])=>v<-0.5).map(([n,v])=>({n,v:-v})).sort((a,b)=>b.v-a.v);
+  const settlements=[];let pi=0,ni=0;
+  while(pi<pos.length&&ni<neg.length){
+    const pay=Math.min(pos[pi].v,neg[ni].v);
+    if(pay>0.5)settlements.push({from:neg[ni].n,to:pos[pi].n,amount:Math.round(pay)});
+    pos[pi].v-=pay;neg[ni].v-=pay;
+    if(pos[pi].v<0.5)pi++;if(neg[ni].v<0.5)ni++;
   }
-  return{members,paid,total,perPerson:Math.round(perPerson),settlements};
+  return{members,bal,total,settlements};
 }
 function addCurrency(){
   const codeEl=document.getElementById('newCurrCode');
@@ -1830,9 +1860,10 @@ function renderBudgetModal(){
   if(!wk)h+=`<div class="b-empty">メンバーパネルで名前を2人以上入力してください</div>`;
   else if(wk.total===0)h+=`<div class="b-empty">💳 支払済のエントリーに金額を入力するとワリカンを計算します</div>`;
   else{
-    h+=`<div class="wk-per">合計 ¥${wk.total.toLocaleString()} ÷ ${wk.members.length}人 = <strong>1人あたり ¥${wk.perPerson.toLocaleString()}</strong></div>`;
-    if(!wk.settlements.length)h+=`<div class="b-empty">✅ 精算不要（均等に支払い済み）</div>`;
-    else h+=`<div class="settle-list">${wk.settlements.map(s=>`<div class="settle-item"><span>${esc(s.from)}</span><span class="settle-arrow">→</span><span>${esc(s.to)}</span><span class="settle-amt">¥${s.amount.toLocaleString()}</span></div>`).join('')}</div>`;
+    h+=`<div style="margin-bottom:8px;font-size:12px;color:var(--muted)">立替合計 ¥${Math.round(wk.total).toLocaleString()}（円換算）</div>`;
+    h+=wk.members.map(m=>{const v=wk.bal[m]||0;const sign=v>0.5?`<span class="wk-bal-val" style="color:var(--success)">受取 ¥${Math.round(v).toLocaleString()}</span>`:v<-0.5?`<span class="wk-bal-val" style="color:var(--danger)">支払 ¥${Math.round(-v).toLocaleString()}</span>`:`<span class="wk-bal-val" style="color:var(--muted)">±0</span>`;return`<div class="wk-bal-row"><span class="wk-bal-name">${esc(m)}</span>${sign}</div>`;}).join('');
+    if(!wk.settlements.length)h+=`<div class="b-empty" style="margin-top:8px">✅ 精算不要</div>`;
+    else h+=`<div class="settle-list" style="margin-top:8px">${wk.settlements.map(s=>`<div class="settle-item"><span>${esc(s.from)}</span><span class="settle-arrow">→</span><span>${esc(s.to)}</span><span class="settle-amt">¥${s.amount.toLocaleString()}</span></div>`).join('')}</div>`;
   }
   h+=`</div>`;
   document.getElementById('budgetContent').innerHTML=h;

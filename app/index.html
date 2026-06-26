@@ -244,6 +244,17 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .paid-who-sel:focus{border-color:var(--accent)}
 .cost-lbl{font-size:12px;color:var(--muted);flex-shrink:0}
 .badge-cost{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);white-space:nowrap}
+.curr-sel{font-size:12px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;background:var(--bg);color:var(--text);outline:none;max-width:72px}
+.curr-sel:focus{border-color:var(--accent)}
+.curr-rate-row{display:flex;align-items:center;gap:6px;padding:5px 2px;font-size:13px;border-bottom:1px solid var(--border)}
+.curr-rate-row:last-of-type{border-bottom:none}
+.curr-code{font-weight:700;width:42px;flex-shrink:0}
+.curr-rate-lbl{font-size:12px;color:var(--muted);flex-shrink:0}
+.curr-rate-in{font-size:13px;width:70px;border:1px solid var(--border);border-radius:4px;padding:2px 6px;background:var(--bg);color:var(--text);outline:none;text-align:right}
+.curr-rate-in:focus{border-color:var(--accent)}
+.curr-add-row{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.curr-code-in{font-size:12px;width:52px;border:1px solid var(--border);border-radius:4px;padding:2px 6px;background:var(--bg);color:var(--text);outline:none;text-transform:uppercase}
+.curr-code-in:focus{border-color:var(--accent)}
 
 /* entry type toggle */
 .etype-btn{font-size:10px;font-weight:600;padding:1px 8px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;line-height:1.7;white-space:nowrap}
@@ -993,6 +1004,7 @@ function migrate(){
   if(!D.comments)D.comments=[];
   if(!D.packingItems)D.packingItems=[];
   if(!D.budget)D.budget=0;
+  if(!D.currencies)D.currencies=[];
   // Ensure day timezone
   for(const day of D.days||[])if(!day.timezone)day.timezone='Asia/Tokyo';
   // Ensure entry fields exist
@@ -1006,6 +1018,7 @@ function migrate(){
     if(e.prepaid===undefined)e.prepaid=false;
     if(e.paidBy===undefined)e.paidBy='';
     if(e.cost===undefined)e.cost=0;
+    if(e.currency===undefined)e.currency='JPY';
     if(e.isTransport===undefined)e.isTransport=false;
     if(e.from===undefined)e.from='';
     if(e.to===undefined)e.to='';
@@ -1399,12 +1412,18 @@ function rEntry(day,e,ns){
     <button class="tag-toggle${bkCls}" onclick="cycleBooking('${dayId}','${e.id}')">${bkLabel}</button>
     ${bkSt==='required'?`<input class="bkurl-in" type="url" value="${esc(e.bookingUrl||'')}" placeholder="予約URL..." onchange="updEnt('${dayId}','${e.id}','bookingUrl',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">予約 →</a>`:''}`:``}
     ${bkSt==='booked'?`<input class="bkref-in" type="text" value="${esc(e.bookingRef||'')}" placeholder="確認番号..." onchange="updEnt('${dayId}','${e.id}','bookingRef',this.value)">${e.bookingUrl?`<a class="link-open" href="${esc(e.bookingUrl)}" target="_blank" rel="noopener">確認 →</a>`:''}`:``}</div>
-  <div class="cost-row">
-    <span class="cost-lbl">¥</span>
-    <input class="cost-in" type="number" min="0" step="1" value="${e.cost||''}" placeholder="0" onchange="updEnt('${dayId}','${e.id}','cost',Number(this.value))">
+  ${(()=>{
+    const curs=D.currencies||[];
+    const currSel=curs.length>0
+      ?`<select class="curr-sel" onchange="updEnt('${dayId}','${e.id}','currency',this.value)"><option value="JPY"${(e.currency||'JPY')==='JPY'?' selected':''}>¥ JPY</option>${curs.map(c=>`<option value="${esc(c.code)}"${e.currency===c.code?' selected':''}>${esc(c.code)}</option>`).join('')}</select>`
+      :`<span class="cost-lbl">¥</span>`;
+    return`<div class="cost-row">
+    ${currSel}
+    <input class="cost-in" type="number" min="0" step="0.01" value="${e.cost||''}" placeholder="0" onchange="updEnt('${dayId}','${e.id}','cost',Number(this.value))">
     <button class="tag-toggle${paidCls}" onclick="togglePrepaid('${dayId}','${e.id}')">💳 立替</button>
     ${e.prepaid?`<select class="paid-who-sel" onchange="updEnt('${dayId}','${e.id}','paidBy',this.value)">${mOpts}</select>`:''}
   </div>`;
+  })()}`;
 
   const imgHtml=e.imageUrl?`<div class="entry-img"><img src="${esc(e.imageUrl)}" onerror="this.parentElement.remove()"></div>`:'';
   const badge=isCur?`<div class="now-badge">▶ 今ここ</div>`:isNxt?`<div class="now-badge">⏱ 次の予定</div>`:'';
@@ -1516,7 +1535,7 @@ function addEntry(dayId){
   const e={id:uid(),icon:'📍',name:'',startTime:'',endTime:'',note:'',link:'',imageUrl:'',
     address:'',mapsUrl:'',placeId:'',lat:null,lng:null,
     isTransport:false,from:'',to:'',
-    bookingStatus:'none',bookingUrl:'',bookingRef:'',prepaid:false,paidBy:'',cost:0};
+    bookingStatus:'none',bookingUrl:'',bookingRef:'',prepaid:false,paidBy:'',cost:0,currency:'JPY'};
   d.entries.push(e);save();rDays();
   setTimeout(()=>{const els=document.querySelectorAll(`#ent-${dayId} .name-in`);els[els.length-1]?.focus()},60);
 }
@@ -1652,11 +1671,27 @@ function doImg(){
 }
 
 /* ══ BUDGET & WARIKAN ══ */
+function toJPY(amount,currency){
+  if(!currency||currency==='JPY')return amount;
+  const c=(D.currencies||[]).find(x=>x.code===currency);
+  return c?amount*c.rate:amount;
+}
+function fmtAmt(cost,currency){
+  const c=Number(cost)||0;
+  if(!currency||currency==='JPY')return`¥${c.toLocaleString()}`;
+  const jpy=toJPY(c,currency);
+  return`${currency} ${c.toLocaleString(undefined,{maximumFractionDigits:2})} (¥${Math.round(jpy).toLocaleString()})`;
+}
 function calcBudgetData(){
   let totalCost=0;const prepaidItems=[],dayTotals=[];
   for(const day of D.days||[]){
     let dt=0;
-    for(const e of day.entries||[]){const c=Number(e.cost)||0;totalCost+=c;dt+=c;if(e.prepaid&&c>0)prepaidItems.push({name:e.name,paidBy:e.paidBy||'',cost:c});}
+    for(const e of day.entries||[]){
+      const c=Number(e.cost)||0;
+      const jpy=toJPY(c,e.currency||'JPY');
+      totalCost+=jpy;dt+=jpy;
+      if(e.prepaid&&c>0)prepaidItems.push({name:e.name,paidBy:e.paidBy||'',cost:c,currency:e.currency||'JPY',costJPY:jpy});
+    }
     dayTotals.push({label:day.date||'',total:dt});
   }
   return{totalCost,prepaidItems,dayTotals};
@@ -1667,7 +1702,10 @@ function calcWarikan(){
   const paid={};members.forEach(m=>paid[m]=0);
   let total=0;
   for(const day of D.days||[])for(const e of day.entries||[]){
-    if(e.prepaid&&e.paidBy&&Number(e.cost)>0){paid[e.paidBy]=(paid[e.paidBy]||0)+Number(e.cost);total+=Number(e.cost);}
+    if(e.prepaid&&e.paidBy&&Number(e.cost)>0){
+      const jpy=toJPY(Number(e.cost),e.currency||'JPY');
+      paid[e.paidBy]=(paid[e.paidBy]||0)+jpy;total+=jpy;
+    }
   }
   if(total===0)return{members,paid,total:0,perPerson:0,settlements:[]};
   const perPerson=total/members.length;
@@ -1682,6 +1720,29 @@ function calcWarikan(){
     if(cred[ci].v<0.5)ci++;if(debt[di].v<0.5)di++;
   }
   return{members,paid,total,perPerson:Math.round(perPerson),settlements};
+}
+function addCurrency(){
+  const codeEl=document.getElementById('newCurrCode');
+  const rateEl=document.getElementById('newCurrRate');
+  const code=(codeEl?.value||'').trim().toUpperCase();
+  const rate=parseFloat(rateEl?.value)||0;
+  if(!code||!/^[A-Z]{2,4}$/.test(code)){toast('通貨コードを入力してください（例: USD）');return;}
+  if(code==='JPY'){toast('JPYは追加不要です');return;}
+  if(!rate||rate<=0){toast('レートを入力してください');return;}
+  if(!D.currencies)D.currencies=[];
+  if(D.currencies.find(c=>c.code===code)){toast(`${code}はすでに追加済みです`);return;}
+  D.currencies.push({code,rate});
+  if(codeEl)codeEl.value='';if(rateEl)rateEl.value='';
+  save();rDays();renderBudgetModal();
+}
+function updCurrencyRate(code,rate){
+  const c=(D.currencies||[]).find(x=>x.code===code);
+  if(c){c.rate=rate;save();}
+}
+function delCurrency(code){
+  D.currencies=(D.currencies||[]).filter(c=>c.code!==code);
+  for(const day of D.days||[])for(const e of day.entries||[])if(e.currency===code)e.currency='JPY';
+  save();rDays();renderBudgetModal();
 }
 /* ══ PACKING LIST ══ */
 function openPacking(){ rPackingModal(); om('mPacking'); setTimeout(()=>document.getElementById('packIn')?.focus(),80); }
@@ -1746,8 +1807,12 @@ function renderBudgetModal(){
   const wk=calcWarikan();
   let h='';
   h+=`<div class="budget-inp-row"><label>合計予算</label><input type="number" min="0" value="${budget||''}" placeholder="0" onchange="D.budget=Number(this.value);save()"><span>円</span></div>`;
+  const curs=D.currencies||[];
+  h+=`<div class="b-section"><div class="b-stitle">外貨レート設定</div>`;
+  if(curs.length)h+=curs.map(c=>`<div class="curr-rate-row"><span class="curr-code">${esc(c.code)}</span><span class="curr-rate-lbl">1 ${esc(c.code)} =</span><input class="curr-rate-in" type="number" min="0.001" step="0.01" value="${c.rate}" onchange="updCurrencyRate('${esc(c.code)}',Number(this.value))"><span class="curr-rate-lbl">円</span><button class="btn-del" onclick="delCurrency('${esc(c.code)}')">✕</button></div>`).join('');
+  h+=`<div class="curr-add-row"><input id="newCurrCode" class="curr-code-in" type="text" placeholder="USD" maxlength="4"><span class="curr-rate-lbl">1 = </span><input id="newCurrRate" class="curr-rate-in" type="number" min="0.001" step="0.01" placeholder="155"><span class="curr-rate-lbl">円</span><button class="tag-toggle" onclick="addCurrency()">＋ 追加</button></div></div>`;
   h+=`<div class="budget-summary">
-    <div class="bsum-card"><div class="bsum-num">¥${totalCost.toLocaleString()}</div><div class="bsum-lbl">費用合計（入力分）</div></div>
+    <div class="bsum-card"><div class="bsum-num">¥${Math.round(totalCost).toLocaleString()}</div><div class="bsum-lbl">費用合計（円換算）</div></div>
     ${budget>0?`<div class="bsum-card"><div class="bsum-num" style="color:${over?'var(--danger)':'var(--success)'}">¥${Math.abs(remaining).toLocaleString()}</div><div class="bsum-lbl">${over?'⚠ 予算オーバー':'残り予算'}</div></div>`:''}
   </div>`;
   if(budget>0)h+=`<div class="bprog-wrap"><div class="bprog-bar${over?' over':''}" style="width:${pct}%"></div></div>`;
@@ -1758,7 +1823,7 @@ function renderBudgetModal(){
   h+=`</div>`;
   if(prepaidItems.length){
     h+=`<div class="b-section"><div class="b-stitle">立替リスト</div>`;
-    prepaidItems.forEach(item=>h+=`<div class="b-row"><span class="b-name">💳 ${esc(item.name||'(未入力)')}</span><span class="b-payer">${esc(item.paidBy)}</span><span class="b-val">¥${item.cost.toLocaleString()}</span></div>`);
+    prepaidItems.forEach(item=>h+=`<div class="b-row"><span class="b-name">💳 ${esc(item.name||'(未入力)')}</span><span class="b-payer">${esc(item.paidBy)}</span><span class="b-val">${fmtAmt(item.cost,item.currency)}</span></div>`);
     h+=`</div>`;
   }
   h+=`<div class="b-section"><div class="b-stitle">ワリカン精算</div>`;

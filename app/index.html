@@ -411,6 +411,13 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .th-label{font-size:12px;font-weight:500;color:var(--text2);white-space:nowrap}
 .th-item.on .th-label{color:var(--accent);font-weight:600}
 
+/* ── TRIPS LIST (My Trips) ── */
+.trip-row{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;transition:border-color var(--tr)}
+.trip-row.on{border-color:var(--accent)}
+.trip-row-main{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:none;border:none;cursor:pointer;padding:9px 12px;text-align:left}
+.trip-row-title{font-size:13.5px;font-weight:600;color:var(--text)}
+.trip-row-meta{font-size:11px;color:var(--muted)}
+
 /* ── ICON PICKER ── */
 .ic-pop{position:fixed;z-index:3000;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px;width:295px;box-shadow:var(--sh-md);max-height:360px;overflow-y:auto}
 .ic-cat{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding:6px 2px 4px;display:block}
@@ -761,11 +768,26 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
     <p class="modal-sub" id="shareStatus">クラウドに保存中...</p>
     <div class="share-url-row"><input type="text" id="shareUrl" readonly placeholder="生成中..."><button class="btn btn-primary" onclick="copyUrl()" id="shareCopyBtn" disabled>コピー</button></div>
     <div class="modal-row" style="margin-bottom:8px"><button class="btn btn-primary" style="width:100%" onclick="window.open(document.getElementById('shareUrl').value,'_blank')" id="shareOpenBtn" disabled>🔗 新しいタブで開いて確認</button></div>
-    <div class="share-note">💡 短いURLで共有できます。プランのスナップショットが保存されます。</div>
+    <div class="share-note" id="shareNote">💡 短いURLで共有できます。プランのスナップショットが保存されます。</div>
     <div class="modal-row"><button class="btn btn-ghost" onclick="cm('mShare')">閉じる</button></div>
   </div>
 </div>
 
+<!-- My Trips (Google login) -->
+<div class="overlay" id="mTrips" onclick="if(event.target===this)cm('mTrips')">
+  <div class="modal" style="max-width:480px">
+    <h2>📁 マイ旅程</h2>
+    <p class="modal-sub">Googleアカウントに保存した旅程の一覧です。編集内容は自動的にクラウドへ保存され、共有URLは常に最新の内容を表示します。</p>
+    <div id="tripsListBody"></div>
+    <div class="modal-row" style="justify-content:space-between;margin-top:14px">
+      <button class="btn btn-ghost" onclick="signOutGoogle()">ログアウト</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="cm('mTrips')">閉じる</button>
+        <button class="btn btn-primary" onclick="createNewTrip()">＋ 新しい旅程</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Image -->
 <div class="overlay" id="mImg" onclick="if(event.target===this)cm('mImg')">
@@ -824,6 +846,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 <datalist id="members-dl"></datalist>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ══ ICONS ══ */
 const ICONS={
@@ -840,6 +863,28 @@ const ICONS={
 /* ══ SUPABASE CONFIG ══ */
 const SB_URL='https://lmzlsfscptwuhksmnzjl.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtemxzZnNjcHR3dWhrc21uempsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDQ4OTksImV4cCI6MjA5ODI4MDg5OX0.j0fMqj2vZ_TvY8sAqK-WjPOgw1RmbO1SJ6-g0kAT7M0';
+const sbc=supabase.createClient(SB_URL,SB_KEY);
+
+/* ══ AUTH / MULTI-TRIP STATE ══ */
+let session=null;          // current Supabase auth session (null = signed out)
+let currentTripId=null;    // id of the trip row currently bound to D (null = local-only)
+let currentTripOwnerId=null;
+let myTrips=[];
+let activeAcctPop=null;
+function isMine(){return!!(session&&currentTripId&&currentTripOwnerId&&session.user.id===currentTripOwnerId)}
+function signInWithGoogle(){
+  sbc.auth.signInWithOAuth({provider:'google',options:{redirectTo:shareBase()}});
+}
+async function signOutGoogle(){
+  const wasMine=isMine();
+  await sbc.auth.signOut();
+  session=null;currentTripId=null;currentTripOwnerId=null;myTrips=[];
+  cm('mTrips');closeAcctPop();
+  history.replaceState(null,'',location.pathname);
+  if(wasMine){if(!loadLocal())D=blankTrip();renderAll();}
+  toast('ログアウトしました');
+  rTopbar();
+}
 
 /* ══ STATE ══ */
 const AFF={
@@ -962,23 +1007,40 @@ function genId(len=7){
   const c='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   return Array.from(crypto.getRandomValues(new Uint8Array(len))).map(b=>c[b%c.length]).join('');
 }
+function blankTrip(){
+  return{title:'新しい旅程',startDate:'',startDateIso:'',endDate:'',endDateIso:'',note:'',theme:D.theme||'light',budget:0,numMembers:2,memberNames:['',''],comments:[],packingItems:[],currencies:[],days:[]};
+}
 async function saveToSupabase(){
   const id=genId();
-  const res=await fetch(`${SB_URL}/rest/v1/trips`,{
-    method:'POST',
-    headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal'},
-    body:JSON.stringify({id,data:shrinkForShare(D)})
-  });
-  if(!res.ok)throw new Error('Supabase save failed: '+res.status);
+  const payload={id,data:shrinkForShare(D),title:D.title||'無題の旅程'};
+  if(session)payload.owner_id=session.user.id;
+  const{error}=await sbc.from('trips').insert(payload);
+  if(error)throw error;
+  if(session){
+    // Sharing while logged in claims the trip into "マイ旅程" and switches to live-sync mode
+    currentTripId=id;currentTripOwnerId=session.user.id;
+    history.replaceState(null,'',shareBase()+'#t/'+id);
+  }
   return id;
 }
 async function loadFromSupabase(id){
-  const res=await fetch(`${SB_URL}/rest/v1/trips?id=eq.${encodeURIComponent(id)}&select=data`,{
-    headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`}
-  });
-  const rows=await res.json();
-  if(rows[0]?.data){D=rows[0].data;migrate();return true;}
-  return false;
+  const{data,error}=await sbc.rpc('get_trip',{trip_id:id});
+  const row=Array.isArray(data)?data[0]:data;
+  if(error||!row?.data)return false;
+  D=row.data;migrate();
+  currentTripId=id;currentTripOwnerId=row.owner_id||null;
+  return true;
+}
+async function scheduleCloudAutosave(){
+  if(!isMine())return;
+  clearTimeout(window._cloudSaveTimer);
+  window._cloudSaveTimer=setTimeout(cloudAutosaveNow,900);
+}
+async function cloudAutosaveNow(){
+  if(!isMine())return;
+  try{
+    await sbc.from('trips').update({data:shrinkForShare(D),title:D.title||'無題の旅程',updated_at:new Date().toISOString()}).eq('id',currentTripId);
+  }catch(err){console.error('cloud autosave failed:',err);}
 }
 
 /* ══ TIMEZONE ══ */
@@ -1023,7 +1085,7 @@ function tzShort(tz){
 function updDayTz(dayId,tz){const d=D.days.find(x=>x.id===dayId);if(d){d.timezone=tz;save();rDays();}}
 
 /* ══ PERSISTENCE ══ */
-function save(){localStorage.setItem(SK,JSON.stringify(D))}
+function save(){localStorage.setItem(SK,JSON.stringify(D));scheduleCloudAutosave();}
 function loadLocal(){try{const s=localStorage.getItem(SK);if(s){D=JSON.parse(s);migrate();return true}}catch{}return false}
 async function loadHashAsync(){
   const h=location.hash;
@@ -1391,7 +1453,13 @@ function renderAll(){
 function rTopbar(){
   const r=document.getElementById('tbR');
   document.getElementById('tripTitle').value=D.title||'';
+  const avatar=session?.user?.user_metadata?.avatar_url;
+  const authHtml=session
+    ?`<div style="position:relative" id="acctW"><button class="btn-icon" title="${esc(session.user.email||'')}" onclick="toggleAcctPop()">${avatar?`<img src="${esc(avatar)}" style="width:20px;height:20px;border-radius:50%;display:block">`:'👤'}</button></div>
+       <button class="btn btn-ghost" onclick="openMyTrips()">📁 <span class="tb-lbl">マイ旅程</span></button>`
+    :`<button class="btn btn-ghost" onclick="signInWithGoogle()">🔐 <span class="tb-lbl">ログイン</span></button>`;
   r.innerHTML=`<div style="position:relative" id="thW"><button class="btn-icon" title="テーマ" onclick="toggleThPop()">🎨</button></div>
+    ${authHtml}
     <button class="btn btn-ghost" onclick="openBudget()">💰 <span class="tb-lbl">精算</span></button>
     <button class="btn btn-ghost" onclick="openPacking()">🎒 <span class="tb-lbl">持ち物</span></button>
     <button class="btn btn-ghost" onclick="window.print()">🖨</button>
@@ -1747,6 +1815,75 @@ function dismissThPop(e){
   if(activeThPop&&!activeThPop.contains(e.target))closeThPop();
 }
 
+/* ══ ACCOUNT MENU ══ */
+function toggleAcctPop(){
+  if(activeAcctPop){closeAcctPop();return}
+  const wrap=document.getElementById('acctW');if(!wrap||!session)return;
+  const p=document.createElement('div');p.className='th-pop';p.id='acctPop';p.style.minWidth='180px';
+  p.innerHTML=`<div class="th-item" style="cursor:default"><span class="th-label" style="color:var(--muted)">${esc(session.user.email||'')}</span></div>
+    <div class="th-item" onclick="closeAcctPop();openMyTrips()"><span class="th-label">📁 マイ旅程</span></div>
+    <div class="th-item" onclick="signOutGoogle()"><span class="th-label">🚪 ログアウト</span></div>`;
+  wrap.appendChild(p);activeAcctPop=p;
+  setTimeout(()=>document.addEventListener('click',dismissAcctPop,{once:true}),0);
+}
+function closeAcctPop(){activeAcctPop?.remove();activeAcctPop=null}
+function dismissAcctPop(e){
+  const wrap=document.getElementById('acctW');
+  if(wrap&&wrap.contains(e.target))return;
+  if(activeAcctPop&&!activeAcctPop.contains(e.target))closeAcctPop();
+}
+
+/* ══ MY TRIPS (multi-itinerary dashboard) ══ */
+async function openMyTrips(){
+  if(!session){signInWithGoogle();return}
+  om('mTrips');
+  document.getElementById('tripsListBody').innerHTML='<p class="modal-sub">読み込み中...</p>';
+  await refreshMyTrips();
+  renderTripsModal();
+}
+async function refreshMyTrips(){
+  if(!session)return;
+  const{data,error}=await sbc.from('trips').select('id,title,updated_at').eq('owner_id',session.user.id).order('updated_at',{ascending:false});
+  if(!error)myTrips=data||[];
+}
+function renderTripsModal(){
+  const body=document.getElementById('tripsListBody');if(!body)return;
+  if(!myTrips.length){
+    body.innerHTML=`<div class="empty" style="padding:32px 16px"><div class="empty-ico">🧳</div><p>まだ旅程がありません</p></div>`;
+    return;
+  }
+  body.innerHTML=myTrips.map(t=>`
+    <div class="trip-row${t.id===currentTripId?' on':''}">
+      <button class="trip-row-main" onclick="cm('mTrips');location.hash='t/${t.id}'">
+        <span class="trip-row-title">${esc(t.title||'無題の旅程')}</span>
+        <span class="trip-row-meta">更新: ${fmtTime(t.updated_at)}</span>
+      </button>
+      <button class="btn-del" title="削除" onclick="deleteTrip('${t.id}')">✕</button>
+    </div>`).join('');
+}
+async function createNewTrip(){
+  if(!session)return;
+  const blank=blankTrip();
+  const id=genId();
+  const{error}=await sbc.from('trips').insert({id,data:blank,title:blank.title,owner_id:session.user.id});
+  if(error){toast('作成に失敗しました');console.error(error);return}
+  cm('mTrips');
+  location.hash='t/'+id;
+}
+async function deleteTrip(id){
+  if(!confirm('この旅程を削除しますか？元に戻せません。'))return;
+  const{error}=await sbc.from('trips').delete().eq('id',id);
+  if(error){toast('削除に失敗しました');return}
+  myTrips=myTrips.filter(t=>t.id!==id);
+  renderTripsModal();
+  if(id===currentTripId){
+    currentTripId=null;currentTripOwnerId=null;
+    history.replaceState(null,'',location.pathname);
+    D=blankTrip();save();renderAll();
+  }
+  toast('削除しました');
+}
+
 /* ══ IMAGE MODAL ══ */
 function openImg(dayId,eid){
   imgTgt={dayId,eid};
@@ -1963,11 +2100,19 @@ async function openShare(){
   urlEl.value='';copyBtn.disabled=true;openBtn.disabled=true;
   status.textContent='クラウドに保存中...';
   try{
-    const id=await saveToSupabase();
+    const id=isMine()?currentTripId:await saveToSupabase();
+    if(isMine())await cloudAutosaveNow(); // flush latest edits before handing out the link
     const url=`https://trunk-travelplanner.com/t/${id}`;
     urlEl.value=url;
     copyBtn.disabled=false;openBtn.disabled=false;
-    status.textContent='このURLを送るとプランを閲覧できます。';
+    const noteEl=document.getElementById('shareNote');
+    if(isMine()){
+      status.textContent='このURLは常に最新の内容を表示します（マイ旅程に保存済み）。';
+      if(noteEl)noteEl.textContent='💡 このリンクを開いた人はログイン不要で閲覧・編集できます。あなたの編集は自動でこのリンクに反映されます。';
+    }else{
+      status.textContent='このURLを送るとプランを閲覧できます。';
+      if(noteEl)noteEl.textContent='💡 短いURLで共有できます。プランのスナップショットが保存されます。';
+    }
   }catch(err){
     status.textContent='❌ 保存に失敗しました。Supabase設定を確認してください。';
     console.error(err);
@@ -1985,22 +2130,53 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 /* ══ KEYBOARD ══ */
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    ['mShare','mImg','mMapsKey','mBudget','mPacking'].forEach(cm);
-    closeIcPick();closeThPop();closeCal();closeAC();
+    ['mShare','mImg','mMapsKey','mBudget','mPacking','mTrips'].forEach(cm);
+    closeIcPick();closeThPop();closeCal();closeAC();closeAcctPop();
     if(document.getElementById('mapPanel').classList.contains('on'))closeMapView();
   }
 });
 
+/* ══ AUTH-AWARE TRIP LOADING ══ */
+// Loads a `#t/{id}` link. If it turns out to be a trip the signed-in user owns, the
+// hash is kept as a permanent, live-syncing address (edits autosave back to it).
+// Otherwise it behaves like before: a one-off snapshot copied into local storage,
+// no login required to view or edit it.
+async function handleTripHash(id){
+  const ok=await loadFromSupabase(id);
+  if(!ok){
+    toast('プランの読み込みに失敗しました');
+    history.replaceState(null,'',location.pathname);
+    return false;
+  }
+  if(isMine()){
+    history.replaceState(null,'',shareBase()+'#t/'+id);
+    toast('マイ旅程を開きました');
+  }else{
+    currentTripId=null;currentTripOwnerId=null;
+    history.replaceState(null,'',location.pathname);
+    toast('共有プランを読み込みました');
+  }
+  return true;
+}
+
 /* ══ INIT ══ */
 async function init(){
+  const{data:{session:s}}=await sbc.auth.getSession();
+  session=s;
+  sbc.auth.onAuthStateChange((event,sess)=>{
+    const isNewSignIn=event==='SIGNED_IN'&&session?.user?.id!==sess?.user?.id;
+    session=sess;
+    rTopbar();
+    if(!session){currentTripId=null;currentTripOwnerId=null;}
+    else if(isNewSignIn&&!currentTripId&&!location.hash.startsWith('#t/'))openMyTrips();
+  });
+
   const h=location.hash;
   if(h.startsWith('#t/')){
-    const id=h.slice(3);
-    history.replaceState(null,'',location.pathname);
-    if(await loadFromSupabase(id)){renderAll();toast('共有プランを読み込みました');return;}
-    toast('プランの読み込みに失敗しました');
+    await handleTripHash(h.slice(3));
+  }else if(!(await loadHashAsync())){
+    loadLocal();
   }
-  if(!(await loadHashAsync()))loadLocal();
   bindMeta();
   renderAll();
   loadMapsApi();
@@ -2017,15 +2193,13 @@ async function init(){
 
   // Print: render in view mode so empty fields are hidden
 
-  // Reload data when URL hash changes (e.g. pasting share URL in same tab)
+  // Reload data when URL hash changes (e.g. pasting share URL in same tab, or opening a trip from "マイ旅程")
   window.addEventListener('hashchange', async()=>{
     const h=location.hash;
     if(h.startsWith('#t/')){
-      const id=h.slice(3);
-      history.replaceState(null,'',location.pathname);
-      if(await loadFromSupabase(id)){renderAll();toast('共有プランを読み込みました');}
+      if(await handleTripHash(h.slice(3)))renderAll();
     }else if(h.startsWith('#v2/')||h.startsWith('#v1')){
-      if(await loadHashAsync()){renderAll();toast('共有プランを読み込みました');}
+      if(await loadHashAsync()){currentTripId=null;currentTripOwnerId=null;renderAll();toast('共有プランを読み込みました');}
     }
   });
 }

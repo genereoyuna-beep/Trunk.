@@ -418,6 +418,20 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .trip-row-title{font-size:13.5px;font-weight:600;color:var(--text)}
 .trip-row-meta{font-size:11px;color:var(--muted)}
 
+/* ── MY PAGE (full-screen account page) ── */
+.mypage-panel{position:fixed;inset:0;z-index:400;background:var(--bg);display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s ease}
+.mypage-panel.on{transform:none}
+.mypage-hd{background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;flex-shrink:0}
+.mypage-hd-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--text)}
+.mypage-body{flex:1;overflow-y:auto;max-width:560px;width:100%;margin:0 auto;padding:28px 20px 60px}
+.mypage-section-title{font-size:13px;font-weight:700;color:var(--text2);letter-spacing:.03em;margin:28px 0 4px}
+.mypage-foot{border-top:1px solid var(--border);padding:14px 20px;display:flex;justify-content:flex-end;flex-shrink:0;background:var(--surface)}
+.mypage-profile{display:flex;align-items:center;gap:14px;padding-bottom:20px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+.mypage-avatar{width:56px;height:56px;border-radius:50%;flex-shrink:0;object-fit:cover;display:block}
+.mypage-avatar-fallback{width:56px;height:56px;border-radius:50%;flex-shrink:0;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+.mypage-name{font-size:16px;font-weight:700;color:var(--text)}
+.mypage-email{font-size:13px;color:var(--muted)}
+
 /* ── ICON PICKER ── */
 .ic-pop{position:fixed;z-index:3000;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px;width:295px;box-shadow:var(--sh-md);max-height:360px;overflow-y:auto}
 .ic-cat{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding:6px 2px 4px;display:block}
@@ -774,18 +788,20 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 </div>
 
 <!-- My Trips (Google login) -->
-<div class="overlay" id="mTrips" onclick="if(event.target===this)cm('mTrips')">
-  <div class="modal" style="max-width:480px">
-    <h2>📁 マイ旅程</h2>
+<div class="mypage-panel" id="mypagePanel">
+  <div class="mypage-hd">
+    <button class="btn-icon" onclick="closeMyTrips()" title="閉じる">←</button>
+    <span class="mypage-hd-title">📁 マイページ</span>
+  </div>
+  <div class="mypage-body">
+    <div class="mypage-profile" id="mypageProfile"></div>
+    <div class="mypage-section-title">マイ旅程</div>
     <p class="modal-sub">Googleアカウントに保存した旅程の一覧です。編集内容は自動的にクラウドへ保存され、共有URLは常に最新の内容を表示します。</p>
     <div id="tripsListBody"></div>
-    <div class="modal-row" style="justify-content:space-between;margin-top:14px">
-      <button class="btn btn-ghost" onclick="signOutGoogle()">ログアウト</button>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" onclick="cm('mTrips')">閉じる</button>
-        <button class="btn btn-primary" onclick="createNewTrip()">＋ 新しい旅程</button>
-      </div>
-    </div>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="createNewTrip()">＋ 新しい旅程を作成</button>
+  </div>
+  <div class="mypage-foot">
+    <button class="btn btn-ghost" onclick="signOutGoogle()">🚪 ログアウト</button>
   </div>
 </div>
 
@@ -879,7 +895,7 @@ async function signOutGoogle(){
   const wasMine=isMine();
   await sbc.auth.signOut();
   session=null;currentTripId=null;currentTripOwnerId=null;myTrips=[];
-  cm('mTrips');closeAcctPop();
+  closeMyTrips();closeAcctPop();
   history.replaceState(null,'',location.pathname);
   if(wasMine){if(!loadLocal())D=blankTrip();renderAll();}
   toast('ログアウトしました');
@@ -1836,10 +1852,21 @@ function dismissAcctPop(e){
 /* ══ MY TRIPS (multi-itinerary dashboard) ══ */
 async function openMyTrips(){
   if(!session){signInWithGoogle();return}
-  om('mTrips');
+  document.getElementById('mypagePanel').classList.add('on');
+  renderProfileHeader();
   document.getElementById('tripsListBody').innerHTML='<p class="modal-sub">読み込み中...</p>';
   await refreshMyTrips();
   renderTripsModal();
+}
+function closeMyTrips(){document.getElementById('mypagePanel').classList.remove('on')}
+function renderProfileHeader(){
+  const el=document.getElementById('mypageProfile');if(!el||!session)return;
+  const u=session.user;
+  const name=u.user_metadata?.full_name||u.user_metadata?.name||(u.email||'').split('@')[0]||'ユーザー';
+  const avatar=u.user_metadata?.avatar_url||u.user_metadata?.picture;
+  const initial=name.charAt(0).toUpperCase();
+  el.innerHTML=`${avatar?`<img class="mypage-avatar" src="${esc(avatar)}">`:`<div class="mypage-avatar-fallback">${esc(initial)}</div>`}
+    <div><div class="mypage-name">${esc(name)}</div><div class="mypage-email">${esc(u.email||'')}</div></div>`;
 }
 async function refreshMyTrips(){
   if(!session)return;
@@ -1854,7 +1881,7 @@ function renderTripsModal(){
   }
   body.innerHTML=myTrips.map(t=>`
     <div class="trip-row${t.id===currentTripId?' on':''}">
-      <button class="trip-row-main" onclick="cm('mTrips');location.hash='t/${t.id}'">
+      <button class="trip-row-main" onclick="closeMyTrips();location.hash='t/${t.id}'">
         <span class="trip-row-title">${esc(t.title||'無題の旅程')}</span>
         <span class="trip-row-meta">更新: ${fmtTime(t.updated_at)}</span>
       </button>
@@ -1867,7 +1894,7 @@ async function createNewTrip(){
   const id=genId();
   const{error}=await sbc.from('trips').insert({id,data:blank,title:blank.title,owner_id:session.user.id});
   if(error){toast('作成に失敗しました');console.error(error);return}
-  cm('mTrips');
+  closeMyTrips();
   location.hash='t/'+id;
 }
 async function deleteTrip(id){
@@ -2130,9 +2157,10 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 /* ══ KEYBOARD ══ */
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    ['mShare','mImg','mMapsKey','mBudget','mPacking','mTrips'].forEach(cm);
+    ['mShare','mImg','mMapsKey','mBudget','mPacking'].forEach(cm);
     closeIcPick();closeThPop();closeCal();closeAC();closeAcctPop();
     if(document.getElementById('mapPanel').classList.contains('on'))closeMapView();
+    if(document.getElementById('mypagePanel').classList.contains('on'))closeMyTrips();
   }
 });
 

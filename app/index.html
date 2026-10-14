@@ -93,9 +93,13 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 .trip-title{font-size:15px;font-weight:600;border:none;outline:none;background:transparent;color:var(--text);flex:1;min-width:0;padding:3px 6px;border-radius:5px}
 .trip-title:not(:disabled):hover{background:var(--bg)}
 .trip-title:not(:disabled):focus{background:var(--bg);outline:2px solid var(--accent)}
-.tb-r{display:flex;align-items:center;gap:5px;flex-shrink:0}
 .edit-badge{display:inline-flex;align-items:center;gap:4px;background:var(--success-bg);color:var(--success);border:1px solid var(--success);font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0}
 .tb-lbl{display:inline}
+
+/* ── TOOL BAR (機能一覧の横スクロール行。ラベルは幅に関わらず常に表示) ── */
+.tool-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:7px 16px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.tool-bar::-webkit-scrollbar{display:none}
+.tb-r{display:flex;align-items:center;gap:6px;width:max-content}
 
 /* ── META BAR ── */
 .meta-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex-shrink:0}
@@ -632,7 +636,6 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 @media(max-width:900px){
   .cp{display:none;position:fixed;right:0;top:0;bottom:0;z-index:350;box-shadow:var(--sh-md);width:300px}
   .cp.mobile-on{display:flex;top:0;height:100dvh}
-  .tb-lbl{display:none}
   .edit-badge{display:none}
 }
 
@@ -642,6 +645,7 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
   .topbar{padding:0 10px;gap:3px;height:48px}
   .logo{font-size:17px}
   .trip-title{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tool-bar{padding:6px 10px}
   .tb-r{gap:2px}
   .tb-r .btn{padding:6px 8px;font-size:12px}
   .tb-r .btn-icon{padding:5px}
@@ -716,8 +720,11 @@ body{font-family:'Outfit','Noto Sans JP',system-ui,sans-serif;background:var(--b
 <header class="topbar">
   <div class="logo">Trunk<span>.</span></div>
   <input class="trip-title" id="tripTitle" type="text" placeholder="旅行タイトルを入力">
-  <div class="tb-r" id="tbR"></div>
 </header>
+
+<nav class="tool-bar">
+  <div class="tb-r" id="tbR"></div>
+</nav>
 
 <div class="meta-bar">
   <div class="mf">

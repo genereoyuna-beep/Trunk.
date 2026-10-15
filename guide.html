@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>使い方ガイド | Trunk.</title>
+<meta name="description" content="Trunk. の使い方。旅行のつくり方から、宿と移動の入力、手配状況の確認、予算、しおりPDF、同行者との共有まで。">
+<link rel="icon" href="/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#F3F4F1; --surface:#FFFFFF; --sunk:#ECEEE9; --sunk2:#E4E6E1; --line:#DADDD6;
+  --ink:#15202B; --ink2:#3D4650; --muted:#5A6470; --faint:#8A929A;
+  --blue:#1D4ED8; --blue-soft:#E3ECFD;
+  --orange:#B45309; --orange-ink:#8A3B06; --orange-bar:#E8892B; --orange-soft:#FDEBD3;
+  --f-display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-mono:"Spline Sans Mono","Noto Sans JP","Hiragino Sans",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.8;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--blue)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;line-height:1.35;text-wrap:balance}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+@media(min-width:720px){.wrap{padding:0 28px}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;border:1.5px solid var(--ink)}
+.btn.primary{background:var(--ink);color:#F3F4F1}
+.btn.ghost{background:transparent;color:var(--ink)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+
+header{position:sticky;top:0;z-index:20;background:rgba(243,244,241,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hd{display:flex;align-items:center;gap:20px;height:62px}
+.logo{font-family:var(--f-display);font-weight:900;font-size:22px;text-decoration:none;color:var(--ink)}
+.logo span{color:var(--blue)}
+.hd nav{display:none;gap:22px;margin-left:12px}
+.hd nav a{font-size:13.5px;color:var(--ink2);text-decoration:none}
+.hd nav a[aria-current="page"]{color:var(--ink);font-weight:700}
+.hd .btn{margin-left:auto;min-height:40px;font-size:13.5px}
+@media(min-width:820px){.hd nav{display:flex}}
+
+.intro{padding:44px 0 28px}
+.intro h1{font-size:clamp(30px,6.4vw,46px);font-weight:900;margin:10px 0 12px}
+.intro p{color:var(--ink2);max-width:40em}
+.quick{display:grid;gap:10px;margin-top:24px}
+@media(min-width:720px){.quick{grid-template-columns:repeat(3,1fr)}}
+.quick a{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none;color:var(--ink)}
+.quick a:hover{border-color:var(--ink)}
+.quick b{display:block;font-family:var(--f-display);font-size:16px}
+.quick span{font-size:12.5px;color:var(--muted)}
+
+.layout{display:grid;gap:32px;padding-bottom:80px}
+@media(min-width:980px){.layout{grid-template-columns:230px minmax(0,1fr);gap:48px}}
+.toc{display:none}
+@media(min-width:980px){.toc{display:block;position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}}
+.toc ol{list-style:none;display:grid;gap:2px}
+.toc a{display:grid;grid-template-columns:26px minmax(0,1fr);gap:4px;padding:6px 10px;border-radius:8px;font-size:13px;color:var(--ink2);text-decoration:none;line-height:1.5}
+.toc a:hover{background:var(--surface)}
+.toc a.on{background:var(--surface);color:var(--ink);font-weight:700}
+.toc a span{font-family:var(--f-mono);font-size:11px;color:var(--faint);padding-top:2px}
+.toc .grp{font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;color:var(--faint);padding:14px 10px 4px}
+.mtoc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin-bottom:8px}
+.mtoc summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none;display:flex;justify-content:space-between}
+.mtoc summary::after{content:"+";font-family:var(--f-mono);color:var(--muted)}
+.mtoc[open] summary::after{content:"−"}
+.mtoc ol{list-style:none;padding-bottom:12px;columns:2;column-gap:16px}
+.mtoc a{display:block;font-size:13px;padding:4px 0;color:var(--ink2);text-decoration:none}
+@media(min-width:980px){.mtoc{display:none}}
+
+article{min-width:0;max-width:760px}
+.chap{padding:36px 0 8px;border-top:1px solid var(--line)}
+.chap:first-child{border-top:0;padding-top:0}
+.chap-h{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.chap-h .no{font-family:var(--f-mono);font-size:13px;color:var(--blue);font-weight:600;letter-spacing:.08em}
+.chap h2{font-size:clamp(22px,4.6vw,28px);font-weight:900}
+.chap > p{color:var(--ink2);margin-bottom:14px}
+.chap h3{font-size:17px;margin:22px 0 8px}
+.steps{list-style:none;counter-reset:s;display:grid;gap:10px;margin:12px 0 16px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.steps li::before{content:counter(s);width:26px;height:26px;border-radius:13px;background:var(--ink);color:#F3F4F1;font-family:var(--f-mono);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.steps li b{font-weight:700}
+.ui{display:inline-flex;align-items:center;font-size:12.5px;font-weight:500;padding:1px 9px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);white-space:nowrap;line-height:1.7;margin:0 2px}
+.ui.dark{background:var(--ink);border-color:var(--ink);color:#F3F4F1}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;padding:1px 9px;border-radius:999px;white-space:nowrap;margin:0 2px}
+.pill::before{content:"";width:6px;height:6px;border-radius:3px;background:currentColor}
+.open{background:var(--orange-soft);color:var(--orange-ink)}
+.booked{background:var(--blue-soft);color:var(--blue)}
+.paid{background:var(--ink);color:#F3F4F1}
+.none{background:var(--sunk2);color:var(--ink2)}
+.tip,.note,.pass{border-radius:12px;padding:12px 16px;font-size:14px;margin:12px 0 16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
+.tip{background:var(--blue-soft)}
+.tip::before{content:"POINT";font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;color:var(--blue);font-weight:600;padding-top:4px}
+.note{background:var(--orange-soft)}
+.note::before{content:"注意";font-size:11px;color:var(--orange-ink);font-weight:700;padding-top:2px}
+.pass{background:var(--surface);border:1.5px dashed var(--ink)}
+.pass::before{content:"TRIP PASS";font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;font-weight:600;padding-top:4px}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:14px;background:var(--surface);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--sunk);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;background:var(--sunk);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+
+/* mocks */
+.mock{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0 18px}
+.tabs5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;border-top:1px solid var(--line);padding-top:10px;margin-top:4px;text-align:center;font-size:11px;color:var(--muted)}
+.tabs5 div{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;border-radius:8px}
+.tabs5 div.on{color:var(--ink);font-weight:700;background:var(--sunk)}
+.tabs5 svg{width:20px;height:20px}
+.legend5{display:grid;gap:6px;margin-top:12px;font-size:13px}
+@media(min-width:620px){.legend5{grid-template-columns:repeat(5,1fr)}}
+.legend5 div{background:var(--sunk);border-radius:10px;padding:8px 10px}
+.legend5 b{display:block;font-size:13px}
+.legend5 span{font-size:11.5px;color:var(--muted)}
+.form{display:grid;gap:8px}
+.field{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:center;font-size:13px}
+.field label{color:var(--muted);font-size:12px}
+.field .in{border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:var(--ground);font-size:13px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.field .in.mono{font-size:12.5px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg span{font-size:12px;padding:3px 10px;border-radius:8px;border:1px solid var(--line);background:var(--ground)}
+.seg span.on{background:var(--ink);border-color:var(--ink);color:#F3F4F1}
+.ev{display:grid;grid-template-columns:44px 12px minmax(0,1fr) auto;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;line-height:1.5;align-items:start}
+.ev:last-child{border-bottom:0}
+.ev .t{font-family:var(--f-mono);font-weight:600;font-size:12.5px}
+.ev .dot{width:10px;height:10px;border-radius:5px;border:2px solid var(--ink);margin-top:5px}
+.ev .dot.mv{border-color:var(--blue);background:var(--blue)}
+.ev small{display:block;color:var(--muted);font-size:11.5px}
+.ev .yen{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.todo{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:10px;background:var(--orange-soft);color:var(--orange-ink);font-size:13px;margin-top:6px}
+.todo b{font-family:var(--f-mono);margin-left:auto}
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sum div{background:var(--sunk);border-radius:10px;padding:8px 10px}
+.sum small{display:block;font-size:11px;color:var(--muted)}
+.sum b{font-family:var(--f-mono);font-size:17px}
+.check{display:grid;gap:4px;font-size:13.5px}
+.check div{display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid var(--sunk)}
+.check i{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--ink);flex:none}
+.check i.on{background:var(--ink);box-shadow:inset 0 0 0 3px var(--surface)}
+.check s{color:var(--faint)}
+.linkbox{display:flex;gap:8px;align-items:center;padding:9px 12px;border-radius:10px;background:var(--sunk);font-family:var(--f-mono);font-size:12px;color:var(--ink2);overflow:hidden;white-space:nowrap}
+.linkbox span{overflow:hidden;text-overflow:ellipsis}
+
+.help{margin-top:40px;background:var(--ink);color:#F3F4F1;border-radius:20px;padding:26px 22px}
+.help h2{font-size:22px;margin-bottom:8px}
+.help p{color:#C9D0D7;font-size:14px}
+.help .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.help .btn.primary{background:#F3F4F1;color:var(--ink);border-color:#F3F4F1}
+.help .btn.ghost{color:#F3F4F1;border-color:#5A6470}
+
+footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
+.ft{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between}
+.ft nav{display:flex;flex-wrap:wrap;gap:8px 18px}
+.ft a{text-decoration:none;color:inherit}
+.ft a:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <a class="logo" href="/" aria-label="Trunk. トップ">Trunk<span>.</span></a>
+    <nav aria-label="サイト">
+      <a href="/#features">機能</a>
+      <a href="/guide.html" aria-current="page">使い方</a>
+      <a href="/#pricing">料金</a>
+      <a href="/#faq">よくある質問</a>
+    </nav>
+    <a class="btn primary" href="/app/">無料ではじめる</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="intro">
+    <div class="eyebrow">Guide</div>
+    <h1>使い方ガイド</h1>
+    <p>旅行をつくるところから、宿と移動の入力、手配状況の確認、予算、しおりPDF、同行者との共有まで。順番に読めば、ひとつの旅行を仕上げられます。</p>
+    <div class="quick">
+      <a href="#create"><b>まずは旅行をつくる</b><span>ログインから最初の旅行まで、3分</span></a>
+      <a href="#shiori"><b>しおりを作りたい</b><span>PDFで保存して、印刷する</span></a>
+      <a href="#share"><b>同行者に見せたい</b><span>共有リンクの出し方と、見える範囲</span></a>
+    </div>
+  </div>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目次" id="toc">
+      <ol>
+        <li class="grp">はじめに</li>
+        <li><a href="#create"><span>01</span>旅行をつくる</a></li>
+        <li><a href="#screens"><span>02</span>画面の見かた</a></li>
+        <li class="grp">旅程を入れる</li>
+        <li><a href="#stay"><span>03</span>宿を入れる</a></li>
+        <li><a href="#move"><span>04</span>移動を入れる</a></li>
+        <li><a href="#day"><span>05</span>1日の予定を入れる</a></li>
+        <li class="grp">準備する</li>
+        <li><a href="#status"><span>06</span>手配もれを確かめる</a></li>
+        <li><a href="#money"><span>07</span>予算とお金</a></li>
+        <li><a href="#pack"><span>08</span>持ち物リスト</a></li>
+        <li class="grp">仕上げる</li>
+        <li><a href="#map"><span>09</span>ルートマップ</a></li>
+        <li><a href="#shiori"><span>10</span>しおりPDF</a></li>
+        <li><a href="#share"><span>11</span>同行者と共有する</a></li>
+        <li class="grp">旅行中・そのほか</li>
+        <li><a href="#abroad"><span>12</span>海外旅行のとき</a></li>
+        <li><a href="#trip"><span>13</span>旅行中に使う</a></li>
+        <li><a href="#pass"><span>14</span>旅行パス</a></li>
+        <li><a href="#manage"><span>15</span>旅行の管理</a></li>
+      </ol>
+    </nav>
+
+    <article>
+      <details class="mtoc"><summary>目次</summary>
+        <ol>
+          <li><a href="#create">01 旅行をつくる</a></li><li><a href="#screens">02 画面の見かた</a></li>
+          <li><a href="#stay">03 宿を入れる</a></li><li><a href="#move">04 移動を入れる</a></li>
+          <li><a href="#day">05 1日の予定</a></li><li><a href="#status">06 手配もれ</a></li>
+          <li><a href="#money">07 予算とお金</a></li><li><a href="#pack">08 持ち物</a></li>
+          <li><a href="#map">09 ルートマップ</a></li><li><a href="#shiori">10 しおりPDF</a></li>
+          <li><a href="#share">11 共有</a></li><li><a href="#abroad">12 海外旅行</a></li>
+          <li><a href="#trip">13 旅行中</a></li><li><a href="#pass">14 旅行パス</a></li>
+          <li><a href="#manage">15 旅行の管理</a></li>
+        </ol>
+      </details>
+
+      <!-- 01 -->
+      <section class="chap" id="create">
+        <div class="chap-h"><span class="no">01</span><h2>旅行をつくる</h2></div>
+        <p>旅行を保存するには、Google アカウントでログインします。新しいパスワードを作る必要はありません。</p>
+        <ol class="steps">
+          <li><div><b>Trunk. を開いて、Google でログインする</b><br>トップページの <span class="ui dark">無料ではじめる</span> から。スマホでもパソコンでも同じです。</div></li>
+          <li><div><b>旅行の名前と日程を入れる</b><br>「ソウル 3泊4日」「金沢の週末」など、わかりやすい名前で。出発日と帰着日を入れると、日ごとの枠が自動でできます。日程が決まっていなければ、あとからでも大丈夫です。</div></li>
+          <li><div><b>一緒に行く人を入れる</b><br>参加者の名前を入れておくと、予算を1人あたりで計算したり、立て替えを精算したりできます。自分だけの旅行なら空のままで構いません。</div></li>
+        </ol>
+        <div class="mock" aria-hidden="true">
+          <div class="form">
+            <div class="field"><label>旅行の名前</label><div class="in">ソウル 3泊4日</div></div>
+            <div class="field"><label>日程</label><div class="in mono">2026.12.04 — 2026.12.07</div></div>
+            <div class="field"><label>参加者</label><div class="in">自分 · あおい · けんた</div></div>
+          </div>
+        </div>
+        <div class="tip"><span>無料版では、出発前〜旅行中の旅行を1件まで作れます。終わった旅行はいくつでも残せるので、旅行が終わればすぐに次の旅行を作れます。</span></div>
+      </section>
+
+      <!-- 02 -->
+      <section class="chap" id="screens">
+        <div class="chap-h"><span class="no">02</span><h2>画面の見かた</h2></div>
+        <p>スマホでは画面の下、パソコンでは左側に、5つのタブが並びます。上の旅行名を押すと、ほかの旅行に切り替えられます。</p>
+        <div class="mock" aria-hidden="true">
+          <div class="tabs5">
+            <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v9H3z"/></svg>ホーム</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>旅程</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16l-7-4-7 4z"/></svg>予約・手配</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M9 9l3 4 3-4M9 13h6M12 13v4"/></svg>お金</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="7" width="14" height="13" rx="2"/><path d="M9 7V4h6v3"/></svg>持ち物</div>
+          </div>
+          <div class="legend5">
+            <div><b>ホーム</b><span>出発までの日数、今やること、今日の予定</span></div>
+            <div><b>旅程</b><span>日ごとのタイムライン、月の表示、地図</span></div>
+            <div><b>予約・手配</b><span>宿と移動の手配状況を一覧で</span></div>
+            <div><b>お金</b><span>予算と支出、1人あたりの負担</span></div>
+            <div><b>持ち物</b><span>チェックリスト</span></div>
+          </div>
+        </div>
+        <h3>色の意味</h3>
+        <p>宿と移動は、手配の状況で色が変わります。どの画面でも同じ色です。</p>
+        <div class="scroll"><table>
+          <tr><th>表示</th><th>意味</th></tr>
+          <tr><td><span class="pill open">未手配</span></td><td>まだ予約していない。ホームの「今やること」にも出ます</td></tr>
+          <tr><td><span class="pill booked">予約済み</span></td><td>予約はしたが、支払いはまだ（現地払いなど）</td></tr>
+          <tr><td><span class="pill paid">支払い済み</span></td><td>予約も支払いも済んでいる</td></tr>
+          <tr><td><span class="pill none">宿不要</span></td><td>家族や友人の家に泊まる、夜行便に乗るなど、宿の手配がいらない</td></tr>
+        </table></div>
+      </section>
+
+      <!-- 03 -->
+      <section class="chap" id="stay">
+        <div class="chap-h"><span class="no">03</span><h2>宿を入れる</h2></div>
+        <p>まずは泊まる場所を入れると、旅行の骨組みができます。予約していなくても、「この街に泊まる」だけ先に入れておけば、未手配として残ります。</p>
+        <ol class="steps">
+          <li><div><span class="ui">旅程</span> または <span class="ui">予約・手配</span> で、<span class="ui">追加</span> から宿を選ぶ</div></li>
+          <li><div><b>都市とチェックイン日、泊数を入れる</b><br>都市名は候補から選べます。泊数を入れると、チェックアウト日は自動で決まります。</div></li>
+          <li><div><b>決まっていれば、宿の名前や予約番号も入れる</b><br>予約ページのURLを入れておくと、旅行中にすぐ開けます。</div></li>
+          <li><div><b>手配の状況を選ぶ</b><br><span class="pill open">未手配</span><span class="pill booked">予約済み</span><span class="pill paid">支払い済み</span><span class="pill none">宿不要</span> から選びます。</div></li>
+        </ol>
+        <div class="mock" aria-hidden="true">
+          <div class="form">
+            <div class="field"><label>都市</label><div class="in">ソウル（韓国）</div></div>
+            <div class="field"><label>チェックイン</label><div class="in mono">12.04 THU · 15:00</div></div>
+            <div class="field"><label>泊数</label><div class="in mono">2</div></div>
+            <div class="field"><label>宿</label><div class="in">明洞のホテル</div></div>
+            <div class="field"><label>予約番号</label><div class="in mono">HTL-2048</div></div>
+            <div class="field"><label>状況</label><div class="seg"><span>未手配</span><span class="on">予約済み</span><span>支払い済み</span><span>宿不要</span></div></div>
+          </div>
+        </div>
+        <div class="tip"><span>料金を入れておくと、お金のタブの予算に自動で入ります。「金額は何人分か」も入れると、1人あたりに割って計算します。</span></div>
+      </section>
+
+      <!-- 04 -->
+      <section class="chap" id="move">
+        <div class="chap-h"><span class="no">04</span><h2>移動を入れる</h2></div>
+        <p>飛行機や新幹線から、地下鉄・タクシー・徒歩まで、移動はすべて同じ「移動」で入れます。どこからどこへ、何で行くかを入れるだけです。</p>
+        <ol class="steps">
+          <li><div><span class="ui">追加</span> → <span class="ui">移動</span>、または日ごとの表示の <span class="ui">＋ 移動</span> を押す</div></li>
+          <li><div><b>出発地と到着地、手段、時刻を入れる</b><br>空港や駅は候補から選べます。到着時刻を入れると所要時間も表示されます。飛行機や列車なら、便名や座席も入れられます。</div></li>
+          <li><div><b>予約が必要かを確かめる</b><br>飛行機や列車は「予約が必要」、地下鉄やタクシーは「予約不要」が最初から選ばれています。予約が必要な移動は、未手配・予約済み・支払い済みで色が変わり、予約・手配の一覧にも出ます。</div></li>
+        </ol>
+        <div class="mock" aria-hidden="true">
+          <div class="form">
+            <div class="field"><label>手段</label><div class="seg"><span class="on">飛行機</span><span>鉄道</span><span>バス</span><span>地下鉄</span><span>タクシー</span><span>徒歩</span></div></div>
+            <div class="field"><label>出発</label><div class="in mono">羽田 HND · 12.04 08:55</div></div>
+            <div class="field"><label>到着</label><div class="in mono">仁川 ICN · 12.04 11:25 <span style="color:var(--muted)">(現地)</span></div></div>
+            <div class="field"><label>状況</label><div class="seg"><span>未手配</span><span>予約済み</span><span class="on">支払い済み</span></div></div>
+          </div>
+        </div>
+        <div class="tip"><span>海外の時刻は、すべて<b>現地の時刻</b>で入れてください。時差は行き先から自動で判断します。くわしくは <a href="#abroad">12 海外旅行のとき</a> へ。</span></div>
+      </section>
+
+      <!-- 05 -->
+      <section class="chap" id="day">
+        <div class="chap-h"><span class="no">05</span><h2>1日の予定を入れる</h2></div>
+        <p>旅程タブでは、日ごとに予定と移動が時刻順に並びます。宿と移動は自動でその日に入るので、あとは観光や食事を足していくだけです。</p>
+        <ol class="steps">
+          <li><div><span class="ui">旅程</span> の日ごとの表示で、<span class="ui">＋ 予定</span> を押す（移動なら <span class="ui">＋ 移動</span>）</div></li>
+          <li><div><b>時刻と内容を入れる</b><br>スポット名を入れると住所の候補が出ます。時刻が決まっていなければ空のままでも構いません。</div></li>
+          <li><div><b>必要ならメモや所要時間、費用を入れる</b><br>「韓服レンタルは前日予約」など、当日に見たいことを書いておけます。</div></li>
+        </ol>
+        <div class="mock" aria-hidden="true">
+          <div class="ev"><span class="t">09:00</span><i class="dot"></i><div>景福宮<small>韓服レンタルは前日予約</small></div><span class="yen"></span></div>
+          <div class="ev"><span class="t">11:40</span><i class="dot mv"></i><div>地下鉄3号線 → 鍾路3街<small>約15分</small></div><span class="yen">₩1,500</span></div>
+          <div class="ev"><span class="t">12:00</span><i class="dot"></i><div>広蔵市場でお昼</div><span class="yen">₩24,000</span></div>
+          <div class="ev"><span class="t">19:00</span><i class="dot"></i><div>明洞で夕食 <span class="pill booked">予約済み</span></div><span class="yen"></span></div>
+        </div>
+        <h3>表示の切り替え</h3>
+        <p>旅程タブの上で、<span class="ui">日ごと</span> <span class="ui">一覧</span> <span class="ui">月</span> <span class="ui">地図</span> を切り替えられます。2週間以内の旅行は、日ごとの表示から始まります。日ごとの表示では、上に並ぶ <span class="ui">DAY 1</span> <span class="ui">DAY 2</span> … のタブで日を切り替えます。旅行中は今日の日が最初に開きます。</p>
+      </section>
+
+      <!-- 06 -->
+      <section class="chap" id="status">
+        <div class="chap-h"><span class="no">06</span><h2>手配もれを確かめる</h2></div>
+        <p>出発前の確認は、ホームと予約・手配タブの2か所で。</p>
+        <ol class="steps">
+          <li><div><b>ホームの「今やること」を見る</b><br>未手配の宿や移動が、日付の近い順に並びます。押すとその項目を開けます。</div></li>
+          <li><div><b>予約・手配タブで全体を見る</b><br>宿と移動が日付順に並び、上のバーで何割済んだかがわかります。<span class="ui">未手配だけ</span> で、残っているものだけに絞れます。</div></li>
+          <li><div><b>予約したら状況を変える</b><br><span class="pill open">未手配</span> → <span class="pill booked">予約済み</span> に変えると、今やることから消えます。</div></li>
+        </ol>
+        <div class="mock" aria-hidden="true">
+          <div class="todo">12月5日の宿を手配しましょう <b>あと 48 日</b></div>
+          <div class="todo" style="background:var(--sunk);color:var(--ink2)">全州 → 釜山の移動手段が未定です</div>
+        </div>
+      </section>
+
+      <!-- 07 -->
+      <section class="chap" id="money">
+        <div class="chap-h"><span class="no">07</span><h2>予算とお金</h2></div>
+        <p>お金のタブでは、予算と実際にかかったお金を<b>1人あたり</b>で見られます。宿や移動、予定に入れた金額は自動で集計されます。</p>
+        <div class="mock" aria-hidden="true">
+          <div class="sum"><div><small>予算（1人分）</small><b>¥90,000</b></div><div><small>見込み</small><b>¥78,400</b></div><div><small>残り</small><b style="color:var(--blue)">¥11,600</b></div></div>
+        </div>
+        <ol class="steps">
+          <li><div><b>1人分の予算を入れる</b><br>上限を決めておくと、残りの予算がすぐわかります。</div></li>
+          <li><div><b>金額が何人分かを入れる</b><br>3人分の宿代なら「3人」と入れると、1人あたりに割って集計します。<span class="ui">全員分の合計で見る</span> に切り替えることもできます。</div></li>
+          <li><div><b>現地で使ったお金を足す</b><br>予定に入っていない買い物や交通費は、お金のタブから追加できます。</div></li>
+        </ol>
+        <div class="pass"><span><b>立て替えと精算・外貨の円換算</b>（旅行パス）<br>「誰が払ったか」を入れておくと、旅行の最後に誰が誰にいくら払えばいいかを計算します。ウォンやユーロで入れた金額は、円に換算して集計します。</span></div>
+      </section>
+
+      <!-- 08 -->
+      <section class="chap" id="pack">
+        <div class="chap-h"><span class="no">08</span><h2>持ち物リスト</h2></div>
+        <p>持ち物タブで、旅行ごとのチェックリストを作れます。出発前に1つずつチェックしていきましょう。</p>
+        <div class="mock check" aria-hidden="true">
+          <div><i class="on"></i><s>パスポート</s></div>
+          <div><i class="on"></i><s>変換プラグ（Cタイプ）</s></div>
+          <div><i></i>モバイルバッテリー</div>
+          <div><i></i>常備薬</div>
+        </div>
+        <div class="tip"><span>海外旅行なら「パスポートの残り期間を確認」「電子渡航認証を申請」など、出発前にやることも項目にしておくと、もれを防げます。</span></div>
+      </section>
+
+      <!-- 09 -->
+      <section class="chap" id="map">
+        <div class="chap-h"><span class="no">09</span><h2>ルートマップ</h2></div>
+        <p>旅程タブの <span class="ui">地図</span> で、泊まる街と移動のルートを地図で見られます。何も設定しなくても、宿と移動を入れた時点で自動で描かれます。</p>
+        <div class="scroll"><table>
+          <tr><th>表示</th><th>意味</th></tr>
+          <tr><td>黒い点</td><td>泊まる街。数字は泊数</td></tr>
+          <tr><td>黒い線</td><td>電車・バス・車などの陸路</td></tr>
+          <tr><td>青い点線</td><td>飛行機</td></tr>
+        </table></div>
+        <div class="note"><span>地図に出ない街があるときは、都市名を候補から選び直してください。手で打った地名は、場所がわからないことがあります。</span></div>
+      </section>
+
+      <!-- 10 -->
+      <section class="chap" id="shiori">
+        <div class="chap-h"><span class="no">10</span><h2>しおりPDF</h2></div>
+        <p>入力した旅程から、A5サイズのしおりを自動でつくります。表紙は搭乗券のデザインです。</p>
+        <ol class="steps">
+          <li><div><span class="ui">旅程</span> の右上のメニューから <span class="ui">旅のしおり（PDFで保存）</span> を選ぶ</div></li>
+          <li><div><b>画面でページを確かめる</b><br>海外旅行なら、フレーズ集を載せるかどうかも選べます。</div></li>
+          <li><div><span class="ui dark">PDFで保存</span> を押す<br>保存したPDFは、そのまま印刷したり、LINEで送ったりできます。</div></li>
+        </ol>
+        <h3>しおりに入るもの</h3>
+        <div class="scroll"><table>
+          <tr><th>ページ</th><th>内容</th></tr>
+          <tr><td>表紙</td><td>旅行名・出発地と行き先・日程・人数（搭乗券のデザイン）</td></tr>
+          <tr><td>ルートマップ</td><td>泊まる街と移動の地図</td></tr>
+          <tr><td>旅程表</td><td>全日程を1ページで</td></tr>
+          <tr><td>日ごとの予定</td><td>1日ずつ、時刻順の予定とその日の宿</td></tr>
+          <tr><td>宿・移動</td><td>予約番号やチェックイン時刻の一覧</td></tr>
+          <tr><td>予算・持ち物</td><td>1人あたりの予算と持ち物リスト</td></tr>
+          <tr><td>フレーズ集</td><td>行き先の言葉の定番フレーズ（海外旅行のとき）</td></tr>
+        </table></div>
+        <div class="pass"><span>無料版のしおりには、ページの下に Trunk. のロゴが入ります。旅行パスを使うと、ロゴなしのしおりにできます。</span></div>
+      </section>
+
+      <!-- 11 -->
+      <section class="chap" id="share">
+        <div class="chap-h"><span class="no">11</span><h2>同行者と共有する</h2></div>
+        <p>旅行ごとに共有リンクを発行できます。受け取った人は、ログインもアプリのインストールもいりません。</p>
+        <ol class="steps">
+          <li><div><b>旅行の設定から <span class="ui">共有リンクを作る</span> を押す</b></div></li>
+          <li><div><b>リンクをコピーして送る</b><br>LINEやメールに貼り付けるだけです。</div></li>
+          <li><div><b>旅程を直すと、共有ページも最新になる</b><br>送り直す必要はありません。</div></li>
+        </ol>
+        <div class="mock" aria-hidden="true">
+          <div class="linkbox"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg><span>trunk-travelplanner.com/s/k7x2m9</span></div>
+        </div>
+        <h3>相手に見えるもの・見えないもの</h3>
+        <div class="scroll"><table>
+          <tr><th>見える</th><th>見えない</th></tr>
+          <tr><td>日ごとの予定、宿と移動、ルートマップ、しおり、持ち物、フレーズ集</td><td>パスポートや保険などの緊急時の情報、立て替えの明細、あなたのメールアドレス</td></tr>
+        </table></div>
+        <ul style="list-style:none;display:grid;gap:6px;font-size:14px;margin:6px 0 12px">
+          <li>・ 共有リンクを知っている人は誰でも見られます。送る相手に気をつけてください。</li>
+          <li>・ <span class="ui">共有を止める</span> を押すと、そのリンクはすぐに開けなくなります。</li>
+          <li>・ 共有ページから旅程を書き換えることはできません。編集できるのは作った本人だけです。</li>
+        </ul>
+        <div class="pass"><span><b>同行者からのリクエスト</b>（旅行パス）<br>共有ページから「ここに行きたい」「これ持っていくね」などのリクエストを送ってもらえます。届いたリクエストは確認してから、ワンタップで旅程に入れられます。</span></div>
+      </section>
+
+      <!-- 12 -->
+      <section class="chap" id="abroad">
+        <div class="chap-h"><span class="no">12</span><h2>海外旅行のとき</h2></div>
+        <h3>時差</h3>
+        <p>時刻はすべて<b>現地の時刻</b>で入れます。行き先の国や都市から時差を自動で判断し、日本との差を表示します。サマータイムも考慮します。自動の判断が違うときは、移動の画面で手で直せます。</p>
+        <div class="mock" aria-hidden="true">
+          <div class="ev"><span class="t">10:30</span><i class="dot mv"></i><div>羽田 → パリ<small>14時間35分 · 到着 17:05（現地）</small></div><span class="yen mono">UTC+9 → +1</span></div>
+        </div>
+        <h3>フレーズ集</h3>
+        <p>行き先の言葉で、あいさつ・買い物・食事・困ったときの定番フレーズを見られます。読み方もついているので、そのまま見せたり読み上げたりできます。しおりにも載せられます。</p>
+        <h3>入国前に確かめたいこと</h3>
+        <p>パスポートの残り期間や、電子渡航認証（K-ETA、ESTA など）が必要かどうかは、国や時期によって変わります。出発前に必ず大使館や公式サイトで確かめて、持ち物リストに項目として入れておきましょう。</p>
+      </section>
+
+      <!-- 13 -->
+      <section class="chap" id="trip">
+        <div class="chap-h"><span class="no">13</span><h2>旅行中に使う</h2></div>
+        <div class="scroll"><table>
+          <tr><th>やりたいこと</th><th>使う場所</th></tr>
+          <tr><td>今日の予定を見る</td><td>ホームの「今日の予定」。旅行中は自動で今日の日付が開きます</td></tr>
+          <tr><td>電波がないところで見る</td><td>一度開いた旅程は、電波がなくても見られます。念のため、しおりPDFも保存しておくと安心です</td></tr>
+          <tr><td>予約番号をすぐ出す</td><td>予約・手配タブで宿や便を押す</td></tr>
+          <tr><td>使ったお金を記録する</td><td>お金のタブで追加</td></tr>
+          <tr><td>スマホのカレンダーに入れる</td><td>旅行の設定から <span class="ui">カレンダー用に書き出す（.ics）</span></td></tr>
+        </table></div>
+      </section>
+
+      <!-- 14 -->
+      <section class="chap" id="pass">
+        <div class="chap-h"><span class="no">14</span><h2>旅行パス</h2></div>
+        <p>旅行パスは、1つの旅行で有料の機能を使えるようにする買い切りのチケットです。<b>2026年12月1日から販売します。</b></p>
+        <div class="scroll"><table>
+          <tr><th>項目</th><th>内容</th></tr>
+          <tr><td>価格</td><td class="mono">440円（税込）/ 1旅行</td></tr>
+          <tr><td>使える機能</td><td>立て替えの精算と外貨の円換算、同行者からのリクエスト、ロゴなしのしおりPDF。また、その旅行は「進行中の旅行1件まで」の数に入らなくなります</td></tr>
+          <tr><td>有効期間</td><td>期限なし。旅行が終わったあとも使えます</td></tr>
+          <tr><td>支払い方法</td><td>クレジットカード（Stripe）</td></tr>
+        </table></div>
+        <ol class="steps">
+          <li><div><b>旅行パスを使いたい旅行を開く</b></div></li>
+          <li><div><b>旅行の設定から <span class="ui">旅行パスを購入</span> を押す</b></div></li>
+          <li><div><b>カード情報を入れて支払う</b><br>支払いが終わると、すぐにその旅行で使えるようになります。</div></li>
+        </ol>
+        <p style="font-size:13px;color:var(--muted)">返金などの条件は <a href="/tokushoho.html">特定商取引法に基づく表記</a> をご覧ください。</p>
+      </section>
+
+      <!-- 15 -->
+      <section class="chap" id="manage">
+        <div class="chap-h"><span class="no">15</span><h2>旅行の管理</h2></div>
+        <div class="scroll"><table>
+          <tr><th>やりたいこと</th><th>やり方</th></tr>
+          <tr><td>ほかの旅行に切り替える</td><td>画面上の旅行名を押して選ぶ</td></tr>
+          <tr><td>新しい旅行を作る</td><td>旅行名を押して <span class="ui">新しい旅行</span>（無料版は進行中の旅行1件まで）</td></tr>
+          <tr><td>旅行を消す</td><td>旅行の設定から削除。消した旅行は元に戻せません</td></tr>
+          <tr><td>データを手元に残す</td><td>旅行の設定から <span class="ui">データを書き出す（JSON）</span></td></tr>
+          <tr><td>アカウントを消したい</td><td>お問い合わせフォームからご連絡ください</td></tr>
+        </table></div>
+      </section>
+
+      <div class="help">
+        <h2>わからないことがあったら</h2>
+        <p>よくある質問で見つからないときは、お問い合わせフォームからどうぞ。不具合の報告もここから受け付けています。</p>
+        <div class="row">
+          <a class="btn primary" href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせフォーム</a>
+          <a class="btn ghost" href="/#faq">よくある質問</a>
+        </div>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap ft">
+    <a class="logo" href="/" style="font-size:18px">Trunk<span>.</span></a>
+    <nav aria-label="フッター">
+      <a href="/guide.html">使い方ガイド</a>
+      <a href="/privacy.html">プライバシーポリシー</a>
+      <a href="/tokushoho.html">特定商取引法に基づく表記</a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせ</a>
+    </nav>
+    <span>© 2026 Trunk.</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('.toc a'));
+  if(!('IntersectionObserver' in window)||!links.length)return;
+  var map={};links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a});
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove('on')});var a=map[e.target.id];if(a)a.classList.add('on')}})},{rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('.chap').forEach(function(s){io.observe(s)});
+})();
+</script>
+</body>
+</html>

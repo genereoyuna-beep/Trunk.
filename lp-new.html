@@ -232,6 +232,24 @@ section{padding:72px 0}
 .settle div{display:flex;justify-content:space-between;align-items:center}
 .settle b{font-family:var(--f-mono)}
 
+
+/* ask ai */
+.ai-topics{display:grid;gap:6px;margin-bottom:12px}
+.ai-topic{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--line);font-size:13px;background:var(--surface)}
+.ai-topic i{width:14px;height:14px;border-radius:7px;border:1.5px solid var(--line);flex:none}
+.ai-topic.on{border-color:var(--ink)}.ai-topic.on i{border:4px solid var(--ink)}
+.ai-topic small{color:var(--muted);font-size:11px;margin-left:auto}
+.ai-btns{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+.ai-btn{font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:10px;border:1.5px solid var(--ink);background:var(--surface)}
+.ai-btn.on{background:var(--ink);color:#F3F4F1}
+.ai-flow{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;color:var(--muted);margin:2px 0 8px}
+.ai-flow span{flex:1;border-top:1.5px dashed var(--line)}
+.ai-pick{display:grid;gap:6px}
+.ai-pick div{display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 12px;border-radius:10px;background:var(--sunk)}
+.ai-pick b{font-family:var(--f-mono);font-size:12px;width:40px}
+.ai-pick em{font-style:normal;margin-left:auto;font-size:11px;color:var(--muted)}
+.ai-pick i{width:16px;height:16px;border-radius:4px;background:var(--ink);box-shadow:inset 0 0 0 3px var(--sunk);flex:none}
+
 /* steps */
 .steps{display:grid;gap:14px;counter-reset:s}
 @media(min-width:820px){.steps{grid-template-columns:repeat(3,1fr);gap:18px}}
@@ -297,6 +315,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <a href="#features">機能</a>
       <a href="#shiori">しおり</a>
       <a href="#share">共有</a>
+      <a href="#ai">AIに相談</a>
       <a href="/guide.html">使い方</a>
       <a href="#pricing">料金</a>
       <a href="#faq">よくある質問</a>
@@ -559,8 +578,34 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
   </div>
 </section>
 
+<!-- ASK AI -->
+<section class="band" id="ai">
+  <div class="wrap feat">
+    <div class="feat-copy rv">
+      <div class="eyebrow">07 · Ask AI</div>
+      <h3>いつもの AI に、<br>旅程ごと相談。</h3>
+      <p>ChatGPT・Claude・Gemini に、旅程をまとめた相談文つきでワンタップ。返ってきた答えを貼り付ければ、予定や持ち物の候補として取り込めます。</p>
+      <ul><li>この日の予定・旅程の見直し・持ち物・自由な質問</li><li>あなた自身の AI を使うので、追加の料金はかかりません</li><li>パスポートなどの個人情報は、相談文に入りません</li></ul>
+    </div>
+    <div class="panel rv" aria-hidden="true">
+      <div class="ai-topics">
+        <div class="ai-topic on"><i></i>この日の予定<small>DAY 2 · 12/5</small></div>
+        <div class="ai-topic"><i></i>旅程全体の見直し</div>
+        <div class="ai-topic"><i></i>持ち物</div>
+      </div>
+      <div class="ai-btns"><span class="ai-btn on">ChatGPT で相談</span><span class="ai-btn">Claude で相談</span><span class="ai-btn">Gemini で相談</span></div>
+      <div class="ai-flow"><span></span>答えを貼り付けて取り込む<span></span></div>
+      <div class="ai-pick">
+        <div><i></i><b>09:00</b>景福宮<em>観光</em></div>
+        <div><i></i><b>12:00</b>広蔵市場でお昼<em>食事</em></div>
+        <div><i></i><b>15:00</b>北村韓屋村をおさんぽ<em>観光</em></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- STEPS -->
-<section class="band" id="how">
+<section id="how">
   <div class="wrap">
     <div class="sec-head rv">
       <div class="eyebrow">How it works</div>
@@ -595,6 +640,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
           <li>ルートマップと共有リンク</li>
           <li>しおりPDF（Trunk. のロゴ入り）</li>
           <li>定番フレーズ集</li>
+          <li>AIに相談（あなたの ChatGPT などを使います）</li>
           <li>広告は表示しません</li>
         </ul>
         <a class="btn ghost" href="/app/">無料ではじめる</a>
@@ -630,6 +676,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <details><summary>アカウント登録は必要ですか？</summary><p>旅行を保存するには Google アカウントでのログインが必要です。新しくパスワードを作る必要はありません。</p></details>
       <details><summary>同行者もログインが必要ですか？</summary><p>いいえ。共有リンクを開くだけで、旅程としおりを見られます。アプリのインストールも不要です。</p></details>
       <details><summary>同行者が旅程を書き換えることはできますか？</summary><p>旅程を編集できるのは作った本人だけです。同行者は共有ページから「ここに行きたい」などのリクエストを送れ、本人が確認してから旅程に入れます（リクエストの受け付けは旅行パスの機能です）。</p></details>
+      <details><summary>AI は使えますか？</summary><p>「AIに相談」から、あなたの ChatGPT・Claude・Gemini を、旅程をまとめた相談文つきで開けます。返ってきた答えを貼り付けると、予定や持ち物の候補として取り込めます。Trunk. が AI に直接データを送ることはなく、パスポートなどの個人情報は相談文に入りません。</p></details>
       <details><summary>スマホで使えますか？</summary><p>はい。ブラウザで動くので、iPhone・Android・パソコンのどれでも使えます。一度開いた旅程は、電波の弱い旅先でも見られます。</p></details>
       <details><summary>旅行パスはいつから買えますか？</summary><p>2026年12月1日から販売します。それまでは無料版でお使いください。</p></details>
       <details><summary>旅行パスに有効期限はありますか？</summary><p>ありません。買った旅行では、旅行が終わったあともずっと有料機能を使えます。</p></details>

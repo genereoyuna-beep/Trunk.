@@ -204,11 +204,12 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
         <li><a href="#map"><span>09</span>ルートマップ</a></li>
         <li><a href="#shiori"><span>10</span>しおりPDF</a></li>
         <li><a href="#share"><span>11</span>同行者と共有する</a></li>
+        <li><a href="#ai"><span>12</span>AIに相談</a></li>
         <li class="grp">旅行中・そのほか</li>
-        <li><a href="#abroad"><span>12</span>海外旅行のとき</a></li>
-        <li><a href="#trip"><span>13</span>旅行中に使う</a></li>
-        <li><a href="#pass"><span>14</span>旅行パス</a></li>
-        <li><a href="#manage"><span>15</span>旅行の管理</a></li>
+        <li><a href="#abroad"><span>13</span>海外旅行のとき</a></li>
+        <li><a href="#trip"><span>14</span>旅行中に使う</a></li>
+        <li><a href="#pass"><span>15</span>旅行パス</a></li>
+        <li><a href="#manage"><span>16</span>旅行の管理</a></li>
       </ol>
     </nav>
 
@@ -220,9 +221,9 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
           <li><a href="#day">05 1日の予定</a></li><li><a href="#status">06 手配もれ</a></li>
           <li><a href="#money">07 予算とお金</a></li><li><a href="#pack">08 持ち物</a></li>
           <li><a href="#map">09 ルートマップ</a></li><li><a href="#shiori">10 しおりPDF</a></li>
-          <li><a href="#share">11 共有</a></li><li><a href="#abroad">12 海外旅行</a></li>
-          <li><a href="#trip">13 旅行中</a></li><li><a href="#pass">14 旅行パス</a></li>
-          <li><a href="#manage">15 旅行の管理</a></li>
+          <li><a href="#share">11 共有</a></li><li><a href="#ai">12 AIに相談</a></li><li><a href="#abroad">13 海外旅行</a></li>
+          <li><a href="#trip">14 旅行中</a></li><li><a href="#pass">15 旅行パス</a></li>
+          <li><a href="#manage">16 旅行の管理</a></li>
         </ol>
       </details>
 
@@ -316,7 +317,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
             <div class="field"><label>状況</label><div class="seg"><span>未手配</span><span>予約済み</span><span class="on">支払い済み</span></div></div>
           </div>
         </div>
-        <div class="tip"><span>海外の時刻は、すべて<b>現地の時刻</b>で入れてください。時差は行き先から自動で判断します。くわしくは <a href="#abroad">12 海外旅行のとき</a> へ。</span></div>
+        <div class="tip"><span>海外の時刻は、すべて<b>現地の時刻</b>で入れてください。時差は行き先から自動で判断します。くわしくは <a href="#abroad">13 海外旅行のとき</a> へ。</span></div>
       </section>
 
       <!-- 05 -->
@@ -443,8 +444,22 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 12 -->
+      <section class="chap" id="ai">
+        <div class="chap-h"><span class="no">12</span><h2>AIに相談</h2></div>
+        <p>あなたの ChatGPT・Claude・Gemini に、旅程をまとめた相談文つきで相談できます。返ってきた答えは、予定や持ち物の候補として取り込めます。</p>
+        <ol class="steps">
+          <li><div><b>右上のメニューから <span class="ui">AIに相談</span> を開く</b><br>日ごとの表示の <span class="ui">提案</span> から開くと、その日の相談になります。</div></li>
+          <li><div><b>相談したいことを選ぶ</b><br>「この日の予定」「旅程全体の見直し」「持ち物」「自由に質問」から選び、希望があれば書き添えます（例：子連れ。歩くのは少なめ）。</div></li>
+          <li><div><b><span class="ui">ChatGPTで相談</span> などを押して、送信する</b><br>ChatGPT と Claude は相談文が入った状態で開きます。Gemini は相談文がコピーされるので、貼り付けて送ってください。</div></li>
+          <li><div><b>答えをまるごと貼り付けて、取り込む</b><br>「この日の予定」と「持ち物」は、答えを <b>AIの答えを貼り付け</b> の欄に貼ると候補が並びます。チェックしたものだけが旅程に入ります。</div></li>
+        </ol>
+        <div class="tip"><span>相談文に入るのは旅程の要約（日程・宿・移動・予定・予算・持ち物）と人数だけです。パスポートや保険などの緊急時の情報は入りません。Trunk. が AI に直接データを送ることもありません。</span></div>
+        <div class="note"><span>AI の答えは目安です。営業時間・料金・予約が必要かは、必ず公式サイトで確かめてください。取り込めないときは、AI に「最後にJSONも出して」と頼んでください。</span></div>
+      </section>
+
+      <!-- 13 -->
       <section class="chap" id="abroad">
-        <div class="chap-h"><span class="no">12</span><h2>海外旅行のとき</h2></div>
+        <div class="chap-h"><span class="no">13</span><h2>海外旅行のとき</h2></div>
         <h3>時差</h3>
         <p>時刻はすべて<b>現地の時刻</b>で入れます。行き先の国や都市から時差を自動で判断し、日本との差を表示します。サマータイムも考慮します。自動の判断が違うときは、移動の画面で手で直せます。</p>
         <div class="mock" aria-hidden="true">
@@ -458,7 +473,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 
       <!-- 13 -->
       <section class="chap" id="trip">
-        <div class="chap-h"><span class="no">13</span><h2>旅行中に使う</h2></div>
+        <div class="chap-h"><span class="no">14</span><h2>旅行中に使う</h2></div>
         <div class="scroll"><table>
           <tr><th>やりたいこと</th><th>使う場所</th></tr>
           <tr><td>今日の予定を見る</td><td>ホームの「今日の予定」。旅行中は自動で今日の日付が開きます</td></tr>
@@ -471,7 +486,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 
       <!-- 14 -->
       <section class="chap" id="pass">
-        <div class="chap-h"><span class="no">14</span><h2>旅行パス</h2></div>
+        <div class="chap-h"><span class="no">15</span><h2>旅行パス</h2></div>
         <p>旅行パスは、1つの旅行で有料の機能を使えるようにする買い切りのチケットです。<b>2026年12月1日から販売します。</b></p>
         <div class="scroll"><table>
           <tr><th>項目</th><th>内容</th></tr>
@@ -490,7 +505,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 
       <!-- 15 -->
       <section class="chap" id="manage">
-        <div class="chap-h"><span class="no">15</span><h2>旅行の管理</h2></div>
+        <div class="chap-h"><span class="no">16</span><h2>旅行の管理</h2></div>
         <div class="scroll"><table>
           <tr><th>やりたいこと</th><th>やり方</th></tr>
           <tr><td>ほかの旅行に切り替える</td><td>画面上の旅行名を押して選ぶ</td></tr>

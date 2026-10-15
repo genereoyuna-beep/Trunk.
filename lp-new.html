@@ -274,6 +274,25 @@ section{padding:72px 0}
 .step h3{font-size:19px;margin:6px 0 8px}
 .step p{font-size:13.5px;color:var(--muted)}
 
+/* home screen */
+.homescreen{margin-top:40px;display:grid;gap:14px}
+@media(min-width:820px){.homescreen{grid-template-columns:1fr 1fr;gap:18px}}
+.hs-head{grid-column:1/-1}
+.hs-head h3{font-size:22px;margin:4px 0 6px}
+.hs-head p{font-size:14px;color:var(--ink2)}
+.hs-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+.hs-card h4{font-family:var(--f-display);font-size:17px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.hs-card h4 span{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;color:var(--muted);font-weight:500}
+.hs-card ol{list-style:none;counter-reset:h;display:grid;gap:9px;font-size:14px}
+.hs-card li{counter-increment:h;display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px}
+.hs-card li::before{content:counter(h);width:22px;height:22px;border-radius:11px;background:var(--ink);color:#F3F4F1;font-family:var(--f-mono);font-size:11px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.hs-card .k{display:inline-block;padding:0 7px;border-radius:6px;background:var(--sunk);font-weight:700;font-size:13px}
+.hs-note{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+/* request */
+.ask{margin-top:22px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.ask h3{font-size:17px;margin-bottom:2px}
+.ask p{font-size:13.5px;color:var(--muted)}
+
 /* pricing */
 .plans{display:grid;gap:16px;max-width:1080px}
 @media(min-width:760px){.plans{grid-template-columns:1fr 1fr}}@media(min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
@@ -636,6 +655,33 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <div class="step rv"><div class="no">STEP 03</div><h3>しおりにして、共有する</h3><p>リンクを同行者に送れば準備完了。PDFのしおりは印刷して持って行けます。</p></div>
     </div>
     <p class="rv" style="margin-top:22px"><a class="btn ghost" href="/guide.html">くわしい使い方を見る</a></p>
+
+    <div class="homescreen" id="homescreen">
+      <div class="hs-head rv">
+        <div class="eyebrow">Home screen</div>
+        <h3>スマホのホーム画面に置いておく</h3>
+        <p>ホーム画面に追加すると、アプリと同じようにアイコンから1タップで開けます。インストールや容量の心配はありません。</p>
+      </div>
+      <div class="hs-card rv">
+        <h4>iPhone <span>SAFARI</span></h4>
+        <ol>
+          <li><span>Safari で Trunk. を開いて、ログインする</span></li>
+          <li><span>画面下の <span class="k">共有</span>（四角から上向きの矢印）を押す</span></li>
+          <li><span>メニューを下にずらして <span class="k">ホーム画面に追加</span> を押す</span></li>
+          <li><span>右上の <span class="k">追加</span> を押す</span></li>
+        </ol>
+      </div>
+      <div class="hs-card rv">
+        <h4>Android <span>CHROME</span></h4>
+        <ol>
+          <li><span>Chrome で Trunk. を開いて、ログインする</span></li>
+          <li><span>右上の <span class="k">︙</span>（メニュー）を押す</span></li>
+          <li><span><span class="k">ホーム画面に追加</span> を押す</span></li>
+          <li><span><span class="k">インストール</span> または <span class="k">追加</span> を押す</span></li>
+        </ol>
+      </div>
+      <p class="hs-note rv">LINE や Instagram の中で開いた場合は、右上のメニューから「ブラウザで開く」を選んでから追加してください。ホーム画面のウィジェット（アプリを開かずに予定が見える小さな表示）には、今は対応していません。</p>
+    </div>
   </div>
 </section>
 
@@ -717,10 +763,15 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <details><summary>同行者もログインが必要ですか？</summary><p>いいえ。共有リンクを開くだけで、旅程としおりを見られます。アプリのインストールも不要です。</p></details>
       <details><summary>同行者が旅程を書き換えることはできますか？</summary><p>旅程を編集できるのは作った本人だけです。同行者は共有ページから「ここに行きたい」などのリクエストを送れ、本人が確認してから旅程に入れます。</p></details>
       <details><summary>AI は使えますか？</summary><p>「AIに相談」から、あなたの ChatGPT・Claude・Gemini を、旅程をまとめた相談文つきで開けます。返ってきた答えを貼り付けると、予定や持ち物の候補として取り込めます。Trunk. が AI に直接データを送ることはなく、パスポートなどの個人情報は相談文に入りません。</p></details>
-      <details><summary>スマホで使えますか？</summary><p>はい。ブラウザで動くので、iPhone・Android・パソコンのどれでも使えます。一度開いた旅程は、電波の弱い旅先でも見られます。</p></details>
+      <details><summary>スマホで使えますか？</summary><p>はい。ブラウザで動くので、iPhone・Android・パソコンのどれでも使えます。<a href="#homescreen">ホーム画面に追加</a>すると、アプリのようにアイコンから開けます。電波のない場所に備えるなら、しおりをPDFで保存しておくと安心です。</p></details>
       <details><summary>旅行パスはいつから買えますか？</summary><p>2026年12月1日から販売します。それまでは無料版でお使いください。</p></details>
       <details><summary>旅行パスは誰が買えばいいですか？</summary><p>2つ目の旅行を作る人です。招待されて参加した旅行は数えないので、同行者が買う必要はありません。</p></details>
+      <details><summary>ほしい機能があります</summary><p>ぜひ教えてください。アプリのメニューの「共有と設定」にある「ほしい機能・困ったこと」から、ひとことで送れます（名前やメールアドレスは送られません）。いただいた声は、次に作る機能を決めるときにすべて読んでいます。</p></details>
       <details><summary>旅行パスと3か月パスの違いは？</summary><p>旅行パス（440円）は1つの旅行ごと、3か月パス（980円）は3か月の間なら旅行をいくつでも準備できます。無料の1つとは別に3つ以上の旅行を準備するなら、3か月パスがお得です（旅行パス3回で1,320円）。どちらも自動更新はなく、期限が切れても今ある旅行はそのまま見られて編集もできます。</p></details>
+    </div>
+    <div class="ask rv">
+      <div><h3>ほしい機能を募集中です</h3><p>使う前の方も歓迎です。いただいた声から、次に作るものを決めています。</p></div>
+      <a class="btn ghost" href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">要望を送る</a>
     </div>
   </div>
 </section>

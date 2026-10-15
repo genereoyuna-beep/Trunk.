@@ -62,8 +62,16 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
   const [msg, setMsg] = useState("");
   const prompt = consultPrompt(t, topic, iso, wish.trim());
   const canImport = topic === "day" || topic === "pack";
+  // claude.ai のアーティファクトのように枠の中で動いているときは、開いたタブにも制限が残って AI のページが表示されない。
+  // そのときは開かずに、相談文をコピーして案内だけ出す
+  const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
   const open = async (ai) => {
-    try { await navigator.clipboard.writeText(prompt); } catch (e) {}
+    let copied = false;
+    try { await navigator.clipboard.writeText(prompt); copied = true; } catch (e) {}
+    if (framed) {
+      setMsg(copied ? `相談文をコピーしました。ブラウザで ${ai.home.replace(/^https:\/\//, "").replace(/\/$/, "")} を開いて、貼り付けて送ってください。` : "下の「相談文を見る・コピーする」から相談文をコピーして、AIに貼り付けてください。");
+      return;
+    }
     const q = encodeURIComponent(prompt);
     const url = ai.url && q.length < 7000 ? ai.url(q) : ai.home;
     window.open(url, "_blank", "noopener");

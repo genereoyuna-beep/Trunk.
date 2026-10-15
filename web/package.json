@@ -1,0 +1,11 @@
+{
+  "name": "trunk-web",
+  "private": true,
+  "scripts": {
+    "sync": "node sync.js",
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "@babel/standalone": "7.23.10"
+  }
+}

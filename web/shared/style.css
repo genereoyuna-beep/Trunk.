@@ -326,3 +326,17 @@ h1{font-size:22px} h2{font-size:18px} h3{font-size:15px}
 .radio{width:18px;height:18px;border-radius:9px;border:1.5px solid var(--line);display:inline-block}
 .radio.on{border:5px solid var(--ink)}
 details > summary{cursor:pointer}
+
+/* ---- 予算（スマホでも横にはみ出さない2段の形） ---- */
+.budget2{display:flex;flex-direction:column;gap:0;padding:4px 14px 14px}
+.brow2{padding:12px 0;border-bottom:1px solid var(--sunk)}
+.brow2-h{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.brow2-h .input{flex:1;min-width:0;font-weight:600}
+.brow2-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:end}
+.brow2-g label,.brow2-g > div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.brow2-g span{font-size:11px;color:var(--muted)}
+.brow2-g .input{width:100%;min-width:0}
+.brow2-g b{font-weight:600;font-size:13px;padding:8px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow2-g b.over{color:var(--danger)}
+.brow2.total{border-bottom:0;padding-bottom:4px}
+.brow2.total b{font-size:14px}

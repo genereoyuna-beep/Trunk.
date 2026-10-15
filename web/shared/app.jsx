@@ -536,9 +536,9 @@ function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
         const { head } = dayEvents(t, d);
         return (
           <section key={d} className="card flush divide" style={d === today ? { boxShadow: "0 0 0 2px var(--blue)" } : undefined}>
-            <div className="row between" style={{ padding: "12px 14px", flexWrap: "nowrap" }}>
-              <span style={{ minWidth: 0 }}>
-                <span className="mono xs muted">{i + 1}日目 ・ {md(d)}（{wdOf(d)}）{d === today ? " ・ 今日" : ""}</span>
+            <div className="row between" style={{ padding: "12px 14px", flexWrap: "wrap", rowGap: 8 }}>
+              <span style={{ minWidth: 0, flex: "1 1 160px" }}>
+                <span className="mono xs muted" style={{ whiteSpace: "nowrap" }}>{i + 1}日目 ・ {md(d)}（{wdOf(d)}）{d === today ? " ・ 今日" : ""}</span>
                 <span style={{ display: "block", fontFamily: "var(--f-display)", fontWeight: 700, fontSize: 17 }}>{head}</span>
               </span>
               <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
@@ -950,21 +950,24 @@ function MoneyView({ t, stats, update }) {
           <Toggle checked={allView} onChange={setAllView}>全員分の合計で見る</Toggle>
           <div className="note">{my.mode === "split" ? `「精算」の参加者と日ごとの参加状況から、${t.myName}さんの負担分を計算しています。` : "宿・移動・現地の金額を、それぞれの「人数（何人分の金額か）」で割って1人分を出しています。人数は各予定の編集画面で変えられます。"}</div>
         </section>
-        <section className="card" style={{ overflowX: "auto" }}>
-          <table className="budget">
-            <thead><tr><th>項目</th><th>予算</th><th>実費・見込み</th><th>差額</th><th><span className="sr" style={{ position: "absolute", left: -9999 }}>削除</span></th></tr></thead>
-            <tbody>
-              {rows.map(r => { const diff = (Number(r.target) || 0) - r.actualV; return (
-                <tr key={r.id}>
-                  <td><input className="input" aria-label="項目名" value={r.category} onChange={e => setB(r.id, { category: e.target.value })} />{r.auto && <div className="xs muted" style={{ marginTop: 2 }}>旅程から自動集計</div>}</td>
-                  <td><NumIn value={r.target} onChange={v => setB(r.id, { target: v })} className="input" aria-label="予算" /></td>
-                  <td>{r.auto ? <span className="mono">{yen(r.actualV)}</span> : <NumIn value={r.actual} onChange={v => setB(r.id, { actual: v })} className="input" aria-label="実費" />}</td>
-                  <td className={"mono" + (diff < 0 ? " over" : "")}>{yen(diff)}</td>
-                  <td><button className="iconbtn" aria-label={`${r.category}を削除`} onClick={() => update(tr => ({ ...tr, budget: tr.budget.filter(b => b.id !== r.id) }))}><Icon n="x" s={16} /></button></td>
-                </tr>); })}
-              <tr><td style={{ fontWeight: 700 }}>合計</td><td className="mono">{yen(totalT)}</td><td className="mono">{yen(totalA)}</td><td className={"mono" + (totalT - totalA < 0 ? " over" : "")}>{yen(totalT - totalA)}</td><td /></tr>
-            </tbody>
-          </table>
+        <section className="card budget2">
+          {rows.map(r => { const tg = Number(r.target) || 0, diff = tg - r.actualV; return (
+            <div key={r.id} className="brow2">
+              <div className="brow2-h">
+                <input className="input" aria-label="項目名" value={r.category} onChange={e => setB(r.id, { category: e.target.value })} />
+                <button className="iconbtn" aria-label={`${r.category}を削除`} onClick={() => update(tr => ({ ...tr, budget: tr.budget.filter(b => b.id !== r.id) }))}><Icon n="x" s={16} /></button>
+              </div>
+              <div className="brow2-g">
+                <label><span>予算</span><NumIn value={r.target} onChange={v => setB(r.id, { target: v })} className="input" aria-label={`${r.category}の予算`} /></label>
+                <label><span>{r.auto ? "見込み（自動）" : "実費"}</span>{r.auto ? <b className="mono">{yen(r.actualV)}</b> : <NumIn value={r.actual} onChange={v => setB(r.id, { actual: v })} className="input" aria-label={`${r.category}の実費`} />}</label>
+                <div><span>差額</span><b className={"mono" + (tg && diff < 0 ? " over" : "")}>{tg ? (diff < 0 ? `${yen(-diff)} 超過` : `残り ${yen(diff)}`) : "—"}</b></div>
+              </div>
+            </div>); })}
+          <div className="brow2 total"><div className="brow2-g">
+            <div><span>予算の合計</span><b className="mono">{yen(totalT)}</b></div>
+            <div><span>見込みの合計</span><b className="mono">{yen(totalA)}</b></div>
+            <div><span>差額</span><b className={"mono" + (totalT && totalT - totalA < 0 ? " over" : "")}>{totalT ? (totalT - totalA < 0 ? `${yen(totalA - totalT)} 超過` : `残り ${yen(totalT - totalA)}`) : "—"}</b></div>
+          </div></div>
           <button className="btn small" style={{ marginTop: 10 }} onClick={() => update(tr => ({ ...tr, budget: [...(tr.budget || []), { id: uid(), category: "", target: 0, auto: false, actual: 0 }] }))}><Icon n="plus" s={14} />項目を追加</button>
         </section>
       </>}

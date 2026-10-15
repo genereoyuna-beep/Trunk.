@@ -1096,7 +1096,7 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings }) {
             <span className="pill tone-none">{tripStatusText(x.data)}</span>
           </button>); })}
       </div>
-      {!form && <div className="row"><button className="btn primary" onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "" })}><Icon n="plus" s={16} />新しい旅行</button><button className="btn" onClick={onSettings}>この旅行の設定</button></div>}
+      {!form && <div className="row"><button className="btn primary" onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "" })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
       {form && (
         <section className="card stack" style={{ gap: 10 }}>
           <h3>新しい旅行</h3>
@@ -1415,10 +1415,11 @@ function App() {
   if (!trips.length) return (
     <div className="main" style={{ paddingTop: 48 }}>
       <div className="card stack">
-        <h1>旅行プランナー</h1>
+        <h1>{FEATURES.appName || "旅行プランナー"}</h1>
         <p className="muted">旅行ごとに、日程・宿・移動・予算・持ち物をまとめて管理します。最初の旅行を作ってください。</p>
-        <TripsSheet trips={[]} currentId={null} onPick={() => {}} onCreate={createTrip} onSettings={() => {}} />
+        <TripsSheet trips={[]} currentId={null} onPick={() => {}} onCreate={createTrip} onSettings={null} />
       </div>
+      {FEATURES.account && <button className="btn ghost" style={{ marginTop: 16 }} onClick={() => Store.signOut()}>ログアウト</button>}
     </div>
   );
   if (!draft) return <div className="empty" style={{ paddingTop: 80 }}>読み込み中…</div>;
@@ -1499,7 +1500,7 @@ function App() {
             </div>
           )}
           {sheet.kind === "trips" && <TripsSheet trips={trips} currentId={tripId} onPick={pickTrip} onCreate={createTrip} onSettings={() => setSheet({ kind: "settings" })} />}
-          {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onDelete={deleteTrip} canDelete={trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
+          {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onDelete={deleteTrip} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
           {sheet.kind === "import" && (
             <>
               <p>「{sheet.data.name || "読み込んだ旅行"}」のデータ（滞在 {staysOf(sheet.data).length}件・移動 {transitsOf(sheet.data).length}件）を読み込みます。</p>

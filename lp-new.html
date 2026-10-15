@@ -278,14 +278,15 @@ section{padding:72px 0}
 .plans{display:grid;gap:16px;max-width:1080px}
 @media(min-width:760px){.plans{grid-template-columns:1fr 1fr}}@media(min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
 .plan{background:var(--surface);border-radius:20px;padding:26px 22px;border:1px solid var(--line);display:flex;flex-direction:column}
-.plan.pass{border:2px solid var(--ink);position:relative}
+.plan{position:relative}
+.plan.pass{border:2px solid var(--ink)}
 .plan .eyebrow{margin-bottom:6px}
 .plan h3{font-size:22px}
 .price{display:flex;align-items:baseline;gap:6px;margin:12px 0 4px}
 .price b{font-family:var(--f-mono);font-size:44px;line-height:1;font-weight:600}
 .price span{font-size:13px;color:var(--muted)}
 .plan .sub{font-size:13px;color:var(--muted);margin-bottom:16px}
-.plan ul{list-style:none;display:grid;gap:9px;font-size:14px;margin-bottom:22px}
+.plan ul{list-style:none;display:grid;gap:9px;font-size:14px;margin-bottom:22px;word-break:auto-phrase}
 .plan li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px}
 .plan li::before{content:"✓";font-family:var(--f-mono);color:var(--blue);font-weight:600}
 .plan .btn{margin-top:auto}
@@ -644,21 +645,22 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
     <div class="sec-head rv">
       <div class="eyebrow">Pricing</div>
       <h2>機能はぜんぶ無料。<br>旅行が重なったときだけ。</h2>
-      <p>1つ目の旅行は無料で、すべての機能が使えます。2つ目の旅行を同時に準備するときだけ、旅行パスか3か月パスを。月額・年額の支払いはありません。</p>
+      <p>準備中の旅行が1つなら、ずっと無料。機能もすべて使えます。<br>旅行の準備が重なったときだけ、パスを1回買ってください。月額の支払いはありません。</p>
     </div>
     <div class="plans">
       <div class="plan rv">
         <div class="eyebrow">Free</div>
         <h3>無料</h3>
         <div class="price"><b>0</b><span>円</span></div>
-        <div class="sub">旅行を1つずつ、すべての機能つきで。</div>
+        <div class="sub">準備中の旅行が1つなら、ずっと無料。</div>
         <ul>
-          <li>日ごとのタイムライン・手配状況・予算・持ち物</li>
-          <li>ルートマップ・しおりPDF・共有リンク</li>
-          <li>立て替えの精算と外貨の円換算</li>
-          <li>定番フレーズ集・AIに相談</li>
-          <li>終わった旅行はいくつでも残せます</li>
-          <li>広告は表示しません</li>
+          <li>日ごとの予定・手配・予算・持ち物</li>
+          <li>ルートマップ・しおりPDF</li>
+          <li>共有リンク</li>
+          <li>割り勘の精算・外貨の円換算</li>
+          <li>フレーズ集・AIに相談</li>
+          <li>終わった旅行は何件でも保存</li>
+          <li>広告なし</li>
         </ul>
         <a class="btn ghost" href="/app/">無料ではじめる</a>
       </div>
@@ -668,24 +670,26 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <h3>旅行パス</h3>
         <div class="price"><b>440</b><span>円（税込）/ 1旅行</span></div>
         <div class="deal" data-promo>公開記念 <s>440円</s> → <b>220</b>円<small>コード TRUNKSTART・2027年1月31日まで</small></div>
-        <div class="sub">2つ目の旅行を同時に準備するときに。</div>
+        <div class="sub">もう1つ旅行を準備したいときに。</div>
         <ul>
-          <li>その旅行を、無料の1つとは別に準備できます</li>
-          <li>使える機能は無料と同じです</li>
-          <li>自動更新はありません</li>
+          <li>無料の1つとは別に、旅行を1つ作れる</li>
+          <li>その旅行が終わるまで使える</li>
+          <li>1回払い・自動更新なし</li>
         </ul>
         <a class="btn primary" href="/app/">まずは無料で旅行をつくる</a>
       </div>
       <div class="plan rv">
+        <span class="badge">12.01 START</span>
         <div class="eyebrow">3 months</div>
         <h3>3か月パス</h3>
         <div class="price"><b>980</b><span>円（税込）/ 3か月</span></div>
         <div class="deal" data-promo>公開記念 <s>980円</s> → <b>490</b>円<small>コード TRUNKSTART・2027年1月31日まで</small></div>
-        <div class="sub">旅行が重なる時期に。</div>
+        <div class="sub">旅行の予定が続く時期に。</div>
         <ul>
-          <li>3か月の間は、旅行をいくつでも準備できます</li>
-          <li>旅行が3つ以上重なるならこちらがお得</li>
-          <li>自動更新はありません。期限が切れても今ある旅行はそのまま使えます</li>
+          <li>3か月間、旅行をいくつでも作れる</li>
+          <li>旅行パス3回分より安い</li>
+          <li>期限後も、作った旅行はそのまま使える</li>
+          <li>1回払い・自動更新なし</li>
         </ul>
         <a class="btn ghost" href="/app/">まずは無料で旅行をつくる</a>
       </div>
@@ -696,7 +700,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <span class="code">TRUNKSTART</span>
       <p>2026年12月1日〜2027年1月31日、お支払いの画面でこのコードを入れると、旅行パス・3か月パスが50%オフになります（お一人さま1回）。</p>
     </div>
-    <p class="price-note">旅行が終わると、その旅行は数えなくなります。パスが終わっても、今ある旅行はそのまま使えます。次の旅行はまた無料で作れます。お支払いはクレジットカード（Stripe）です。詳しくは<a href="/tokushoho.html">特定商取引法に基づく表記</a>をご覧ください。</p>
+    <p class="price-note">終わった旅行は数に入らないので、旅行が終われば次の旅行はまた無料で作れます。パスの期限が切れても、作った旅行は消えません。お支払いはクレジットカード（Stripe）です。詳しくは<a href="/tokushoho.html">特定商取引法に基づく表記</a>をご覧ください。</p>
   </div>
 </section>
 
@@ -716,7 +720,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <details><summary>スマホで使えますか？</summary><p>はい。ブラウザで動くので、iPhone・Android・パソコンのどれでも使えます。一度開いた旅程は、電波の弱い旅先でも見られます。</p></details>
       <details><summary>旅行パスはいつから買えますか？</summary><p>2026年12月1日から販売します。それまでは無料版でお使いください。</p></details>
       <details><summary>旅行パスは誰が買えばいいですか？</summary><p>2つ目の旅行を作る人です。招待されて参加した旅行は数えないので、同行者が買う必要はありません。</p></details>
-      <details><summary>旅行パスと3か月パスの違いは？</summary><p>旅行パス（440円）は1つの旅行ごと、3か月パス（980円）は3か月の間なら旅行をいくつでも準備できます。旅行が3つ以上重なるなら3か月パスがお得です。どちらも自動更新はなく、期限が切れても今ある旅行はそのまま見られて編集もできます。</p></details>
+      <details><summary>旅行パスと3か月パスの違いは？</summary><p>旅行パス（440円）は1つの旅行ごと、3か月パス（980円）は3か月の間なら旅行をいくつでも準備できます。無料の1つとは別に3つ以上の旅行を準備するなら、3か月パスがお得です（旅行パス3回で1,320円）。どちらも自動更新はなく、期限が切れても今ある旅行はそのまま見られて編集もできます。</p></details>
     </div>
   </div>
 </section>

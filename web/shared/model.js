@@ -107,7 +107,6 @@ const LOCAL_CATS = ["観光", "食事", "ツアー", "入場券", "買い物", "
 const BOOKED = ["予約済み（キャンセル無料）", "予約済み（変更可能）", "予約済み（変更キャンセル不可）"];
 const POLICY_LABEL = { "予約済み（キャンセル無料）": "無料キャンセル可", "予約済み（変更可能）": "変更可", "予約済み（変更キャンセル不可）": "変更・キャンセル不可" };
 const TIME_OPTIONS = Array.from({ length: 33 }, (_, i) => `${pad(6 + Math.floor(i / 2))}:${i % 2 ? "30" : "00"}`);
-const DEFAULT_BAGS = ["スーツケース", "リュック", "小さいバッグ"];
 
 function emptyTrip(name, startDate, nights) {
   return {
@@ -123,8 +122,8 @@ function emptyTrip(name, startDate, nights) {
     ],
     totalBudget: 0,
     packing: {
-      "書類": [{ id: uid(), name: "パスポート", checked: false, bag: "小さいバッグ" }, { id: uid(), name: "予約確認書", checked: false, bag: "小さいバッグ" }],
-      "電子機器": [{ id: uid(), name: "充電ケーブル", checked: false, bag: "リュック" }, { id: uid(), name: "変換プラグ", checked: false, bag: "リュック" }],
+      "書類": [{ id: uid(), name: "パスポート", checked: false, bag: "" }, { id: uid(), name: "予約確認書", checked: false, bag: "" }],
+      "電子機器": [{ id: uid(), name: "充電ケーブル", checked: false, bag: "" }, { id: uid(), name: "変換プラグ", checked: false, bag: "" }],
       "衣類": [], "洗面・薬": [],
     },
     participants: [], dayParticipants: {}, myName: "",
@@ -146,6 +145,8 @@ function upgradeTrip(t) {
     out.localTransport = (t.localTransport || []).filter(l => l.category !== "移動");
   }
   out.itinerary = markLegs(itin);
+  // かばんは固定にせず、旅行ごとに自分で決める。旧版で使っていたかばんは引き継ぐ
+  if (!Array.isArray(t.bags)) out.bags = [...new Set(Object.values(t.packing || {}).flat().map(i => i.bag).filter(Boolean))];
   // 予算の「移動費」と「現地交通」は「交通費」1つに
   const b = out.budget || [];
   const local = b.find(x => x.auto && x.category === "現地交通"), move = b.find(x => x.auto && String(x.category || "").startsWith("移動費"));

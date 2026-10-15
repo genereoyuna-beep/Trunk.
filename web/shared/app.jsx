@@ -1038,19 +1038,46 @@ function PackView({ t, update }) {
   const [bag, setBag] = useState("すべて");
   const [adding, setAdding] = useState({});
   const [newCat, setNewCat] = useState("");
+  const [bagEdit, setBagEdit] = useState(null); // null / { mode: "add" | "rename", name, from }
   const packing = t.packing || {};
   const all = Object.values(packing).flat();
   const done = all.filter(i => i.checked).length;
-  const bags = [...new Set([...DEFAULT_BAGS, ...all.map(i => i.bag).filter(Boolean)])];
+  const bags = Array.isArray(t.bags) ? t.bags : [];
+  const sel = bags.includes(bag) || bag === "未定" ? bag : "すべて";
   const setItems = (cat, fn) => update(tr => ({ ...tr, packing: { ...tr.packing, [cat]: fn(tr.packing[cat] || []) } }));
-  const addItem = (cat) => { const n = (adding[cat] || "").trim(); if (!n) return; setItems(cat, items => [...items, { id: uid(), name: n, checked: false, bag: bag !== "すべて" ? bag : bags[0] }]); setAdding({ ...adding, [cat]: "" }); };
+  const mapAll = (tr, fn) => Object.fromEntries(Object.entries(tr.packing || {}).map(([c, xs]) => [c, xs.map(fn)]));
+  const addItem = (cat) => { const n = (adding[cat] || "").trim(); if (!n) return; setItems(cat, items => [...items, { id: uid(), name: n, checked: false, bag: bags.includes(sel) ? sel : "" }]); setAdding({ ...adding, [cat]: "" }); };
+  const saveBag = () => {
+    const n = (bagEdit.name || "").trim();
+    if (!n || (bags.includes(n) && n !== bagEdit.from)) { setBagEdit(null); return; }
+    if (bagEdit.mode === "add") update(tr => ({ ...tr, bags: [...(tr.bags || []), n] }));
+    else update(tr => ({ ...tr, bags: (tr.bags || []).map(b => b === bagEdit.from ? n : b), packing: mapAll(tr, x => x.bag === bagEdit.from ? { ...x, bag: n } : x) }));
+    setBag(n); setBagEdit(null);
+  };
+  const removeBag = (b) => { update(tr => ({ ...tr, bags: (tr.bags || []).filter(x => x !== b), packing: mapAll(tr, x => x.bag === b ? { ...x, bag: "" } : x) })); setBag("すべて"); };
   return (
     <div className="stack">
       <div className="row between" style={{ marginTop: 4 }}><h1>持ち物</h1><span className="mono small muted">{done}/{all.length}</span></div>
       <div className="bar" style={{ height: 8, margin: 0 }}><span style={{ width: `${all.length ? done / all.length * 100 : 0}%`, background: "var(--blue)" }} /></div>
-      <div className="chips">{["すべて", ...bags].map(b => <button key={b} className="chip" aria-pressed={bag === b} onClick={() => setBag(b)}>{b}</button>)}</div>
+      <div className="chips">
+        {bags.length > 0 && ["すべて", ...bags, "未定"].map(b => <button key={b} className="chip" aria-pressed={sel === b} onClick={() => setBag(b)}>{b === "未定" ? "かばん未定" : b}</button>)}
+        <button className="chip" onClick={() => setBagEdit({ mode: "add", name: "" })}><Icon n="plus" s={12} />{bags.length ? "かばん" : "かばんごとに分ける"}</button>
+      </div>
+      {bagEdit && (
+        <div className="row" style={{ flexWrap: "nowrap" }}>
+          <input className="input" autoFocus aria-label="かばんの名前" placeholder="例：キャリーケース、機内持ち込み" value={bagEdit.name} onChange={e => setBagEdit({ ...bagEdit, name: e.target.value })} onKeyDown={e => e.key === "Enter" && saveBag()} />
+          <button className="btn small" onClick={saveBag}>{bagEdit.mode === "add" ? "追加" : "変更"}</button>
+          <button className="btn small ghost" onClick={() => setBagEdit(null)}>やめる</button>
+        </div>
+      )}
+      {bags.includes(sel) && !bagEdit && (
+        <div className="row small">
+          <button className="btn small ghost" onClick={() => setBagEdit({ mode: "rename", name: sel, from: sel })}>「{sel}」の名前を変える</button>
+          <button className="btn small ghost" style={{ color: "var(--danger)" }} onClick={() => removeBag(sel)}>このかばんを消す</button>
+        </div>
+      )}
       {Object.entries(packing).map(([cat, items]) => {
-        const shown = items.filter(i => bag === "すべて" || i.bag === bag);
+        const shown = items.filter(i => sel === "すべて" || (sel === "未定" ? !bags.includes(i.bag) : i.bag === sel));
         return (
           <section key={cat} className="card flush divide">
             <div className="row between" style={{ padding: "10px 14px" }}><h3>{cat}</h3><span className="mono xs muted">{items.filter(i => i.checked).length}/{items.length}</span></div>
@@ -1058,7 +1085,7 @@ function PackView({ t, update }) {
               <div key={i.id} className={"packitem" + (i.checked ? " done" : "")}>
                 <input type="checkbox" aria-label={i.name} checked={!!i.checked} onChange={e => setItems(cat, xs => xs.map(x => x.id === i.id ? { ...x, checked: e.target.checked } : x))} />
                 <span className="nm" style={{ minWidth: 0 }}>{i.name}</span>
-                <select className="input" aria-label="入れるかばん" style={{ width: "auto", fontSize: 12, padding: "4px 6px" }} value={i.bag || ""} onChange={e => setItems(cat, xs => xs.map(x => x.id === i.id ? { ...x, bag: e.target.value } : x))}>{bags.map(b => <option key={b}>{b}</option>)}</select>
+                {bags.length > 0 ? <select className="input" aria-label="入れるかばん" style={{ width: "auto", fontSize: 12, padding: "4px 6px" }} value={bags.includes(i.bag) ? i.bag : ""} onChange={e => setItems(cat, xs => xs.map(x => x.id === i.id ? { ...x, bag: e.target.value } : x))}><option value="">未定</option>{bags.map(b => <option key={b}>{b}</option>)}</select> : <span />}
                 <button className="iconbtn" aria-label={`${i.name}を削除`} onClick={() => setItems(cat, xs => xs.filter(x => x.id !== i.id))}><Icon n="x" s={16} /></button>
               </div>
             ))}

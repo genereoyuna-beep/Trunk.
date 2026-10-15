@@ -1440,7 +1440,7 @@ function App() {
   };
   const openCount = staysOf(t).filter(s => isOpenState(stayState(t, s))).length + transitsOf(t).filter(x => isOpenState(transitState(x))).length + (t.localTransport || []).filter(l => isOpenState(localState(l))).length;
   const mail = <MailCard t={t} update={update} inbox={inbox} scan={scan} onScan={scanGmail} onPaste={pasteImport} onApply={applyInbox} onDecide={decide} />;
-  const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", settings: "共有と設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", shiori: "旅のしおり", suggest: "予定の提案", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
+  const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", settings: "共有と設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", shiori: "旅のしおり", suggest: "予定の提案", consult: "AIに相談", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
 
   return (
     <SuggestCtx.Provider value={sugg}>
@@ -1459,7 +1459,7 @@ function App() {
       </nav>
       <main className="main">
         {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
-        {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : null} />}
+        {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => addLocal()} mail={FEATURES.mail ? mail : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={t} stats={stats} update={update} />}
         {tab === "pack" && <PackView t={t} update={update} />}
@@ -1468,14 +1468,14 @@ function App() {
         <>
           <div style={{ position: "fixed", inset: 0, zIndex: 55 }} onClick={() => setMenu(false)} />
           <div className="menu" role="menu">
-            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "settings" }); }}>共有と設定（リクエストの取り込み）</button>
+            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "settings" }); }}>{FEATURES.claudeShare ? "共有と設定（リクエストの取り込み）" : "共有と設定"}</button>
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "trips" }); }}>旅行を切り替える・追加する</button>
             <hr />
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "shiori" }); }}>旅のしおり（PDFで保存）</button>
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "phrases" }); }}>旅のフレーズ集</button>
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "emergency" }); }}>緊急時の情報</button>
             <button role="menuitem" onClick={exportICS}>カレンダー用に書き出す（.ics）</button>
-            <button role="menuitem" onClick={copySummary}>旅程の要約をコピー（AIに相談する用）</button>
+            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "consult" }); }}>AIに相談（ChatGPT・Claude など）</button>
             <button role="menuitem" onClick={exportJSON}>データを書き出す（JSON）</button>
             <button role="menuitem" onClick={() => { setMenu(false); fileRef.current && fileRef.current.click(); }}>データを読み込む（JSON）</button>
           </div>
@@ -1486,9 +1486,10 @@ function App() {
         <Sheet title={sheetTitle} onClose={closeSheet} full={sheet.kind === "shiori"}>
           {sheet.kind === "shiori" && <ShioriView t={t} canExport update={update} />}
           {sheet.kind === "emergency" && <EmergencyView t={t} update={update} canEdit />}
+          {sheet.kind === "consult" && <ConsultView t={t} update={update} initialTopic={sheet.topic} initialIso={sheet.iso} done={(m) => { toast(m); closeSheet(); }} />}
           {sheet.kind === "phrases" && <PhraseView t={t} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} />}
           {sheet.kind === "suggest" && <DaySuggest t={t} iso={sheet.iso} update={update} done={(n) => { toast(`${n}件の予定を追加しました`); closeSheet(); }} />}
-          {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d) => addLocal(d, d)} onAddMove={(d) => addTransit(d, d)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : null} />}
+          {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d) => addLocal(d, d)} onAddMove={(d) => addTransit(d, d)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d, back: d })} />}
           {sheet.kind === "stay" && <StayEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
           {sheet.kind === "transit" && <TransitEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
           {sheet.kind === "local" && <LocalEditor t={t} id={sheet.id} update={update} close={closeSheet} />}

@@ -321,3 +321,8 @@ h1{font-size:22px} h2{font-size:18px} h3{font-size:15px}
 .daytab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#F3F4F1}
 .daytab[aria-selected="true"] span{color:#B9C2CC}
 .daytab.today::after{content:"";position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:3px;background:var(--blue)}
+
+/* ---- AIに相談 ---- */
+.radio{width:18px;height:18px;border-radius:9px;border:1.5px solid var(--line);display:inline-block}
+.radio.on{border:5px solid var(--ink)}
+details > summary{cursor:pointer}

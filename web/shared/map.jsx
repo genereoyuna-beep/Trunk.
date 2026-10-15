@@ -184,7 +184,7 @@ function RouteMap({ t, width = 640, height = 440, onPick, compact }) {
           return (
             <g key={s.k} style={{ cursor: onPick && s.stays.length ? "pointer" : "default" }} onClick={() => onPick && s.stays.length && onPick(s.stays[0])}>
               <circle cx={x} cy={y} r={r} fill={fill} stroke={stroke} strokeWidth="1.6" />
-              {s.nums.length > 0 && <text x={x} y={y + 3.2} textAnchor="middle" fontSize="8.5" fontWeight="700" fill={st && (st.tone === "booked" || st.tone === "paid") ? "#fff" : "#15202B"} fontFamily="Spline Sans Mono, monospace">{s.nums.length > 1 ? s.nums[0] + "+" : s.nums[0]}</text>}
+              {s.nums.length > 0 && <text x={x} y={y + 3.2} textAnchor="middle" fontSize="8.5" fontWeight="700" fill={st && (st.tone === "booked" || st.tone === "paid") ? "#fff" : "#15202B"} fontFamily="Chivo Mono, monospace">{s.nums.length > 1 ? s.nums[0] + "+" : s.nums[0]}</text>}
               {s._lab && <text x={s._lab.x} y={s._lab.y} textAnchor={s._lab.anchor} fontSize={fs} fontWeight={s.stays.length ? 700 : 400} fill="#15202B" fontFamily="Noto Sans JP, sans-serif" stroke="#F7F8F5" strokeWidth="3" paintOrder="stroke">{s._lab.text}</text>}
             </g>
           );

@@ -14,6 +14,13 @@ const html = `<!DOCTYPE html>
 <title>Trunk.</title>
 <meta name="robots" content="noindex">
 <link rel="icon" href="/icon.png">
+<link rel="apple-touch-icon" href="/icons/trunk-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F3F4F1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Trunk.">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
@@ -35,4 +42,10 @@ ${code}
 if (/genereoyuna|@gmail\.com/i.test(html)) { console.error('個人のメールアドレスが含まれています。中止します'); process.exit(1); }
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, html);
+// ホーム画面に追加したとき、アプリのように全画面で開くための設定（アプリと同じフォルダに置く）
+fs.writeFileSync(path.join(path.dirname(out), 'manifest.webmanifest'), JSON.stringify({
+  name: 'Trunk.', short_name: 'Trunk.', lang: 'ja', start_url: './', scope: './', display: 'standalone',
+  background_color: '#F3F4F1', theme_color: '#F3F4F1',
+  icons: [{ src: '/icons/trunk-192.png', sizes: '192x192', type: 'image/png' }, { src: '/icons/trunk-512.png', sizes: '512x512', type: 'image/png' }]
+}, null, 2));
 console.log('built', out, html.length);

@@ -250,6 +250,22 @@ section{padding:72px 0}
 .ai-pick em{font-style:normal;margin-left:auto;font-size:11px;color:var(--muted)}
 .ai-pick i{width:16px;height:16px;border-radius:4px;background:var(--ink);box-shadow:inset 0 0 0 3px var(--sunk);flex:none}
 
+
+/* launch promo */
+.promo-bar{background:var(--orange-bar);color:#fff;font-size:13px;font-weight:700;text-align:center;padding:8px 16px;line-height:1.5}
+.promo-bar a{color:#fff}
+.promo-bar .mono{background:rgba(255,255,255,.22);padding:1px 7px;border-radius:6px;margin:0 2px}
+.promo-badge{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:7px 14px;border-radius:999px;background:var(--orange-soft);color:var(--orange-ink);font-size:13px;font-weight:700;text-decoration:none}
+.promo-badge b{background:var(--orange-bar);color:#fff;border-radius:999px;padding:1px 9px;font-size:12px}
+.deal{margin:4px 0 14px;padding:10px 12px;border-radius:12px;background:var(--orange-soft);color:var(--orange-ink);font-size:13px;line-height:1.5}
+.deal b{font-family:var(--f-mono);font-size:22px;color:var(--orange-ink)}
+.deal s{color:var(--muted)}
+.deal small{display:block;font-size:11.5px;margin-top:2px}
+.promo-box{margin-top:22px;display:grid;gap:6px;justify-items:start;padding:18px 20px;border-radius:16px;border:2px dashed var(--orange-bar);background:var(--surface);max-width:1080px}
+.promo-box h3{font-size:19px}
+.promo-box .code{font-family:var(--f-mono);font-size:24px;font-weight:600;letter-spacing:.12em;padding:4px 14px;border-radius:10px;background:var(--orange-soft);color:var(--orange-ink)}
+.promo-box p{font-size:13.5px;color:var(--ink2)}
+
 /* steps */
 .steps{display:grid;gap:14px;counter-reset:s}
 @media(min-width:820px){.steps{grid-template-columns:repeat(3,1fr);gap:18px}}
@@ -259,8 +275,8 @@ section{padding:72px 0}
 .step p{font-size:13.5px;color:var(--muted)}
 
 /* pricing */
-.plans{display:grid;gap:16px;max-width:860px}
-@media(min-width:760px){.plans{grid-template-columns:1fr 1fr}}
+.plans{display:grid;gap:16px;max-width:1080px}
+@media(min-width:760px){.plans{grid-template-columns:1fr 1fr}}@media(min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
 .plan{background:var(--surface);border-radius:20px;padding:26px 22px;border:1px solid var(--line);display:flex;flex-direction:column}
 .plan.pass{border:2px solid var(--ink);position:relative}
 .plan .eyebrow{margin-bottom:6px}
@@ -308,6 +324,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </head>
 <body>
 
+<div class="promo-bar" data-promo>公開記念：2026年12月1日〜2027年1月31日、コード <span class="mono">TRUNKSTART</span> で旅行パス・3か月パスが<b>半額</b>　<a href="#pricing">くわしく</a></div>
 <header id="hd">
   <div class="wrap hd">
     <a class="logo" href="/" aria-label="Trunk. トップ">Trunk<span>.</span></a>
@@ -336,6 +353,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <a class="btn primary" href="/app/">無料で旅行をつくる</a>
         <a class="btn ghost" href="#features">機能を見る</a>
       </div>
+      <a class="promo-badge" href="#pricing" data-promo><b>半額</b>公開記念キャンペーン 12/1〜1/31</a>
       <div class="facts"><span>Googleアカウントで保存</span><span>同行者はログイン不要</span><span>スマホでもPCでも</span></div>
     </div>
 
@@ -649,17 +667,36 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <div class="eyebrow">Per trip</div>
         <h3>旅行パス</h3>
         <div class="price"><b>440</b><span>円（税込）/ 1旅行</span></div>
-        <div class="sub">2つ目の旅行を同時に準備するときに。2026年12月1日から販売します。</div>
+        <div class="deal" data-promo>公開記念 <s>440円</s> → <b>220</b>円<small>コード TRUNKSTART・2027年1月31日まで</small></div>
+        <div class="sub">2つ目の旅行を同時に準備するときに。</div>
         <ul>
-          <li>次の旅行も、並べて準備できます</li>
+          <li>その旅行を、無料の1つとは別に準備できます</li>
           <li>使える機能は無料と同じです</li>
-          <li>自動更新はありません（1旅行ごとの支払い）</li>
-          <li>旅行が重なる時期は <b>3か月パス 980円</b>（その間は旅行いくつでも）</li>
+          <li>自動更新はありません</li>
         </ul>
         <a class="btn primary" href="/app/">まずは無料で旅行をつくる</a>
       </div>
+      <div class="plan rv">
+        <div class="eyebrow">3 months</div>
+        <h3>3か月パス</h3>
+        <div class="price"><b>980</b><span>円（税込）/ 3か月</span></div>
+        <div class="deal" data-promo>公開記念 <s>980円</s> → <b>490</b>円<small>コード TRUNKSTART・2027年1月31日まで</small></div>
+        <div class="sub">旅行が重なる時期に。</div>
+        <ul>
+          <li>3か月の間は、旅行をいくつでも準備できます</li>
+          <li>旅行が3つ以上重なるならこちらがお得</li>
+          <li>自動更新はありません。期限が切れても今ある旅行はそのまま使えます</li>
+        </ul>
+        <a class="btn ghost" href="/app/">まずは無料で旅行をつくる</a>
+      </div>
     </div>
-    <p class="price-note"><b>公開記念：</b>コード <b class="mono">TRUNKSTART</b> で、旅行パス・3か月パスがどちらも50%オフ（2026年12月1日〜2027年1月31日、お一人さま1回）。<br>旅行が終わると、その旅行は数えなくなります。パスが終わっても、今ある旅行はそのまま使えます。次の旅行はまた無料で作れます。お支払いはクレジットカード（Stripe）です。詳しくは<a href="/tokushoho.html">特定商取引法に基づく表記</a>をご覧ください。</p>
+    <div class="promo-box rv" data-promo>
+      <div class="eyebrow" style="color:var(--orange-ink)">Launch campaign</div>
+      <h3>公開記念：どちらのパスも半額</h3>
+      <span class="code">TRUNKSTART</span>
+      <p>2026年12月1日〜2027年1月31日、お支払いの画面でこのコードを入れると、旅行パス・3か月パスが50%オフになります（お一人さま1回）。</p>
+    </div>
+    <p class="price-note">旅行が終わると、その旅行は数えなくなります。パスが終わっても、今ある旅行はそのまま使えます。次の旅行はまた無料で作れます。お支払いはクレジットカード（Stripe）です。詳しくは<a href="/tokushoho.html">特定商取引法に基づく表記</a>をご覧ください。</p>
   </div>
 </section>
 
@@ -711,6 +748,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 
 <script>
 (function(){
+  if (Date.now() > Date.parse("2027-01-31T23:59:59+09:00")) document.querySelectorAll("[data-promo]").forEach(function(e){ e.remove(); });
   var hd=document.getElementById('hd');
   var onScroll=function(){hd.classList.toggle('scrolled',window.scrollY>8)};
   window.addEventListener('scroll',onScroll,{passive:true});onScroll();

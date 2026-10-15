@@ -1294,7 +1294,7 @@ function App() {
   const pickTrip = (id) => { flushNow(); rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("home"); };
   const atLimit = !!FEATURES.freeLimit && activeTripCount(trips) >= FEATURES.freeLimit;
   const createTrip = async (form) => {
-    if (atLimit) { toast("無料版では進行中の旅行は1件までです"); return; }
+    if (atLimit) { toast("無料版では旅行は1つずつです"); return; }
     flushNow();
     const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36);
     let data = { ...emptyTrip(form.name.trim(), form.start || "", form.nights), gmailLabel: form.label.trim() };

@@ -9,6 +9,57 @@ function TrunkShareSection({ t, tripId }) {
   );
 }
 
+// 機能の要望。名前やメールアドレスは聞かない
+function FeedbackForm({ whereFrom, placeholder, onDone }) {
+  const [body, setBody] = useState("");
+  const [st, setSt] = useState("");
+  const send = async () => {
+    setSt("busy");
+    try { await Store.sendFeedback(body.trim(), whereFrom); setBody(""); setSt("done"); onDone && onDone(); }
+    catch (e) { setSt("err"); }
+  };
+  if (st === "done") return <div className="note">ありがとうございます。届きました。いただいた声は、次に作る機能を決めるときに読んでいます。</div>;
+  return (
+    <div className="stack" style={{ gap: 8 }}>
+      <textarea value={body} maxLength={2000} rows={3} onChange={e => setBody(e.target.value)} placeholder={placeholder} />
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <span className="xs muted">名前やメールアドレスは送られません</span>
+        <button className="btn primary" disabled={!body.trim() || st === "busy"} onClick={send}>{st === "busy" ? "送っています…" : "送る"}</button>
+      </div>
+      {st === "err" && <div className="err">送れませんでした。通信を確かめて、もう一度お試しください。</div>}
+    </div>
+  );
+}
+function TrunkFeedbackSection() {
+  return (
+    <section className="stack" style={{ gap: 10 }}>
+      <div className="formsec">ほしい機能・困ったこと</div>
+      <FeedbackForm whereFrom="settings" placeholder="例：持ち物を前の旅行からコピーしたい" />
+    </section>
+  );
+}
+// 旅行が終わってから2週間、ホームに1回だけ出す。閉じたらその旅行では二度と出さない
+function TrunkAfterTrip({ t, tripId }) {
+  const key = "trunk-after-trip-" + tripId;
+  const seen = () => { try { return !!localStorage.getItem(key); } catch (e) { return false; } };
+  const [hidden, setHidden] = useState(seen);
+  useEffect(() => setHidden(seen()), [tripId]);
+  const r = tripRange(t);
+  if (hidden || !r) return null;
+  const since = dayDiff(r.end, todayISO());
+  if (since < 1 || since > 14) return null;
+  const close = () => { try { localStorage.setItem(key, "1"); } catch (e) {} setHidden(true); };
+  return (
+    <section className="card stack" style={{ gap: 10, marginBottom: 14 }}>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <b>おかえりなさい。この旅で不便だったことは？</b>
+        <button className="btn ghost" aria-label="閉じる" onClick={close}>閉じる</button>
+      </div>
+      <FeedbackForm whereFrom="after_trip" placeholder="例：旅行中に地図をすぐ開きたかった" onDone={() => { try { localStorage.setItem(key, "1"); } catch (e) {} }} />
+    </section>
+  );
+}
+
 function LoginView({ err }) {
   const [busy, setBusy] = useState(false);
   const login = async () => {

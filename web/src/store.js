@@ -33,6 +33,11 @@ const Store = {
     const { error } = await SB.from("trips").delete().eq("id", id);
     if (error) throw error;
   },
+  // 機能の要望（送るだけ。読むのは運営）
+  async sendFeedback(body, whereFrom) {
+    const { error } = await SB.from("feedback").insert({ body, where_from: whereFrom });
+    if (error) throw error;
+  },
   // 予約メールの取り込みは Trunk. ではまだ使わない
   watchInbox(tripId, cb) { cb([]); return () => {}; },
   async inboxIds() { return new Set(); },

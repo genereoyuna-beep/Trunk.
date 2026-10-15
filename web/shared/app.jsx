@@ -1179,6 +1179,7 @@ function SettingsSheet({ t, tripId, update, onDelete, canDelete, onRequest, busy
       </div>
       {FEATURES.mail && <div className="note">Gmailで予約メールにこのラベルを付けておくと、「予約・手配」の「Gmailから探す」でそのメールだけを読み取ります。読めるのは個人のGmailで、Claudeデスクトップアプリで開いたときだけです。</div>}
       {FEATURES.claudeShare ? <ShareSection t={t} onRequest={onRequest} busy={busy} /> : typeof TrunkShareSection === "function" ? <TrunkShareSection t={t} tripId={tripId} /> : null}
+      {typeof TrunkFeedbackSection === "function" && <><div className="formsec" /><TrunkFeedbackSection /></>}
       <div className="formsec" />
       {canDelete ? <DeleteButton label="この旅行を削除" onDelete={onDelete} /> : <div className="small muted">旅行が1つだけのときは削除できません。</div>}
       {FEATURES.account && <><div className="formsec" /><button className="btn block" onClick={() => Store.signOut()}>ログアウト</button></>}
@@ -1491,6 +1492,7 @@ function App() {
         ))}
       </nav>
       <main className="main">
+        {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
         {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => addLocal()} mail={FEATURES.mail ? mail : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}

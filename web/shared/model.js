@@ -222,6 +222,10 @@ function normalizeItinerary(list) {
   return markLegs(sortItinerary(out));
 }
 
+// 無料版の数え方：帰ってくる日がまだ来ていない旅行と、日程が未定の旅行は「進行中」。旅行パスを使った旅行は数えない
+const isActiveTrip = (t) => { const r = tripRange(t); return !t.tripPass && (!r || r.end >= todayISO()); };
+const activeTripCount = (list) => list.filter(x => isActiveTrip(x.data)).length;
+const FREE_LIMIT_MSG = "無料版では、これからの旅行と旅行中の旅行は1件までです。終わった旅行はいくつでも残せます。旅行パス（2026年12月1日から）を使うと、旅行を増やせます。";
 function tripRange(t) {
   const dates = [];
   staysOf(t).forEach(s => { if (isISO(s.startDate)) { dates.push(s.startDate, stayEnd(s)); } });

@@ -1083,7 +1083,7 @@ function tripStatusText(data) {
   if (dayDiff(today, r.end) >= 0) return "旅行中";
   return "終了";
 }
-function TripsSheet({ trips, currentId, onPick, onCreate, onSettings }) {
+function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited }) {
   const [form, setForm] = useState(null);
   const [busyCreate, setBusyCreate] = useState(false);
   const sorted = [...trips].sort((a, b) => { const ra = tripRange(a.data), rb = tripRange(b.data); return (ra ? ra.start : "9") < (rb ? rb.start : "9") ? -1 : 1; });
@@ -1096,7 +1096,8 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings }) {
             <span className="pill tone-none">{tripStatusText(x.data)}</span>
           </button>); })}
       </div>
-      {!form && <div className="row"><button className="btn primary" onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "" })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
+      {limited && !form && <div className="note">{FREE_LIMIT_MSG}</div>}
+      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "" })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
       {form && (
         <section className="card stack" style={{ gap: 10 }}>
           <h3>新しい旅行</h3>
@@ -1261,7 +1262,9 @@ function App() {
   };
   const flushNow = () => { if (timer.current) { clearTimeout(timer.current); const id = idRef.current, d = draftRef.current; if (id && d) { lastSaved.current[id] = JSON.stringify(d); Store.saveTrip(id, d).catch(() => {}); } } };
   const pickTrip = (id) => { flushNow(); rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("home"); };
+  const atLimit = !!FEATURES.freeLimit && activeTripCount(trips) >= FEATURES.freeLimit;
   const createTrip = async (form) => {
+    if (atLimit) { toast("無料版では進行中の旅行は1件までです"); return; }
     flushNow();
     const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36);
     let data = { ...emptyTrip(form.name.trim(), form.start || "", form.nights), gmailLabel: form.label.trim() };
@@ -1500,13 +1503,13 @@ function App() {
               ))}
             </div>
           )}
-          {sheet.kind === "trips" && <TripsSheet trips={trips} currentId={tripId} onPick={pickTrip} onCreate={createTrip} onSettings={() => setSheet({ kind: "settings" })} />}
+          {sheet.kind === "trips" && <TripsSheet limited={atLimit} trips={trips} currentId={tripId} onPick={pickTrip} onCreate={createTrip} onSettings={() => setSheet({ kind: "settings" })} />}
           {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onDelete={deleteTrip} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
           {sheet.kind === "import" && (
             <>
               <p>「{sheet.data.name || "読み込んだ旅行"}」のデータ（滞在 {staysOf(sheet.data).length}件・移動 {transitsOf(sheet.data).length}件）を読み込みます。</p>
               <button className="btn primary block" onClick={() => { update(tr => upgradeTrip({ ...sheet.data, name: tr.name, gmailLabel: tr.gmailLabel, createdAt: tr.createdAt })); setSheet(null); toast(`「${t.name}」を上書きしました`); }}>今の旅行（{t.name}）を上書きする</button>
-              <button className="btn block" onClick={async () => { const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36); await Store.saveTrip(id, upgradeTrip({ ...sheet.data, name: sheet.data.name || "読み込んだ旅行" })); pickTrip(id); toast("新しい旅行として追加しました"); }}>新しい旅行として追加する</button>
+              <button className="btn block" disabled={atLimit} onClick={async () => { const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36); await Store.saveTrip(id, upgradeTrip({ ...sheet.data, name: sheet.data.name || "読み込んだ旅行" })); pickTrip(id); toast("新しい旅行として追加しました"); }}>新しい旅行として追加する</button>
             </>
           )}
         </Sheet>

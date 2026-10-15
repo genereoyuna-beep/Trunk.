@@ -11,7 +11,7 @@ function phraseLangs(t) {
   return out;
 }
 // onSave は「作り始めたときの旅行」に保存する関数（途中で旅行を切り替えても混ざらない）
-function PhraseView({ t, onSave, canGenerate }) {
+function PhraseView({ t, onSave, canGenerate, onConsult }) {
   const langs = phraseLangs(t);
   const [cur, setCur] = useState(() => (langs.find(l => l.saved) || langs[0] || {}).lang);
   const [busy, setBusy] = useState("");
@@ -48,6 +48,7 @@ function PhraseView({ t, onSave, canGenerate }) {
         <section className="card stack" style={{ gap: 10 }}>
           <p style={{ margin: 0 }}>{L.lang}のフレーズ集はまだありません。</p>
           {canGenerate ? <button className="btn primary" disabled={!!busy} onClick={() => gen(L)}>{busy === L.lang ? "作っています…" : `${L.lang}のフレーズ集を作る`}</button>
+            : onConsult ? <><p className="small muted" style={{ margin: 0 }}>この言葉は最初から入っていません。あなたの ChatGPT などで作って、取り込めます。</p><button className="btn primary" onClick={onConsult}>AIに相談してフレーズ集を作る</button></>
             : <p className="small muted" style={{ margin: 0 }}>旅行を作った人が作成すると、ここに表示されます。</p>}
         </section>
       ) : (

@@ -12,9 +12,16 @@ const CONSULT_TOPICS = [
   { key: "trip", label: "旅程全体の見直し", sub: "無理や抜けがないか見てもらう" },
   { key: "pack", label: "持ち物", sub: "足りない物を出してもらい、取り込めます" },
   { key: "free", label: "自由に質問", sub: "聞きたいことを書いて相談" },
+  { key: "phrase", label: "フレーズ集を作る", sub: "最初から入っていない言葉のフレーズ集を作って取り込めます" },
 ];
+// 旅行先の言語のうち、まだフレーズ集がないもの（最初から入っている言葉は除く）
+const missingPhraseLangs = (t) => tripLanguages(t).filter(l => !(t.phrases || {})[l.lang]);
 
-function consultPrompt(t, topic, iso, wish) {
+function consultPrompt(t, topic, iso, wish, lang) {
+  if (topic === "phrase") {
+    const L = missingPhraseLangs(t).find(l => l.lang === lang) || missingPhraseLangs(t)[0];
+    return L ? phrasePrompt(L.lang, L.countries) + "\n\nJSONは ```json のコードブロックで出してください。" : "";
+  }
   const head = `私は旅行計画アプリ「Trunk.」で旅程を作っています。下の旅程をもとに相談に乗ってください。\n\n${buildSummaryText(t)}\n\n人数: ${(t.participants || []).length || 1}人\n`;
   const fmt = (shape) => `\n\n説明は日本語で短めにしてください。最後に、アプリに取り込むためのJSONを1つだけ \`\`\`json のコードブロックで出してください。\n形式: ${shape}`;
   if (topic === "day") {
@@ -60,8 +67,11 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
   const [answer, setAnswer] = useState("");
   const [picked, setPicked] = useState(null);
   const [msg, setMsg] = useState("");
-  const prompt = consultPrompt(t, topic, iso, wish.trim());
-  const canImport = topic === "day" || topic === "pack";
+  const missing = missingPhraseLangs(t);
+  const [plang, setPlang] = useState((missing[0] || {}).lang || "");
+  const topics = CONSULT_TOPICS.filter(o => o.key !== "phrase" || missing.length);
+  const prompt = consultPrompt(t, topic, iso, wish.trim(), plang);
+  const canImport = topic === "day" || topic === "pack" || topic === "phrase";
   // claude.ai のアーティファクトのように枠の中で動いているときは、開いたタブにも制限が残って AI のページが表示されない。
   // そのときは開かずに、相談文をコピーして案内だけ出す
   const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
@@ -81,12 +91,22 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
     if (!answer.trim()) return null;
     const j = extractJSON(answer);
     if (!j) return { err: "答えの中に取り込める形（JSON）が見つかりませんでした。AIに「最後にJSONも出して」と頼んでください。" };
+    if (topic === "phrase" && Array.isArray(j.items)) {
+      const items = j.items.map(o => { const base = PHRASE_LIST[Number(o && o.id) - 1]; return base && o.local ? { cat: base.cat, ja: base.ja, local: String(o.local), reading: String(o.reading || "") } : null; }).filter(Boolean);
+      return items.length ? { kind: "phrase", lang: plang, items, list: [] } : { err: "フレーズを読み取れませんでした。" };
+    }
     if (Array.isArray(j.items)) return { kind: "day", date: isISO(j.date) ? j.date : iso, list: j.items.filter(x => x && x.title) };
     if (Array.isArray(j.packing)) return { kind: "pack", list: j.packing.filter(x => x && x.name) };
     return { err: "取り込める項目が見つかりませんでした。" };
-  }, [answer, iso]);
+  }, [answer, iso, topic, plang]);
   useEffect(() => { setPicked(parsed && parsed.list ? parsed.list.map(() => true) : null); }, [parsed]);
   const importNow = () => {
+    if (parsed && parsed.kind === "phrase") {
+      const L = missing.find(l => l.lang === parsed.lang) || {};
+      update(tr => ({ ...tr, phrases: { ...(tr.phrases || {}), [parsed.lang]: { lang: parsed.lang, bcp: L.bcp || "", countries: L.countries || [], items: parsed.items, createdAt: new Date().toISOString() } } }));
+      done(`${parsed.lang}のフレーズ集（${parsed.items.length}件）を取り込みました`);
+      return;
+    }
     if (!parsed || !parsed.list) return;
     const chosen = parsed.list.filter((_, i) => picked && picked[i]);
     if (!chosen.length) return;
@@ -117,7 +137,7 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
       <p className="small muted" style={{ margin: 0 }}>あなたの ChatGPT・Claude・Gemini に、この旅程を見せて相談できます。Trunk. から AI に直接送ることはなく、パスポートなどの緊急時の情報は相談文に入りません。</p>
       <div className="formsec">何を相談する？</div>
       <div className="card flush divide">
-        {CONSULT_TOPICS.map(o => (
+        {topics.map(o => (
           <button key={o.key} className="bookrow" style={{ gridTemplateColumns: "22px minmax(0,1fr)" }} aria-pressed={topic === o.key} onClick={() => { setTopic(o.key); setAnswer(""); }}>
             <span className={"radio" + (topic === o.key ? " on" : "")} aria-hidden="true" />
             <span style={{ minWidth: 0 }}><span className="t1">{o.label}</span><span className="t2">{o.sub}</span></span>
@@ -125,7 +145,8 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
         ))}
       </div>
       {topic === "day" && days.length > 0 && <DayTabs days={days} sel={iso} setSel={setIso} today={todayISO()} />}
-      <Field label={topic === "free" ? "聞きたいこと" : "希望・補足（任意）"}><textarea value={wish} onChange={e => setWish(e.target.value)} placeholder={topic === "free" ? "例：2日目の夜にソウルでおすすめの過ごし方は？" : topic === "day" ? "例：子連れ。歩くのは少なめで、夜は焼肉" : "例：予算を抑えたい"} /></Field>
+      {topic === "phrase" && <div className="chips">{missing.map(l => <button key={l.lang} className="chip" aria-pressed={plang === l.lang} onClick={() => { setPlang(l.lang); setAnswer(""); }}>{l.lang}</button>)}</div>}
+      {topic !== "phrase" && <Field label={topic === "free" ? "聞きたいこと" : "希望・補足（任意）"}><textarea value={wish} onChange={e => setWish(e.target.value)} placeholder={topic === "free" ? "例：2日目の夜にソウルでおすすめの過ごし方は？" : topic === "day" ? "例：子連れ。歩くのは少なめで、夜は焼肉" : "例：予算を抑えたい"} /></Field>}
       <div className="formsec">AIを選んで開く</div>
       <div className="row">{CONSULT_AIS.map(ai => <button key={ai.key} className="btn" onClick={() => open(ai)}>{ai.label}で相談</button>)}</div>
       {msg && <div className="note">{msg}</div>}
@@ -134,7 +155,13 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
         <div className="formsec">答えを取り込む</div>
         <Field label="AIの答えをそのまま貼り付けてください"><textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="答えの全文を貼り付け（最後のJSONが読み取られます）" /></Field>
         {parsed && parsed.err && <div className="err">{parsed.err}</div>}
-        {parsed && parsed.list && picked && (
+        {parsed && parsed.kind === "phrase" && (
+          <>
+            <div className="note">{parsed.lang}のフレーズを{parsed.items.length}件読み取りました（例：{parsed.items.slice(0, 2).map(i => `${i.ja} → ${i.local}`).join("、")}）</div>
+            <button className="btn primary block" onClick={importNow}>フレーズ集に取り込む</button>
+          </>
+        )}
+        {parsed && parsed.list && parsed.list.length > 0 && picked && (
           <>
             <div className="card flush divide">
               {parsed.list.map((o, i) => (

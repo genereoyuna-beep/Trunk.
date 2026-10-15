@@ -1270,7 +1270,7 @@ function App() {
   // 旧版で旅行データの中に入っていたフレーズ集は、その旅行の言語のものだけ別の場所へ移す
   useEffect(() => {
     const d = draftRef.current, id = idRef.current;
-    if (!d || !id || !d.phrases || !Object.keys(d.phrases).length) return;
+    if (FEATURES.phrasesInTrip || !d || !id || !d.phrases || !Object.keys(d.phrases).length) return;
     const mine = new Set(tripLanguages(d).map(l => l.lang));
     (async () => {
       for (const p of Object.values(d.phrases)) if (mine.has(p.lang)) await Store.setPhrase(id, p).catch(() => {});
@@ -1457,7 +1457,7 @@ function App() {
   );
   if (!draft) return <div className="empty" style={{ paddingTop: 80 }}>読み込み中…</div>;
 
-  const t = { ...draft, phrases: { ...(draft.phrases || {}), ...Object.fromEntries(phraseDocs.map(p => [p.lang, p])) } };
+  const t = withBuiltinPhrases({ ...draft, phrases: { ...(draft.phrases || {}), ...Object.fromEntries(phraseDocs.map(p => [p.lang, p])) } });
   const sugg = buildSuggestions([t, ...trips.filter(x => x.id !== tripId).map(x => x.data)]);
   const stats = tripStats(t);
   const todos = buildTodos(t, inbox.length);
@@ -1520,7 +1520,7 @@ function App() {
           {sheet.kind === "shiori" && <ShioriView t={t} canExport update={update} />}
           {sheet.kind === "emergency" && <EmergencyView t={t} update={update} canEdit />}
           {sheet.kind === "consult" && <ConsultView t={t} update={update} initialTopic={sheet.topic} initialIso={sheet.iso} done={(m) => { toast(m); closeSheet(); }} />}
-          {sheet.kind === "phrases" && <PhraseView t={t} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} />}
+          {sheet.kind === "phrases" && <PhraseView t={t} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} onConsult={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "phrase" })} />}
           {sheet.kind === "suggest" && <DaySuggest t={t} iso={sheet.iso} update={update} done={(n) => { toast(`${n}件の予定を追加しました`); closeSheet(); }} />}
           {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d) => addLocal(d, d)} onAddMove={(d) => addTransit(d, d)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d, back: d })} />}
           {sheet.kind === "stay" && <StayEditor t={t} id={sheet.id} update={update} close={closeSheet} />}

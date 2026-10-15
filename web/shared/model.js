@@ -813,7 +813,7 @@ const PHRASE_EN = {
   "助けて！": "Help!", "病院はどこですか？": "Where is the hospital?", "いらっしゃいませ（お店で言われる言葉）": "Welcome (said by shop staff)",
 };
 // 英語はわかるので、英語のフレーズ集は作らない・しおりにも入れない
-const SKIP_LANGS = new Set(["英語"]);
+const SKIP_LANGS = new Set(FEATURES.skipLangs || []);
 const PHRASE_CATS = PHRASE_SET.map(c => c[0]);
 // しおりに載せる主要なフレーズ（旅行中に実際によく使うもの）
 const PHRASE_ESSENTIAL = new Set(["すみません", "ありがとうございます", "はい", "いいえ", "わかりません", "英語が話せますか？", "こんにちは", "おはようございます", "こんばんは",

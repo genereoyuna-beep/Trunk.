@@ -89,7 +89,7 @@ function ShareHome({ t, goDay }) {
 }
 function ShareApp() {
   const payload = window.__TRIP__ || {};
-  const t = upgradeTrip(payload.data || {});
+  const t = withBuiltinPhrases(upgradeTrip(payload.data || {}));
   const r = tripRange(t), today = todayISO();
   const [view, setView] = useState("home");
   const [dayIso, setDayIso] = useState(null);

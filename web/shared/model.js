@@ -226,7 +226,7 @@ function normalizeItinerary(list) {
 // 無料版の数え方：帰ってくる日がまだ来ていない旅行と、日程が未定の旅行は「進行中」。旅行パスを使った旅行は数えない
 const isActiveTrip = (t) => { const r = tripRange(t); return !t.tripPass && (!r || r.end >= todayISO()); };
 const activeTripCount = (list) => list.filter(x => isActiveTrip(x.data)).length;
-const FREE_LIMIT_MSG = "無料版では、旅行を1つずつ準備できます（機能はすべて使えます）。終わった旅行はいくつでも残せます。2つ目の旅行を同時に準備するには、旅行パス（1旅行440円・2026年12月1日から）が必要です。";
+const FREE_LIMIT_MSG = "無料版では、旅行を1つずつ準備できます（機能はすべて使えます）。終わった旅行はいくつでも残せます。2つ目の旅行を同時に準備するには、旅行パス（1旅行440円）か3か月パス（980円）が必要です（2026年12月1日から）。";
 function tripRange(t) {
   const dates = [];
   staysOf(t).forEach(s => { if (isISO(s.startDate)) { dates.push(s.startDate, stayEnd(s)); } });

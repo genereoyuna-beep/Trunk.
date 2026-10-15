@@ -243,7 +243,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
             <div class="field"><label>参加者</label><div class="in">自分 · あおい · けんた</div></div>
           </div>
         </div>
-        <div class="tip"><span>無料版では、出発前〜旅行中の旅行を1件まで作れます。終わった旅行はいくつでも残せるので、旅行が終わればすぐに次の旅行を作れます。</span></div>
+        <div class="tip"><span>無料版では、旅行を1つずつ準備できます（機能はすべて使えます）。終わった旅行はいくつでも残せるので、旅行が終わればすぐに次の旅行を作れます。2つ目の旅行を同時に準備したいときは、旅行パスを使います。</span></div>
       </section>
 
       <!-- 02 -->
@@ -366,7 +366,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
           <li><div><b>金額が何人分かを入れる</b><br>3人分の宿代なら「3人」と入れると、1人あたりに割って集計します。<span class="ui">全員分の合計で見る</span> に切り替えることもできます。</div></li>
           <li><div><b>現地で使ったお金を足す</b><br>予定に入っていない買い物や交通費は、お金のタブから追加できます。</div></li>
         </ol>
-        <div class="pass"><span><b>立て替えと精算・外貨の円換算</b>（旅行パス）<br>「誰が払ったか」を入れておくと、旅行の最後に誰が誰にいくら払えばいいかを計算します。ウォンやユーロで入れた金額は、円に換算して集計します。</span></div>
+        <div class="tip"><span><b>立て替えと精算・外貨の円換算</b><br>「誰が払ったか」を入れておくと、旅行の最後に誰が誰にいくら払えばいいかを計算します。ウォンやユーロで入れた金額は、円に換算して集計します。</span></div>
       </section>
 
       <!-- 08 -->
@@ -440,7 +440,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
           <li>・ <span class="ui">共有を止める</span> を押すと、そのリンクはすぐに開けなくなります。</li>
           <li>・ 共有ページから旅程を書き換えることはできません。編集できるのは作った本人だけです。</li>
         </ul>
-        <div class="pass"><span><b>同行者からのリクエスト</b>（旅行パス）<br>共有ページから「ここに行きたい」「これ持っていくね」などのリクエストを送ってもらえます。届いたリクエストは確認してから、ワンタップで旅程に入れられます。</span></div>
+        <div class="tip"><span><b>同行者からのリクエスト</b><br>共有ページから「ここに行きたい」「これ持っていくね」などのリクエストを送ってもらえます。届いたリクエストは確認してから、ワンタップで旅程に入れられます。</span></div>
       </section>
 
       <!-- 12 -->
@@ -487,18 +487,19 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       <!-- 14 -->
       <section class="chap" id="pass">
         <div class="chap-h"><span class="no">15</span><h2>旅行パス</h2></div>
-        <p>旅行パスは、1つの旅行で有料の機能を使えるようにする買い切りのチケットです。<b>2026年12月1日から販売します。</b></p>
+        <p>旅行パスは、2つ目の旅行を同時に準備するときに使う、1旅行ごとのチケットです。使える機能は無料と同じで、旅行の数だけが増えます。<b>2026年12月1日から販売します。</b></p>
         <div class="scroll"><table>
           <tr><th>項目</th><th>内容</th></tr>
           <tr><td>価格</td><td class="mono">440円（税込）/ 1旅行</td></tr>
-          <tr><td>使える機能</td><td>立て替えの精算と外貨の円換算、同行者からのリクエスト。また、その旅行は「進行中の旅行1件まで」の数に入らなくなります</td></tr>
-          <tr><td>だれが買う</td><td>旅行のメンバーの誰か1人が買えば、全員が使えます</td></tr>
-          <tr><td>有効期間</td><td>期限なし。旅行が終わったあとも使えます</td></tr>
+          <tr><td>いつ必要か</td><td>2つ目の旅行を同時に準備するとき。終わった旅行と、招待されて参加した旅行は数えません</td></tr>
+          <tr><td>だれが買う</td><td>2つ目の旅行を作る人です。同行者が買う必要はありません</td></tr>
+          <tr><td>先着100名</td><td>コード <span class="mono">TRUNK100</span> で1回無料</td></tr>
+          <tr><td>自動更新</td><td>ありません。1旅行ごとの支払いです</td></tr>
           <tr><td>支払い方法</td><td>クレジットカード（Stripe）</td></tr>
         </table></div>
         <ol class="steps">
-          <li><div><b>旅行パスを使いたい旅行を開く</b></div></li>
-          <li><div><b>旅行の設定から <span class="ui">旅行パスを購入</span> を押す</b></div></li>
+          <li><div><b>2つ目の旅行を作ろうとすると、旅行パスの案内が出る</b></div></li>
+          <li><div><b>案内の <span class="ui">旅行パスを購入</span> を押す</b></div></li>
           <li><div><b>カード情報を入れて支払う</b><br>支払いが終わると、すぐにその旅行で使えるようになります。</div></li>
         </ol>
         <p style="font-size:13px;color:var(--muted)">返金などの条件は <a href="/tokushoho.html">特定商取引法に基づく表記</a> をご覧ください。</p>
@@ -510,7 +511,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
         <div class="scroll"><table>
           <tr><th>やりたいこと</th><th>やり方</th></tr>
           <tr><td>ほかの旅行に切り替える</td><td>画面上の旅行名を押して選ぶ</td></tr>
-          <tr><td>新しい旅行を作る</td><td>旅行名を押して <span class="ui">新しい旅行</span>（無料版は進行中の旅行1件まで）</td></tr>
+          <tr><td>新しい旅行を作る</td><td>旅行名を押して <span class="ui">新しい旅行</span>（無料版は旅行1つずつ。2つ目は旅行パス）</td></tr>
           <tr><td>旅行を消す</td><td>旅行の設定から削除。消した旅行は元に戻せません</td></tr>
           <tr><td>データを手元に残す</td><td>旅行の設定から <span class="ui">データを書き出す（JSON）</span></td></tr>
           <tr><td>アカウントを消したい</td><td>お問い合わせフォームからご連絡ください</td></tr>

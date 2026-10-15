@@ -528,7 +528,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <div class="eyebrow">05 · Share</div>
       <h3>同行者には、<br>リンクを送るだけ。</h3>
       <p>旅行ごとに共有リンクを発行できます。受け取った人はアカウントもアプリも不要。いつ開いても最新の旅程としおりが見られます。</p>
-      <ul><li>見せる相手は旅行ごとに変えられます</li><li>リンクはいつでも止められます</li><li>「ここに行きたい」は、共有ページからリクエストで届きます（旅行パス）</li></ul>
+      <ul><li>見せる相手は旅行ごとに変えられます</li><li>リンクはいつでも止められます</li><li>「ここに行きたい」は、共有ページからリクエストで届きます</li></ul>
     </div>
     <div class="share rv" aria-hidden="true">
       <div class="sh-card">
@@ -571,7 +571,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       </div>
       <div class="tile rv">
         <h3>立て替えと精算</h3>
-        <p>誰が何を払ったかを入れると、最後に誰が誰にいくら払えばいいかを計算します。外貨は円に換算（旅行パス）。</p>
+        <p>誰が何を払ったかを入れると、最後に誰が誰にいくら払えばいいかを計算します。外貨は円に換算して集計します。</p>
         <div class="settle" aria-hidden="true"><div><span>けんた → あおい</span><b>¥8,200</b></div><div><span>みさき → あおい</span><b>¥3,450</b></div></div>
       </div>
     </div>
@@ -625,22 +625,21 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
   <div class="wrap">
     <div class="sec-head rv">
       <div class="eyebrow">Pricing</div>
-      <h2>基本は無料。<br>旅行ごとに、必要なときだけ。</h2>
-      <p>月額の支払いはありません。もっと使いたい旅行にだけ、旅行パスを買い切りで。</p>
+      <h2>機能はぜんぶ無料。<br>旅行が重なったときだけ。</h2>
+      <p>1つ目の旅行は無料で、すべての機能が使えます。2つ目の旅行を同時に準備するときだけ、旅行パスを。月額・年額の支払いはありません。</p>
     </div>
     <div class="plans">
       <div class="plan rv">
         <div class="eyebrow">Free</div>
         <h3>無料</h3>
         <div class="price"><b>0</b><span>円</span></div>
-        <div class="sub">はじめての旅行から、ずっと無料で。</div>
+        <div class="sub">旅行を1つずつ、すべての機能つきで。</div>
         <ul>
-          <li>進行中の旅行1件（終わった旅行はいくつでも保存）</li>
           <li>日ごとのタイムライン・手配状況・予算・持ち物</li>
-          <li>ルートマップと共有リンク</li>
-          <li>しおりPDF</li>
-          <li>定番フレーズ集</li>
-          <li>AIに相談（あなたの ChatGPT などを使います）</li>
+          <li>ルートマップ・しおりPDF・共有リンク</li>
+          <li>立て替えの精算と外貨の円換算</li>
+          <li>定番フレーズ集・AIに相談</li>
+          <li>終わった旅行はいくつでも残せます</li>
           <li>広告は表示しません</li>
         </ul>
         <a class="btn ghost" href="/app/">無料ではじめる</a>
@@ -650,17 +649,17 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <div class="eyebrow">Per trip</div>
         <h3>旅行パス</h3>
         <div class="price"><b>440</b><span>円（税込）/ 1旅行</span></div>
-        <div class="sub">2026年12月1日から販売します。買い切りで、旅行が終わってもずっと使えます。</div>
+        <div class="sub">2つ目の旅行を同時に準備するときに。2026年12月1日から販売します。</div>
         <ul>
-          <li>この旅行は進行中の件数に数えません</li>
-          <li>立て替えの精算と外貨の円換算</li>
-          <li>同行者からのリクエスト受け付け</li>
-          <li>旅行のメンバーの誰か1人が買えば、全員が使えます</li>
+          <li>次の旅行も、並べて準備できます</li>
+          <li>使える機能は無料と同じです</li>
+          <li>自動更新はありません（1旅行ごとの支払い）</li>
+          <li>先着100名は、コード <b class="mono">TRUNK100</b> で1回無料</li>
         </ul>
         <a class="btn primary" href="/app/">まずは無料で旅行をつくる</a>
       </div>
     </div>
-    <p class="price-note">お支払いはクレジットカード（Stripe）です。詳しくは<a href="/tokushoho.html">特定商取引法に基づく表記</a>をご覧ください。</p>
+    <p class="price-note">旅行が終わると、その旅行は数えなくなります。次の旅行はまた無料で作れます。お支払いはクレジットカード（Stripe）です。詳しくは<a href="/tokushoho.html">特定商取引法に基づく表記</a>をご覧ください。</p>
   </div>
 </section>
 
@@ -672,14 +671,14 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <h2>よくある質問</h2>
     </div>
     <div class="faq">
-      <details><summary>無料でどこまで使えますか？</summary><p>旅程づくり、手配状況の管理、予算、持ち物、ルートマップ、共有リンク、しおりPDFまで、旅行1件ぶんは無料で使えます。終わった旅行はいくつでも残せます。</p></details>
+      <details><summary>無料でどこまで使えますか？</summary><p>すべての機能が無料で使えます。無料で準備できる旅行は1つずつで、2つ目の旅行を同時に準備するときだけ旅行パス（440円）が必要です。終わった旅行はいくつでも残せます。</p></details>
       <details><summary>アカウント登録は必要ですか？</summary><p>旅行を保存するには Google アカウントでのログインが必要です。新しくパスワードを作る必要はありません。</p></details>
       <details><summary>同行者もログインが必要ですか？</summary><p>いいえ。共有リンクを開くだけで、旅程としおりを見られます。アプリのインストールも不要です。</p></details>
-      <details><summary>同行者が旅程を書き換えることはできますか？</summary><p>旅程を編集できるのは作った本人だけです。同行者は共有ページから「ここに行きたい」などのリクエストを送れ、本人が確認してから旅程に入れます（リクエストの受け付けは旅行パスの機能です）。</p></details>
+      <details><summary>同行者が旅程を書き換えることはできますか？</summary><p>旅程を編集できるのは作った本人だけです。同行者は共有ページから「ここに行きたい」などのリクエストを送れ、本人が確認してから旅程に入れます。</p></details>
       <details><summary>AI は使えますか？</summary><p>「AIに相談」から、あなたの ChatGPT・Claude・Gemini を、旅程をまとめた相談文つきで開けます。返ってきた答えを貼り付けると、予定や持ち物の候補として取り込めます。Trunk. が AI に直接データを送ることはなく、パスポートなどの個人情報は相談文に入りません。</p></details>
       <details><summary>スマホで使えますか？</summary><p>はい。ブラウザで動くので、iPhone・Android・パソコンのどれでも使えます。一度開いた旅程は、電波の弱い旅先でも見られます。</p></details>
       <details><summary>旅行パスはいつから買えますか？</summary><p>2026年12月1日から販売します。それまでは無料版でお使いください。</p></details>
-      <details><summary>旅行パスに有効期限はありますか？</summary><p>ありません。買った旅行では、旅行が終わったあともずっと有料機能を使えます。</p></details>
+      <details><summary>旅行パスは誰が買えばいいですか？</summary><p>2つ目の旅行を作る人です。招待されて参加した旅行は数えないので、同行者が買う必要はありません。</p></details>
     </div>
   </div>
 </section>

@@ -2,22 +2,25 @@
 import Stripe from "npm:stripe@17.4.0";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", { httpClient: Stripe.createFetchHttpClient() });
+// 鍵がまだ入っていなくても起動できるよう、使うときに作る
+const key = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+const stripe = key ? new Stripe(key, { httpClient: Stripe.createFetchHttpClient() }) : null;
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const crypto = Stripe.createSubtleCryptoProvider();
 
 Deno.serve(async (req) => {
+  if (!stripe) return new Response("not configured", { status: 503 });
   const sig = req.headers.get("stripe-signature");
   const body = await req.text();
   let event: Stripe.Event;
   try {
-    event = await stripe.webhooks.constructEventAsync(body, sig ?? "", Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "", undefined, crypto);
+    event = await stripe!.webhooks.constructEventAsync(body, sig ?? "", Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "", undefined, crypto);
   } catch (_e) {
     return new Response("bad signature", { status: 400 });
   }
 
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
-    const s = await stripe.checkout.sessions.retrieve((event.data.object as Stripe.Checkout.Session).id, { expand: ["discounts.promotion_code"] });
+    const s = await stripe!.checkout.sessions.retrieve((event.data.object as Stripe.Checkout.Session).id, { expand: ["discounts.promotion_code"] });
     if (s.payment_status !== "paid") return new Response("not paid", { status: 200 });
     const userId = s.metadata?.user_id, kind = s.metadata?.kind;
     if (!userId || (kind !== "trip" && kind !== "3m")) return new Response("ignored", { status: 200 });

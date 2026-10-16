@@ -3,7 +3,9 @@
 import Stripe from "npm:stripe@17.4.0";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", { httpClient: Stripe.createFetchHttpClient() });
+// 鍵がまだ入っていなくても起動できるよう、使うときに作る
+const key = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+const stripe = key ? new Stripe(key, { httpClient: Stripe.createFetchHttpClient() }) : null;
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const SALES_START = Date.parse("2026-12-01T00:00:00+09:00");
 const ORIGINS = ["https://trunk-travelplanner.com", "http://localhost:5173"];
@@ -24,6 +26,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: h });
   if (req.method !== "POST") return json({ error: "method" }, 405, h);
 
+  if (!stripe) return json({ error: "not_configured" }, 503, h);
   const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer /, "");
   const { data: { user } } = await admin.auth.getUser(jwt);
   if (!user) return json({ error: "login_required" }, 401, h);
@@ -39,7 +42,7 @@ Deno.serve(async (req) => {
   const { count } = await admin.from("passes").select("id", { count: "exact", head: true }).eq("user_id", user.id).not("promo_code", "is", null);
 
   const base = origin && ORIGINS.includes(origin) ? origin : ORIGINS[0];
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripe!.checkout.sessions.create({
     mode: "payment",
     locale: "ja",
     line_items: [{ quantity: 1, price_data: { currency: "jpy", unit_amount: plan.amount, product_data: { name: plan.name, description: plan.description } } }],

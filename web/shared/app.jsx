@@ -382,7 +382,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
             <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>
           </button>
         )}
-        <section className="card row" style={{ flexWrap: "nowrap", gap: 12 }}>
+        {FEATURES.mail && <section className="card row" style={{ flexWrap: "nowrap", gap: 12 }}>
           <span className="ico blue"><Icon n="mail" /></span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span className="t1">予約メール</span>
@@ -391,7 +391,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
           {inboxCount > 0
             ? <button className="btn small primary" onClick={() => go("book")}>確認する</button>
             : <button className="btn small" disabled={scan.st === "busy"} onClick={onScan}>{scan.st === "busy" ? "読み取り中…" : "Gmailを確認"}</button>}
-        </section>
+        </section>}
       </div>
     </div>
   );

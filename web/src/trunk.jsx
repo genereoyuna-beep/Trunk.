@@ -1,8 +1,8 @@
 // ================= Trunk. だけの画面 =================
 // ===== 有料パス =====
 const PASS_SALES_START = Date.parse("2026-12-01T00:00:00+09:00");
-// 12/1より前に試すとき（Stripe のテスト環境）は、アプリを ?passtest=1 で開く
-const passTest = (() => { try { if (new URLSearchParams(location.search).get("passtest") === "1") sessionStorage.setItem("trunk-passtest", "1"); return sessionStorage.getItem("trunk-passtest") === "1"; } catch (e) { return false; } })();
+// 12/1より前に試すとき（Stripe のテスト環境）は、手元（localhost）でアプリを ?passtest=1 で開く
+const passTest = location.hostname === "localhost" && (() => { try { if (new URLSearchParams(location.search).get("passtest") === "1") sessionStorage.setItem("trunk-passtest", "1"); return sessionStorage.getItem("trunk-passtest") === "1"; } catch (e) { return false; } })();
 const passWatch = {
   subs: new Set(),
   emit() { this.subs.forEach(f => f(Date.now())); },

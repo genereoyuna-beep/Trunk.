@@ -37,6 +37,8 @@ Deno.serve(async (req) => {
 
   const live = (Deno.env.get("STRIPE_SECRET_KEY") ?? "").startsWith("sk_live_");
   if (live && Date.now() < SALES_START) return json({ error: "not_yet" }, 403, h);
+  // テストの鍵のときは、手元の確認用（localhost）からだけ買える。本番のサイトからテストのカードでパスを取られないように
+  if (!live && origin !== "http://localhost:5173") return json({ error: "not_yet" }, 403, h);
 
   // 公開記念コードなどの割引は、1人1回まで（すでに割引で買っていれば、コード欄を出さない）
   const { count } = await admin.from("passes").select("id", { count: "exact", head: true }).eq("user_id", user.id).not("promo_code", "is", null);

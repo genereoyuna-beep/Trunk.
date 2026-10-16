@@ -1170,7 +1170,7 @@ function ShareSection({ t, onRequest, busy }) {
     </section>
   );
 }
-function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onRequest, busy }) {
+function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onRequest, busy, joined }) {
   return (
     <>
       <div className="fgrid">
@@ -1184,7 +1184,7 @@ function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onReque
       <button className="btn block" onClick={onCopy}>コピーして新しい旅行を作る</button>
       <div className="small muted">旅程・持ち物・予算の枠を引き継ぎます。実際の支出と共有リンクは引き継ぎません。</div>
       <div className="formsec" />
-      {canDelete ? <DeleteButton label="この旅行を削除" onDelete={onDelete} /> : <div className="small muted">旅行が1つだけのときは削除できません。</div>}
+      {joined ? <DeleteButton label="この旅行から抜ける" onDelete={onDelete} /> : canDelete ? <DeleteButton label="この旅行を削除" onDelete={onDelete} /> : <div className="small muted">旅行が1つだけのときは削除できません。</div>}
       {FEATURES.account && <><div className="formsec" /><button className="btn block" onClick={() => Store.signOut()}>ログアウト</button></>}
     </>
   );
@@ -1207,7 +1207,8 @@ function App() {
   const [inboxAll, setInboxAll] = useState([]);
   const [scan, setScan] = useState({ st: "idle", msg: "", more: false });
   const [scrolled, setScrolled] = useState(false);
-  const draftRef = useRef(null), idRef = useRef(null), lastSaved = useRef({}), timer = useRef(null), migrated = useRef(false), fileRef = useRef(null);
+  // opsRef：まだ保存が終わっていない変更（関数）。同行者の保存と重なったときに、最新の内容へ重ね直すために取っておく
+  const draftRef = useRef(null), idRef = useRef(null), lastSaved = useRef({}), opsRef = useRef({}), timer = useRef(null), migrated = useRef(false), fileRef = useRef(null);
 
   const toast = (m) => { setToastMsg(m); clearTimeout(toast.t); toast.t = setTimeout(() => setToastMsg(""), 2400); };
   const setTab = (k) => { setTabState(k); try { history.replaceState(null, "", "#" + k); } catch (e) {} window.scrollTo(0, 0); };
@@ -1253,7 +1254,10 @@ function App() {
     } else if (json !== lastSaved.current[id] && json !== JSON.stringify(draftRef.current)) {
       const a = document.activeElement;
       if (a && ["INPUT", "TEXTAREA", "SELECT"].includes(a.tagName)) return;
-      lastSaved.current[id] = json; const d = upgradeTrip(cur.data); draftRef.current = d; setDraft(d);
+      lastSaved.current[id] = json;
+      const pending = opsRef.current[id] || [];
+      const d = pending.reduce((x, f) => { try { return f(x); } catch (e) { return x; } }, upgradeTrip(cur.data));
+      draftRef.current = d; setDraft(d);
     }
   }, [trips, tripId]);
 
@@ -1284,18 +1288,35 @@ function App() {
   }, [tripId, draft && draft.phrases]);
   const inbox = inboxAll.filter(x => x && x.status === "pending" && x.extracted).sort((a, b) => (a.receivedAt || "").localeCompare(b.receivedAt || ""));
 
+  const save = (id, data) => {
+    const batch = opsRef.current[id] || [];
+    const json = JSON.stringify(data);
+    lastSaved.current[id] = json;
+    return Store.saveTrip(id, JSON.parse(json), batch).then(saved => {
+      opsRef.current[id] = (opsRef.current[id] || []).slice(batch.length);
+      // 同行者の保存と重なって重ね直したときは、その内容に、まだ保存していない変更を足して画面に出す
+      if (saved && JSON.stringify(saved) !== json) {
+        lastSaved.current[id] = JSON.stringify(saved);
+        if (idRef.current === id) {
+          const d = opsRef.current[id].reduce((x, f) => { try { return f(x); } catch (e) { return x; } }, saved);
+          draftRef.current = d; setDraft(d);
+        }
+      }
+    }, e => {
+      if (e && e.code === "trip_limit") { opsRef.current[id] = []; setNotice(TRIP_RENEW_MSG); }
+      else if (e && e.code === "gone") { opsRef.current[id] = []; setNotice("この旅行は、作った人が削除したか、同行者から外されました。"); }
+      else toast(e && e.code === "quota_exceeded" ? "保存できる容量を超えました" : "保存できませんでした。もう一度お試しください");
+    });
+  };
   const update = (fn) => {
     const id = idRef.current;
     const next = fn(draftRef.current);
     draftRef.current = next; setDraft(next);
+    (opsRef.current[id] = opsRef.current[id] || []).push(fn);
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      const json = JSON.stringify(next);
-      lastSaved.current[id] = json;
-      Store.saveTrip(id, JSON.parse(json)).catch(e => e && e.code === "trip_limit" ? setNotice(TRIP_RENEW_MSG) : toast(e && e.code === "quota_exceeded" ? "保存できる容量を超えました" : "保存できませんでした。もう一度お試しください"));
-    }, 500);
+    timer.current = setTimeout(() => { timer.current = null; save(id, next); }, 500);
   };
-  const flushNow = () => { if (timer.current) { clearTimeout(timer.current); const id = idRef.current, d = draftRef.current; if (id && d) { lastSaved.current[id] = JSON.stringify(d); Store.saveTrip(id, d).catch(() => {}); } } };
+  const flushNow = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; const id = idRef.current, d = draftRef.current; if (id && d) save(id, d); } };
   const pickTrip = (id) => { flushNow(); rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("home"); };
   const atLimit = !!FEATURES.freeLimit && activeTripCount(trips) >= FEATURES.freeLimit;
   const createTrip = async (form) => {
@@ -1329,10 +1350,11 @@ function App() {
   };
   const deleteTrip = async () => {
     const id = idRef.current; const other = trips.find(x => x.id !== id);
+    const wasJoined = !!(Store.isJoined && Store.isJoined(id));
     clearTimeout(timer.current);
     await Store.deleteTrip(id).catch(() => {});
     if (other) { rememberTrip(other.id); idRef.current = null; setTripId(other.id); }
-    setSheet(null); toast("旅行を削除しました");
+    setSheet(null); toast(wasJoined ? "旅行から抜けました" : "旅行を削除しました");
   };
 
   // 追加
@@ -1473,6 +1495,14 @@ function App() {
   if (!draft) return <div className="empty" style={{ paddingTop: 80 }}>読み込み中…</div>;
 
   const t = withBuiltinPhrases({ ...draft, phrases: { ...(draft.phrases || {}), ...Object.fromEntries(phraseDocs.map(p => [p.lang, p])) } });
+  // 持ち物は人ごと：同行者として参加した旅行では、自分の分（packingBy[自分のID]）を見せて、そこにだけ書く。作った人は今まで通り t.packing
+  const me = Store.userId && Store.userId(), packMine = !!(me && Store.isJoined && Store.isJoined(tripId));
+  const mineOf = (tr) => ((tr.packingBy || {})[me]) || { packing: {}, bags: [] };
+  const packT = packMine ? { ...t, packing: mineOf(t).packing, bags: mineOf(t).bags } : t;
+  const packUpdate = packMine ? (fn) => update(tr => {
+    const m = mineOf(tr), r = fn({ ...tr, packing: m.packing, bags: m.bags });
+    return { ...tr, packingBy: { ...(tr.packingBy || {}), [me]: { packing: r.packing || {}, bags: r.bags || [] } } };
+  }) : update;
   const sugg = buildSuggestions([t, ...trips.filter(x => x.id !== tripId).map(x => x.data)]);
   const stats = tripStats(t);
   const todos = buildTodos(t, inbox.length);
@@ -1511,7 +1541,7 @@ function App() {
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => addLocal()} mail={FEATURES.mail ? mail : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={t} stats={stats} update={update} />}
-        {tab === "pack" && <PackView t={t} update={update} />}
+        {tab === "pack" && <PackView t={packT} update={packUpdate} />}
       </main>
       {menu && (
         <>
@@ -1533,7 +1563,7 @@ function App() {
       <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={onImportFile} />
       {sheet && (
         <Sheet title={sheetTitle} onClose={closeSheet} full={sheet.kind === "shiori"}>
-          {sheet.kind === "shiori" && <ShioriView t={t} canExport update={update} />}
+          {sheet.kind === "shiori" && <ShioriView t={packT} canExport update={update} />}
           {sheet.kind === "emergency" && <EmergencyView t={t} update={update} canEdit />}
           {sheet.kind === "consult" && <ConsultView t={t} update={update} initialTopic={sheet.topic} initialIso={sheet.iso} done={(m) => { toast(m); closeSheet(); }} />}
           {sheet.kind === "phrases" && <PhraseView t={t} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} onConsult={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "phrase" })} />}
@@ -1550,7 +1580,7 @@ function App() {
             </div>
           )}
           {sheet.kind === "trips" && <TripsSheet limited={atLimit} trips={trips} currentId={tripId} onPick={pickTrip} onCreate={createTrip} onSettings={() => setSheet({ kind: "settings" })} />}
-          {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onCopy={copyTrip} onDelete={deleteTrip} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
+          {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onCopy={copyTrip} onDelete={deleteTrip} joined={!!(Store.isJoined && Store.isJoined(tripId))} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
           {sheet.kind === "import" && (
             <>
               <p>「{sheet.data.name || "読み込んだ旅行"}」のデータ（滞在 {staysOf(sheet.data).length}件・移動 {transitsOf(sheet.data).length}件）を読み込みます。</p>

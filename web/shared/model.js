@@ -225,7 +225,8 @@ function normalizeItinerary(list) {
 
 // 無料版の数え方：帰ってくる日がまだ来ていない旅行と、日程が未定の旅行は「進行中」。旅行パスを使った旅行は数えない
 const isActiveTrip = (t) => { const r = tripRange(t); return !t.tripPass && (!r || r.end >= todayISO()); };
-const activeTripCount = (list) => list.filter(x => isActiveTrip(x.data)).length;
+// 招待されて参加した旅行（joined）と、パスで準備している旅行（pass）は、自分の枠には数えない
+const activeTripCount = (list) => list.filter(x => !x.pass && !x.joined && isActiveTrip(x.data)).length;
 const FREE_LIMIT_MSG = "無料版では、旅行を1つずつ準備できます（機能はすべて使えます）。終わった旅行はいくつでも残せます。2つ目の旅行を同時に準備するには、旅行パス（1旅行440円）か3か月パス（980円）が必要です（2026年12月1日から）。";
 // 始まった旅行の日程を先へ動かして別の旅行に作り替えると、新しい旅行として数える（Trunk. は保存先でも確かめる）
 const TRIP_RENEW_MSG = "始まった旅行の日程を先に動かすと、新しい旅行として数えます。無料で準備できる旅行は1つずつなので、今は保存できませんでした。次の旅行は「新しい旅行」で作るか、「共有と設定」の「コピーして新しい旅行を作る」を使ってください。";
@@ -233,7 +234,7 @@ const TRIP_RENEW_MSG = "始まった旅行の日程を先に動かすと、新�
 function copyTripData(t) {
   const c = JSON.parse(JSON.stringify(t));
   c.name = (t.name || "旅行") + "（コピー）"; c.createdAt = new Date().toISOString();
-  delete c.shareUrl; delete c.shareUpdatedAt; delete c.tripPass;
+  delete c.shareUrl; delete c.shareUpdatedAt; delete c.tripPass; delete c.packingBy;
   c.expenses = [];
   Object.values(c.packing || {}).forEach(list => Array.isArray(list) && list.forEach(i => { i.checked = false; }));
   return c;

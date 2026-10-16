@@ -75,7 +75,9 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
   // claude.ai のアーティファクトのように枠の中で動いているときは、開いたタブにも制限が残って AI のページが表示されない。
   // そのときは開かずに、相談文をコピーして案内だけ出す
   const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  const [paste, setPaste] = useState(null);
   const open = async (ai) => {
+    setPaste(null);
     let copied = false;
     try { await navigator.clipboard.writeText(prompt); copied = true; } catch (e) {}
     if (framed) {
@@ -84,6 +86,8 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
     }
     const q = encodeURIComponent(prompt);
     const url = ai.url && q.length < 7000 ? ai.url(q) : ai.home;
+    // 入力欄に入れられない AI（Gemini）は、先にコピーしたことを伝えてから、ボタンで開いてもらう
+    if (url === ai.home) { setMsg(""); setPaste({ ai, copied }); return; }
     window.open(url, "_blank", "noopener");
     setMsg(url === ai.home ? `相談文をコピーしました。${ai.label}に貼り付けて送ってください。` : `${ai.label}を開きました。送信ボタンを押してください（相談文はコピーもしてあります）。`);
   };
@@ -148,7 +152,15 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
       {topic === "phrase" && <div className="chips">{missing.map(l => <button key={l.lang} className="chip" aria-pressed={plang === l.lang} onClick={() => { setPlang(l.lang); setAnswer(""); }}>{l.lang}</button>)}</div>}
       {topic !== "phrase" && <Field label={topic === "free" ? "聞きたいこと" : "希望・補足（任意）"}><textarea value={wish} onChange={e => setWish(e.target.value)} placeholder={topic === "free" ? "例：2日目の夜にソウルでおすすめの過ごし方は？" : topic === "day" ? "例：子連れ。歩くのは少なめで、夜は焼肉" : "例：予算を抑えたい"} /></Field>}
       <div className="formsec">AIを選んで開く</div>
-      <div className="row">{CONSULT_AIS.map(ai => <button key={ai.key} className="btn" onClick={() => open(ai)}>{ai.label}で相談</button>)}</div>
+      <div className="row">{CONSULT_AIS.map(ai => <button key={ai.key} className="btn" onClick={() => open(ai)}>{ai.label}で相談{ai.url ? "" : "（貼り付け）"}</button>)}</div>
+      {paste && (
+        <div className="note stack" style={{ gap: 8 }}>
+          {paste.copied
+            ? <span><b>相談文をコピーしました。</b>{paste.ai.label}は文章を自動で入れられないので、開いたら入力欄を長押し（パソコンは右クリック）して「ペースト」し、送信してください。</span>
+            : <span>相談文をコピーできませんでした。下の「相談文を見る・コピーする」からコピーしてから開いてください。</span>}
+          <a className="btn primary" href={paste.ai.home} target="_blank" rel="noopener" onClick={() => setPaste(null)}>{paste.ai.label}を開く</a>
+        </div>
+      )}
       {msg && <div className="note">{msg}</div>}
       <details><summary className="small muted">相談文を見る・コピーする</summary><textarea readOnly value={prompt} style={{ minHeight: 160, marginTop: 8, fontSize: 12 }} onFocus={e => e.target.select()} /></details>
       {!canImport && <div className="note">この相談は、答えを読むだけです（アプリには取り込みません）。答えをアプリに取り込みたいときは、上で「この日の予定」「持ち物」「フレーズ集を作る」を選んでください。答えを貼り付ける欄が、この下に出ます。</div>}

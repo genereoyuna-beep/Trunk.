@@ -104,7 +104,8 @@ const Store = {
     if (error) return;
     const now = Date.now();
     const valid3m = data.filter(p => p.kind === "3m" && p.valid_until && Date.parse(p.valid_until) > now).map(p => p.valid_until).sort();
-    this.passState = { unusedTrip: data.filter(p => p.kind === "trip" && !p.used_at).length, until: valid3m.length ? valid3m[valid3m.length - 1] : null, list: data };
+    const staff = data.some(p => p.kind === "staff" && (!p.valid_until || Date.parse(p.valid_until) > now));
+    this.passState = { unusedTrip: data.filter(p => p.kind === "trip" && !p.used_at).length, until: valid3m.length ? valid3m[valid3m.length - 1] : null, staff, list: data };
     passWatch.emit();
   },
   // パスの出発期限（購入から1年、日本時間の日付）
@@ -123,7 +124,7 @@ const Store = {
     }
     if (m.passId) {
       const p = (this.passState.list || []).find(x => x.id === m.passId);
-      if (p) {
+      if (p && p.kind !== "staff") {
         const dl = this.passDeadline(p), now = Date.now();
         if ((r && r.start > dl) || (!r && (today > dl || (p.kind === "3m" && Date.parse(p.valid_until) <= now))))
           return { kind: "deadline", msg: "このパスは " + fmt(dl) + " までに出発する旅行に使えます。" + (r ? "出発日がそれより後になるため" : "日付が未定のため") + "、この旅行はパスの対象から外れ、無料の枠かパスが必要になります。" };
@@ -131,7 +132,7 @@ const Store = {
     }
     return null;
   },
-  canExceed() { const p = this.passState; return p.unusedTrip > 0 || (p.until && Date.parse(p.until) > Date.now()); },
+  canExceed() { const p = this.passState; return p.staff || p.unusedTrip > 0 || (p.until && Date.parse(p.until) > Date.now()); },
   async buy(kind) {
     const { data, error } = await SB.functions.invoke("create-checkout", { body: { kind } });
     if (error || !data || !data.url) {

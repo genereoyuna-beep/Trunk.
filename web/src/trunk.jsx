@@ -31,6 +31,7 @@ function TrunkBuyPass() {
 // 今のプラン（旅行一覧の下に1行、「共有と設定」に詳しく）
 function planSummary(ps) {
   const items = [];
+  if (ps.staff) items.push("運営者パス（期限なし）");
   if (ps.until && Date.parse(ps.until) > Date.now()) items.push("3か月パス（" + fmtDay(ps.until) + "まで）");
   if (ps.unusedTrip > 0) items.push("まだ使っていない旅行パス " + ps.unusedTrip + "枚");
   return items;
@@ -55,7 +56,7 @@ function TrunkPlanSection() {
           {used > 0 ? "　これまでに使った旅行パス：" + used + "枚" : ""}
         </span>
         {ps.until && Date.parse(ps.until) > Date.now() && <span className="xs muted">期限が切れても、作った旅行はそのまま使えます。自動更新はありません。</span>}
-        {(ps.list || []).filter(p => Store.passDeadline(p) >= todayISO()).map(p => <span key={p.id} className="xs muted">{p.kind === "3m" ? "3か月パス" : "旅行パス"}（{fmtDay(p.created_at)}購入）：{fmtYmd(Store.passDeadline(p))}までに出発する旅行に使えます</span>)}
+        {(ps.list || []).filter(p => p.kind !== "staff" && Store.passDeadline(p) >= todayISO()).map(p => <span key={p.id} className="xs muted">{p.kind === "3m" ? "3か月パス" : "旅行パス"}（{fmtDay(p.created_at)}購入）：{fmtYmd(Store.passDeadline(p))}までに出発する旅行に使えます</span>)}
       </div>
     </section>
   );

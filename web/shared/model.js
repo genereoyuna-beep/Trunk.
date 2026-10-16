@@ -90,9 +90,13 @@ function effTZ(x, side) {
   const manual = side === "depart" ? x.departTZManual : x.arriveTZManual;
   const stored = side === "depart" ? x.departTZ : x.arriveTZ;
   if (manual) return Number(stored) || 0;
-  const m = tzMatch(side === "depart" ? x.fromCity : x.toCity);
-  const off = m ? tzOffset(m.zone, side === "depart" ? x.departDate : (x.arriveDate || x.departDate)) : null;
-  return off === null ? Number(stored) || 0 : off;
+  const auto = (sd) => { const m = tzMatch(sd === "depart" ? x.fromCity : x.toCity); return m ? tzOffset(m.zone, sd === "depart" ? x.departDate : (x.arriveDate || x.departDate)) : null; };
+  const off = auto(side);
+  if (off !== null) return off;
+  if (stored !== undefined && stored !== "" && stored !== null) return Number(stored) || 0;
+  // 都市名から分からず手入力もないときは、反対側と同じ時差とみなす（ソウル駅→水原 のような国内の移動で時差が出ないように）
+  const other = auto(side === "depart" ? "arrive" : "depart");
+  return other !== null ? other : 0;
 }
 function tzSource(x, side) {
   if (side === "depart" ? x.departTZManual : x.arriveTZManual) return "手入力";

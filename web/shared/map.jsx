@@ -229,8 +229,16 @@ function dayPoints(t, iso) {
   return pts;
 }
 function DayMap({ t, iso, width = 640, height = 300, print }) {
-  const pts = useMemo(() => dayPoints(t, iso), [t, iso]);
-  if (pts.length < 2) return print ? null : <p className="xs muted" style={{ margin: "4px 2px" }}>この日の地図：場所を2つ以上、Google の候補から選ぶと出ます。</p>;
+  const raw = useMemo(() => dayPoints(t, iso), [t, iso]);
+  // 国をまたぐような広い日は、近く（約25km以内）の続いた点を1つにまとめる（空港・駅・宿が重なって読めなくならないように）
+  const rawSpan = raw.length ? Math.max(Math.max(...raw.map(p => p.ll[1])) - Math.min(...raw.map(p => p.ll[1])), Math.max(...raw.map(p => p.ll[0])) - Math.min(...raw.map(p => p.ll[0]))) : 0;
+  const pts = [];
+  raw.forEach((p, i) => {
+    const last = pts[pts.length - 1];
+    if (rawSpan > 1.2 && last && Math.abs(last.ll[0] - p.ll[0]) < 0.25 && Math.abs(last.ll[1] - p.ll[1]) < 0.3) { last.to = i + 1; last.label = p.label; }
+    else pts.push({ ...p, no: i + 1 });
+  });
+  if (raw.length < 2) return print ? null : <p className="xs muted" style={{ margin: "4px 2px" }}>この日の地図：場所を2つ以上、Google の候補から選ぶと出ます。</p>;
   let x0 = Math.min(...pts.map(p => p.ll[1])), x1 = Math.max(...pts.map(p => p.ll[1]));
   let y0 = Math.min(...pts.map(p => mercY(p.ll[0]))), y1 = Math.max(...pts.map(p => mercY(p.ll[0])));
   const minSpan = 0.02;
@@ -260,7 +268,7 @@ function DayMap({ t, iso, width = 640, height = 300, print }) {
         {xy.map(([x, y], i) => (
           <g key={"p" + i}>
             <circle cx={x} cy={y} r="11" fill="#15202B" />
-            <text x={x} y={y + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" fontFamily="Chivo Mono, monospace">{i + 1}</text>
+            <text x={x} y={y + 4} textAnchor="middle" fontSize={pts[i].to ? 9 : 11} fontWeight="700" fill="#fff" fontFamily="Chivo Mono, monospace">{pts[i].to ? `${pts[i].no}-${pts[i].to}` : pts[i].no}</text>
             <text x={x + 15} y={y + 4} fontSize="12" fill="#15202B" fontFamily="Noto Sans JP, sans-serif" stroke="#F3F4F1" strokeWidth="3" paintOrder="stroke">{pts[i].label.slice(0, 16)}</text>
           </g>
         ))}
@@ -269,7 +277,7 @@ function DayMap({ t, iso, width = 640, height = 300, print }) {
           <text x={scaleKm / kmPerPx / 2} y="-5" textAnchor="middle" fontSize="10" fill="#5A6470" fontFamily="Chivo Mono, monospace">{scaleKm} km</text>
         </g>
       </svg>
-      <div className="xs muted" style={{ marginTop: 4 }}>{pts.map((p, i) => `${i + 1} ${p.time ? p.time + " " : ""}${p.title}`).join("　")}</div>
+      <div className="xs muted" style={{ marginTop: 4 }}>{raw.map((p, i) => `${i + 1} ${p.time ? p.time + " " : ""}${p.title}`).join("　")}</div>
     </div>
   );
 }

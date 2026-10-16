@@ -600,6 +600,7 @@ function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
           </section>
         );
       })())}
+      {cur && <DayMap t={t} iso={cur} />}
     </div>
   );
 }
@@ -617,7 +618,8 @@ function MapView({ t, onPick, onGuess, guessing }) {
         {unknown.length > 0 && (
           <div className="row between note" style={{ flexWrap: "nowrap" }}>
             <span style={{ minWidth: 0 }}>位置が分からず地図に出ていない場所：{unknown.join("・")}</span>
-            {onGuess && <button className="btn small" disabled={guessing} onClick={onGuess}>{guessing ? "推測中…" : "Claudeで位置を推測"}</button>}
+            {onGuess && FEATURES.ai ? <button className="btn small" disabled={guessing} onClick={onGuess}>{guessing ? "推測中…" : "Claudeで位置を推測"}</button>
+              : !FEATURES.ai && <span className="xs muted">都市や場所の欄で Google の候補から選び直すと、地図に出ます</span>}
           </div>
         )}
       </section>

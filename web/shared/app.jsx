@@ -1170,7 +1170,7 @@ function ShareSection({ t, onRequest, busy }) {
     </section>
   );
 }
-function SettingsSheet({ t, tripId, update, onDelete, canDelete, onRequest, busy }) {
+function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onRequest, busy }) {
   return (
     <>
       <div className="fgrid">
@@ -1180,6 +1180,9 @@ function SettingsSheet({ t, tripId, update, onDelete, canDelete, onRequest, busy
       {FEATURES.mail && <div className="note">Gmailで予約メールにこのラベルを付けておくと、「予約・手配」の「Gmailから探す」でそのメールだけを読み取ります。読めるのは個人のGmailで、Claudeデスクトップアプリで開いたときだけです。</div>}
       {FEATURES.claudeShare ? <ShareSection t={t} onRequest={onRequest} busy={busy} /> : typeof TrunkShareSection === "function" ? <TrunkShareSection t={t} tripId={tripId} /> : null}
       {typeof TrunkFeedbackSection === "function" && <><div className="formsec" /><TrunkFeedbackSection /></>}
+      <div className="formsec" />
+      <button className="btn block" onClick={onCopy}>コピーして新しい旅行を作る</button>
+      <div className="small muted">旅程・持ち物・予算の枠を引き継ぎます。実際の支出と共有リンクは引き継ぎません。</div>
       <div className="formsec" />
       {canDelete ? <DeleteButton label="この旅行を削除" onDelete={onDelete} /> : <div className="small muted">旅行が1つだけのときは削除できません。</div>}
       {FEATURES.account && <><div className="formsec" /><button className="btn block" onClick={() => Store.signOut()}>ログアウト</button></>}
@@ -1200,6 +1203,7 @@ function App() {
   const [sheet, setSheet] = useState(null);
   const [menu, setMenu] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  const [notice, setNotice] = useState("");
   const [inboxAll, setInboxAll] = useState([]);
   const [scan, setScan] = useState({ st: "idle", msg: "", more: false });
   const [scrolled, setScrolled] = useState(false);
@@ -1288,7 +1292,7 @@ function App() {
     timer.current = setTimeout(() => {
       const json = JSON.stringify(next);
       lastSaved.current[id] = json;
-      Store.saveTrip(id, JSON.parse(json)).catch(e => toast(e && e.code === "quota_exceeded" ? "保存できる容量を超えました" : "保存できませんでした。もう一度お試しください"));
+      Store.saveTrip(id, JSON.parse(json)).catch(e => e && e.code === "trip_limit" ? setNotice(TRIP_RENEW_MSG) : toast(e && e.code === "quota_exceeded" ? "保存できる容量を超えました" : "保存できませんでした。もう一度お試しください"));
     }, 500);
   };
   const flushNow = () => { if (timer.current) { clearTimeout(timer.current); const id = idRef.current, d = draftRef.current; if (id && d) { lastSaved.current[id] = JSON.stringify(d); Store.saveTrip(id, d).catch(() => {}); } } };
@@ -1312,6 +1316,16 @@ function App() {
     }
     await Store.saveTrip(id, data).catch(() => {});
     rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("plan"); toast(drafted ? "日程の下書きを入れて旅行を作りました" : form.idea && form.idea.trim() ? "旅行を作りました（下書きは作れませんでした）" : "旅行を作りました");
+  };
+  const copyTrip = async () => {
+    flushNow();
+    const src = draftRef.current; if (!src) return;
+    const data = copyTripData(src);
+    if (atLimit && isActiveTrip(data)) { setNotice(FREE_LIMIT_MSG); return; }
+    const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36);
+    try { await Store.saveTrip(id, data); }
+    catch (e) { setNotice(e && e.code === "trip_limit" ? FREE_LIMIT_MSG : "コピーできませんでした。もう一度お試しください"); return; }
+    rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("plan"); toast("コピーして新しい旅行を作りました。日程を直してください");
   };
   const deleteTrip = async () => {
     const id = idRef.current; const other = trips.find(x => x.id !== id);
@@ -1536,7 +1550,7 @@ function App() {
             </div>
           )}
           {sheet.kind === "trips" && <TripsSheet limited={atLimit} trips={trips} currentId={tripId} onPick={pickTrip} onCreate={createTrip} onSettings={() => setSheet({ kind: "settings" })} />}
-          {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onDelete={deleteTrip} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
+          {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onCopy={copyTrip} onDelete={deleteTrip} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
           {sheet.kind === "import" && (
             <>
               <p>「{sheet.data.name || "読み込んだ旅行"}」のデータ（滞在 {staysOf(sheet.data).length}件・移動 {transitsOf(sheet.data).length}件）を読み込みます。</p>
@@ -1547,6 +1561,7 @@ function App() {
         </Sheet>
       )}
       {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
+      {notice && <div className="noticebar" role="alert"><span>{notice}</span><button className="btn" onClick={() => setNotice("")}>閉じる</button></div>}
     </div>
     </SuggestCtx.Provider>
   );

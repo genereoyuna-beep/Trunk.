@@ -9,9 +9,10 @@ const Store = {
   },
   emit() { const list = [...this.cache].map(([id, data]) => ({ id, data })); this.listeners.forEach(f => f(list)); },
   async load() {
-    const { data, error } = await SB.from("trips").select("id,data,updated_at").order("updated_at", { ascending: false });
+    const { data, error } = await SB.from("trips").select("id,data,pass_id,updated_at").order("updated_at", { ascending: false });
     if (error) throw error;
-    this.cache = new Map(data.map(r => [r.id, r.data]));
+    // パスで準備している旅行は数えない。どの旅行にパスが付いているかは保存先が決める（アプリからは変えられない）
+    this.cache = new Map(data.map(r => [r.id, r.pass_id ? { ...r.data, tripPass: true } : r.data]));
     this.emit();
   },
   watchTrips(cb, onErr) {
@@ -23,10 +24,14 @@ const Store = {
     return () => { this.listeners.delete(cb); document.removeEventListener("visibilitychange", f); };
   },
   async saveTrip(id, data) {
-    const r = tripRange(data);
     this.cache.set(id, data); this.emit();
-    const { error } = await SB.from("trips").upsert({ id, name: data.name || "新しい旅行", start_date: r ? r.start : null, end_date: r ? r.end : null, data });
-    if (error) throw error;
+    // 日付・パスは保存先が旅行の中身から決めるので、送るのは名前と中身だけ
+    const { tripPass, ...body } = data;
+    const { error } = await SB.from("trips").upsert({ id, name: data.name || "新しい旅行", data: body });
+    if (error) {
+      if (/trip_limit/.test(error.message || "")) { await this.load().catch(() => {}); throw { code: "trip_limit" }; }
+      throw error;
+    }
   },
   async deleteTrip(id) {
     this.cache.delete(id); this.emit();

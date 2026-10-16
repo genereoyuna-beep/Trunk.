@@ -9,6 +9,7 @@ const CONSULT_AIS = [
 ];
 const CONSULT_TOPICS = [
   { key: "day", label: "この日の予定", sub: "観光・食事の候補を出してもらい、取り込めます" },
+  { key: "line", label: "LINEのトークから候補を作る", sub: "グループの会話を貼り付けると、行きたい場所や持ち物を拾って取り込めます" },
   { key: "trip", label: "旅程全体の見直し", sub: "無理や抜けがないか見てもらう" },
   { key: "pack", label: "持ち物", sub: "足りない物を出してもらい、取り込めます" },
   { key: "free", label: "自由に質問", sub: "聞きたいことを書いて相談" },
@@ -17,6 +18,16 @@ const CONSULT_TOPICS = [
 // 旅行先の言語のうち、まだフレーズ集がないもの（最初から入っている言葉は除く）
 const missingPhraseLangs = (t) => tripLanguages(t).filter(l => !(t.phrases || {})[l.lang]);
 
+// LINE のトーク履歴：電話番号・メールアドレスは伏せ、長すぎるときは新しい方を残す
+const LINE_MAX = 20000;
+function cleanLineTalk(text) {
+  let s = String(text || "")
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "（メール）")
+    .replace(/(\+?\d[\d\- ]{8,}\d)/g, "（電話番号）")
+    .replace(/\[(写真|スタンプ|動画|ファイル|アルバム|ノート|Photo|Sticker|Video)\]/g, "");
+  if (s.length > LINE_MAX) s = "…（古い会話は省略）\n" + s.slice(-LINE_MAX);
+  return s.trim();
+}
 function consultPrompt(t, topic, iso, wish, lang) {
   if (topic === "phrase") {
     const L = missingPhraseLangs(t).find(l => l.lang === lang) || missingPhraseLangs(t)[0];
@@ -28,6 +39,11 @@ function consultPrompt(t, topic, iso, wish, lang) {
     const { ev, head: where, sleeping } = dayEvents(t, iso);
     return head + `\n## 相談したいこと\n${md(iso)}（${wdOf(iso)}曜日）の過ごし方を提案してください。\n場所: ${where}${sleeping ? `（${splitCity(sleeping.city).main}に宿泊）` : ""}\nすでに決まっている予定: ${ev.length ? ev.map(e => `${e.time || "時刻未定"} ${e.title}`).join(" / ") : "なし"}\n希望: ${wish || "特になし"}\n決まっている予定や移動と時刻が重ならないように、3〜6件を時刻順に。`
       + fmt(`{"date":"${iso}","items":[{"time":"HH:MM","end_time":"HH:MM","title":"予定の名前","category":"観光|食事|買い物|ツアー|入場券|その他体験","address":"場所（施設名や地区名）","price_jpy":1人あたりの費用の目安（円・整数）,"needs_booking":事前予約が必要ならtrue,"note":"ひとこと"}]}`);
+  }
+  if (topic === "line") {
+    const r = tripRange(t);
+    return head + `\n## 相談したいこと\n下は、この旅行について話している LINE グループの会話です。会話の中で「行きたい」「やりたい」「食べたい」と出ている場所や予定と、「持って行く」と話している物を拾ってください。決まっていないものも候補として挙げてください。日付が分かるものは旅行の日付（${r ? r.start + "〜" + r.end : "未定"}）に当てはめ、分からなければ空にしてください。\n\n--- LINE の会話ここから ---\n${cleanLineTalk(wish)}\n--- ここまで ---`
+      + fmt(`{"places":[{"date":"YYYY-MM-DD（分からなければ空）","time":"HH:MM（分からなければ空）","title":"予定の名前","category":"観光|食事|買い物|ツアー|入場券|その他体験","address":"場所","note":"誰が言ったか・ひとこと"}],"packing":[{"category":"書類|衣類|電子機器|洗面用具|薬|その他","name":"持ち物の名前","note":"誰が持って行くか"}]}`);
   }
   if (topic === "pack") {
     return head + `\n## 相談したいこと\nこの旅行の持ち物で、今のリストに足りない物を挙げてください。行き先の気候・季節・電源プラグなども考えてください。\n希望: ${wish || "特になし"}`
@@ -71,7 +87,7 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
   const [plang, setPlang] = useState((missing[0] || {}).lang || "");
   const topics = CONSULT_TOPICS.filter(o => o.key !== "phrase" || missing.length);
   const prompt = consultPrompt(t, topic, iso, wish.trim(), plang);
-  const canImport = topic === "day" || topic === "pack" || topic === "phrase";
+  const canImport = topic === "day" || topic === "pack" || topic === "phrase" || topic === "line";
   // claude.ai のアーティファクトのように枠の中で動いているときは、開いたタブにも制限が残って AI のページが表示されない。
   // そのときは開かずに、相談文をコピーして案内だけ出す
   const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
@@ -99,6 +115,10 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
       const items = j.items.map(o => { const base = PHRASE_LIST[Number(o && o.id) - 1]; return base && o.local ? { cat: base.cat, ja: base.ja, local: String(o.local), reading: String(o.reading || "") } : null; }).filter(Boolean);
       return items.length ? { kind: "phrase", lang: plang, items, list: [] } : { err: "フレーズを読み取れませんでした。" };
     }
+    if (Array.isArray(j.places) || (topic === "line" && Array.isArray(j.packing))) {
+      const list = [...(j.places || []).filter(x => x && x.title).map(x => ({ ...x, _t: "place" })), ...(j.packing || []).filter(x => x && x.name).map(x => ({ ...x, _t: "pack" }))];
+      return list.length ? { kind: "line", list } : { err: "会話の中から候補が見つかりませんでした。" };
+    }
     if (Array.isArray(j.items)) return { kind: "day", date: isISO(j.date) ? j.date : iso, list: j.items.filter(x => x && x.title) };
     if (Array.isArray(j.packing)) return { kind: "pack", list: j.packing.filter(x => x && x.name) };
     return { err: "取り込める項目が見つかりませんでした。" };
@@ -114,6 +134,25 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
     if (!parsed || !parsed.list) return;
     const chosen = parsed.list.filter((_, i) => picked && picked[i]);
     if (!chosen.length) return;
+    if (parsed.kind === "line") {
+      const r0 = tripRange(t), places = chosen.filter(o => o._t === "place"), packs = chosen.filter(o => o._t === "pack");
+      update(tr => {
+        const rows = places.map(o => {
+          const d = isISO(o.date) && r0 && o.date >= r0.start && o.date <= r0.end ? o.date : "";
+          const stay = d ? staysOf(tr).find(s => s.startDate && d >= s.startDate && d < stayEnd(s)) : null;
+          return { id: uid(), linkedStayId: stay ? stay.id : null, category: LOCAL_CATS.includes(o.category) ? o.category : "観光", desc: String(o.title).slice(0, 80), address: String(o.address || ""), fromAddress: "", toAddress: "",
+            date: d, startTime: HHMM(o.time), endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: [o.note, "（LINEの会話から）"].filter(Boolean).join(" "), paymentStatus: "未払い", status: "候補" };
+        });
+        const packing = { ...(tr.packing || {}) };
+        packs.forEach(o => {
+          const cat = String(o.category || "その他").slice(0, 20), name = String(o.name).slice(0, 60);
+          if (!Object.values(packing).flat().some(i => i.name === name)) packing[cat] = [...(packing[cat] || []), { id: uid(), name, checked: false, bag: "" }];
+        });
+        return { ...tr, localTransport: [...(tr.localTransport || []), ...rows], packing };
+      });
+      done(`LINEの会話から、予定${places.length}件・持ち物${packs.length}件を候補として追加しました`);
+      return;
+    }
     if (parsed.kind === "day") {
       update(tr => {
         const stay = staysOf(tr).find(s => s.startDate && parsed.date >= s.startDate && parsed.date < stayEnd(s));
@@ -150,7 +189,12 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
       </div>
       {topic === "day" && days.length > 0 && <DayTabs days={days} sel={iso} setSel={setIso} today={todayISO()} />}
       {topic === "phrase" && <div className="chips">{missing.map(l => <button key={l.lang} className="chip" aria-pressed={plang === l.lang} onClick={() => { setPlang(l.lang); setAnswer(""); }}>{l.lang}</button>)}</div>}
-      {topic !== "phrase" && <Field label={topic === "free" ? "聞きたいこと" : "希望・補足（任意）"}><textarea value={wish} onChange={e => setWish(e.target.value)} placeholder={topic === "free" ? "例：2日目の夜にソウルでおすすめの過ごし方は？" : topic === "day" ? "例：子連れ。歩くのは少なめで、夜は焼肉" : "例：予算を抑えたい"} /></Field>}
+      {topic === "line" && <>
+        <div className="note">LINE のグループで、右上のメニュー →「設定」→「<b>トーク履歴を送信</b>」で会話をテキストにできます（スマホのメモなどに保存してからコピー）。旅行の話をしている部分だけを貼り付けても大丈夫です。電話番号とメールアドレスは自動で伏せます。同行者の発言が含まれるので、相談に使うことを一言伝えておくと安心です。</div>
+        <Field label="LINE の会話を貼り付け"><textarea value={wish} onChange={e => setWish(e.target.value)} placeholder={"2026/10/16(金)\n21:03\tあおい\t2日目は水原の華城に行きたい！\n21:05\tけんた\t変換プラグ持っていくね"} style={{ minHeight: 140 }} /></Field>
+        {wish.length > LINE_MAX && <div className="xs muted">長いので、新しい方から約2万文字を使います。</div>}
+      </>}
+      {topic !== "phrase" && topic !== "line" && <Field label={topic === "free" ? "聞きたいこと" : "希望・補足（任意）"}><textarea value={wish} onChange={e => setWish(e.target.value)} placeholder={topic === "free" ? "例：2日目の夜にソウルでおすすめの過ごし方は？" : topic === "day" ? "例：子連れ。歩くのは少なめで、夜は焼肉" : "例：予算を抑えたい"} /></Field>}
       <div className="formsec">AIを選んで開く</div>
       <div className="row">{CONSULT_AIS.map(ai => <button key={ai.key} className="btn" onClick={() => open(ai)}>{ai.label}で相談{ai.url ? "" : "（貼り付け）"}</button>)}</div>
       {paste && (
@@ -181,13 +225,13 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
                 <label key={i} className="bookrow" style={{ gridTemplateColumns: "22px minmax(0,1fr)", cursor: "pointer" }}>
                   <input type="checkbox" checked={!!picked[i]} onChange={e => setPicked(picked.map((v, k) => k === i ? e.target.checked : v))} />
                   <span style={{ minWidth: 0 }}>
-                    <span className="t1">{parsed.kind === "day" ? `${HHMM(o.time) || "—"} ${o.title}` : o.name}</span>
-                    <span className="t2">{parsed.kind === "day" ? [o.category, o.address, Number(o.price_jpy) > 0 && yen(o.price_jpy), o.needs_booking && "要予約", o.note].filter(Boolean).join(" ・ ") : o.category}</span>
+                    <span className="t1">{parsed.kind === "line" ? (o._t === "place" ? `${isISO(o.date) ? md(o.date) + " " : ""}${o.title}` : `持ち物：${o.name}`) : parsed.kind === "day" ? `${HHMM(o.time) || "—"} ${o.title}` : o.name}</span>
+                    <span className="t2">{parsed.kind === "line" ? [o.category, o.address, o.note].filter(Boolean).join(" ・ ") : parsed.kind === "day" ? [o.category, o.address, Number(o.price_jpy) > 0 && yen(o.price_jpy), o.needs_booking && "要予約", o.note].filter(Boolean).join(" ・ ") : o.category}</span>
                   </span>
                 </label>
               ))}
             </div>
-            <button className="btn primary block" disabled={!picked.some(Boolean)} onClick={importNow}>{parsed.kind === "day" ? `選んだ予定を${md(parsed.date)}に追加` : "選んだ持ち物を追加"}</button>
+            <button className="btn primary block" disabled={!picked.some(Boolean)} onClick={importNow}>{parsed.kind === "line" ? "選んだものを候補として追加" : parsed.kind === "day" ? `選んだ予定を${md(parsed.date)}に追加` : "選んだ持ち物を追加"}</button>
           </>
         )}
       </>}

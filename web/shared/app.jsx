@@ -1526,7 +1526,7 @@ function App() {
       <header className={"topbar" + (scrolled ? " scrolled" : "")}>
         <button className="tripbtn" onClick={() => setSheet({ kind: "trips" })} aria-label={`旅行を切り替える（今は${t.name}）`}><span>{t.name}</span><Icon n="down" s={16} /></button>
         <div className="spacer" />
-        <button className="iconbtn" aria-label="その他のメニュー" aria-expanded={menu} onClick={() => setMenu(!menu)}><Icon n="dots" /></button>
+        <button className="iconbtn" aria-label="その他のメニュー" aria-expanded={menu} onClick={() => setMenu(!menu)} style={{ position: "relative" }}><Icon n="dots" />{typeof TrunkMenuBadge === "function" && <TrunkMenuBadge tripId={tripId} />}</button>
       </header>
       <nav className="nav" aria-label="メインメニュー">
         {NAV.map(([k, l, ic]) => (
@@ -1536,6 +1536,7 @@ function App() {
         ))}
       </nav>
       <main className="main">
+        {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
         {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
@@ -1547,7 +1548,7 @@ function App() {
         <>
           <div style={{ position: "fixed", inset: 0, zIndex: 55 }} onClick={() => setMenu(false)} />
           <div className="menu" role="menu">
-            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "settings" }); }}>{FEATURES.claudeShare ? "共有と設定（リクエストの取り込み）" : "共有と設定"}</button>
+            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "settings" }); }}>{FEATURES.claudeShare ? "共有と設定（リクエストの取り込み）" : "共有と設定"}{typeof TrunkMenuBadge === "function" && <TrunkMenuBadge tripId={tripId} inline />}</button>
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "trips" }); }}>旅行を切り替える・追加する</button>
             <hr />
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "shiori" }); }}>旅のしおり（PDFで保存）</button>

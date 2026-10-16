@@ -117,9 +117,15 @@ const Store = {
     const { data, error } = await SB.from("share_requests").select("id,name,body,status,created_at").eq("trip_id", tripId).neq("status", "dismissed").order("created_at", { ascending: false }).limit(50);
     if (error) throw error; return data || [];
   },
+  // まだ「対応した」「消す」を押していないリクエストの数（作った人だけ数えられる）
+  async newRequestCount(tripId) {
+    const { count, error } = await SB.from("share_requests").select("id", { count: "exact", head: true }).eq("trip_id", tripId).eq("status", "new");
+    if (error) throw error; return count || 0;
+  },
   async setRequest(id, status) {
     const { error } = await SB.from("share_requests").update({ status }).eq("id", id);
     if (error) throw error;
+    requestWatch.refresh();
   },
   async acceptInvite(token) {
     const { data, error } = await SB.rpc("accept_invite", { p_token: token });

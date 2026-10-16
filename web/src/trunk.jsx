@@ -1,4 +1,46 @@
 // ================= Trunk. だけの画面 =================
+// 共有ページから届いた新しいリクエストの数を、30秒ごとと画面に戻ったときに確かめる（作った人の旅行だけ）
+const requestWatch = {
+  tripId: null, count: 0, subs: new Set(), timer: null,
+  async check() {
+    const id = this.tripId;
+    if (!id || Store.isJoined(id)) { this.set(0); return; }
+    try { const n = await Store.newRequestCount(id); if (id === this.tripId) this.set(n); } catch (e) {}
+  },
+  set(n) { if (n !== this.count) { this.count = n; this.subs.forEach(f => f(n)); } },
+  refresh() { this.check(); },
+  use(tripId) {
+    const [n, setN] = useState(this.tripId === tripId ? this.count : 0);
+    useEffect(() => {
+      if (this.tripId !== tripId) { this.tripId = tripId; this.count = 0; this.check(); }
+      this.subs.add(setN); setN(this.count);
+      if (!this.timer) {
+        this.timer = setInterval(() => { if (document.visibilityState === "visible") this.check(); }, 30000);
+        document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") this.check(); });
+      }
+      return () => { this.subs.delete(setN); };
+    }, [tripId]);
+    return n;
+  },
+};
+function TrunkMenuBadge({ tripId, inline }) {
+  const n = requestWatch.use(tripId);
+  if (!n) return null;
+  return inline
+    ? <span style={{ marginLeft: 8, background: "var(--orange-bar)", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "1px 7px" }}>{n}</span>
+    : <span aria-label={"新しいリクエスト" + n + "件"} style={{ position: "absolute", top: 4, right: 4, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 8, background: "var(--orange-bar)", color: "#fff", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--f-mono)" }}>{n}</span>;
+}
+function TrunkRequestsBanner({ tripId, onOpen }) {
+  const n = requestWatch.use(tripId);
+  if (!n) return null;
+  return (
+    <button className="card" onClick={onOpen} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 12, marginBottom: 14, border: "2px solid var(--orange-bar)", cursor: "pointer" }}>
+      <span style={{ flex: "none", minWidth: 28, height: 28, borderRadius: 14, background: "var(--orange-bar)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontFamily: "var(--f-mono)" }}>{n}</span>
+      <span style={{ flex: 1 }}><b>共有ページからリクエストが届いています</b><br /><span className="small muted">押すと「共有と設定」で読めます。読んだら「対応した」か「消す」を押してください。</span></span>
+    </button>
+  );
+}
+
 // 見る専用の共有リンクと、そこから届いたリクエスト（作った人だけ）
 function TrunkViewShare({ tripId }) {
   const [sh, setSh] = useState(undefined);

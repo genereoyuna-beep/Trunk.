@@ -1,5 +1,5 @@
 // 有料パスの支払いページ（Stripe Checkout）を作る。ログインした人だけ呼べる。
-// 本番の鍵（sk_live_）では 2026-12-01 より前は売らない。テストの鍵（sk_test_）ではいつでも試せる。
+// 本番の鍵（sk_live_ / rk_live_）では 2026-12-01 より前は売らない。テストの鍵では手元（localhost）から試せる。
 import Stripe from "npm:stripe@17.4.0";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
@@ -35,7 +35,8 @@ Deno.serve(async (req) => {
   const plan = PLANS[kind];
   if (!plan) return json({ error: "bad_kind" }, 400, h);
 
-  const live = (Deno.env.get("STRIPE_SECRET_KEY") ?? "").startsWith("sk_live_");
+  // 本番の鍵は sk_live_（標準）か rk_live_（権限を絞った鍵）で始まる
+  const live = /^(sk|rk)_live_/.test(Deno.env.get("STRIPE_SECRET_KEY") ?? "");
   if (live && Date.now() < SALES_START) return json({ error: "not_yet" }, 403, h);
   // テストの鍵のときは、手元の確認用（localhost）からだけ買える。本番のサイトからテストのカードでパスを取られないように
   if (!live && origin !== "http://localhost:5173") return json({ error: "not_yet" }, 403, h);

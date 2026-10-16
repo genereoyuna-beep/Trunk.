@@ -666,23 +666,24 @@ function dayEvents(t, iso) {
   const ending = stays.find(s => stayEnd(s) === iso), starting = stays.find(s => s.startDate === iso);
   const sleeping = stays.find(s => iso >= s.startDate && iso < stayEnd(s));
   const ev = [];
-  if (ending && !ending.noHotel) { const h = hotelOf(t, ending) || {}; ev.push({ k: h.checkoutTime || "10:00", co: !h.checkoutTime, time: h.checkoutTime, icon: "bed", title: "チェックアウト", sub: h.name || `${splitCity(ending.city).main}の宿`, edit: { kind: "stay", id: ending.id } }); }
+  if (ending && !ending.noHotel) { const h = hotelOf(t, ending) || {}; ev.push({ at: [[h.address, h.name, ending.city]], k: h.checkoutTime || "10:00", co: !h.checkoutTime, time: h.checkoutTime, icon: "bed", title: "チェックアウト", sub: h.name || `${splitCity(ending.city).main}の宿`, edit: { kind: "stay", id: ending.id } }); }
   transitsOf(t).forEach(x => {
     const from = splitCity(x.fromCity).main, to = splitCity(x.toCity).main, dur = calcDuration(x), st = transitState(x);
     if (!isLeg(x)) {
       // 街の中の移動は1行で（出発〜到着）
-      if (x.departDate === iso) ev.push({ k: x.departTime || "13:00", time: x.departTime ? x.departTime + (x.arriveTime ? `〜${x.arriveTime}` : "") : "", icon: modeIcon(x.mode), title: moveTitle(x), sub: [x.mode !== "未定" && x.mode, from && to && x.desc, x.airline, dur].filter(Boolean).join(" ・ "), st, edit: { kind: "transit", id: x.id } });
+      if (x.departDate === iso) ev.push({ at: [[x.fromCity], [x.toCity]], k: x.departTime || "13:00", time: x.departTime ? x.departTime + (x.arriveTime ? `〜${x.arriveTime}` : "") : "", icon: modeIcon(x.mode), title: moveTitle(x), sub: [x.mode !== "未定" && x.mode, from && to && x.desc, x.airline, dur].filter(Boolean).join(" ・ "), st, edit: { kind: "transit", id: x.id } });
       return;
     }
     if (x.departDate === iso) {
       const arr = x.arriveTime ? (x.arriveDate && x.arriveDate !== iso ? `${md(x.arriveDate)} ${x.arriveTime} 着` : `${x.arriveTime} 着`) : "";
-      ev.push({ k: x.departTime || "12:00", dep: true, time: x.departTime, icon: modeIcon(x.mode), title: `${from} 発 → ${to}`, sub: [x.mode, x.airline, arr, dur, x.cls].filter(Boolean).join(" ・ "), st, edit: { kind: "transit", id: x.id } });
-      if (x.arriveDate === iso && x.arriveTime) ev.push({ k: x.arriveTime, arr: true, time: x.arriveTime, icon: "pin", title: `${to} 着`, sub: x.airline || x.mode, edit: { kind: "transit", id: x.id } });
+      ev.push({ at: [[x.fromCity]], k: x.departTime || "12:00", dep: true, time: x.departTime, icon: modeIcon(x.mode), title: `${from} 発 → ${to}`, sub: [x.mode, x.airline, arr, dur, x.cls].filter(Boolean).join(" ・ "), st, edit: { kind: "transit", id: x.id } });
+      if (x.arriveDate === iso && x.arriveTime) ev.push({ at: [[x.toCity]], k: x.arriveTime, arr: true, time: x.arriveTime, icon: "pin", title: `${to} 着`, sub: x.airline || x.mode, edit: { kind: "transit", id: x.id } });
     } else if (x.arriveDate === iso && x.departDate && x.departDate < iso) {
-      ev.push({ k: x.arriveTime || "08:00", arr: true, time: x.arriveTime, icon: "pin", title: `${to} 着`, sub: `${md(x.departDate)} ${from}発 ・ ${x.airline || x.mode}`, edit: { kind: "transit", id: x.id } });
+      ev.push({ at: [[x.toCity]], k: x.arriveTime || "08:00", arr: true, time: x.arriveTime, icon: "pin", title: `${to} 着`, sub: `${md(x.departDate)} ${from}発 ・ ${x.airline || x.mode}`, edit: { kind: "transit", id: x.id } });
     }
   });
   (t.localTransport || []).filter(l => l.date === iso).forEach(l => ev.push({
+    at: l.category === "移動" ? [[l.fromAddress], [l.toAddress]] : [[l.address, l.desc]],
     k: l.startTime || "13:00", time: l.startTime ? l.startTime + (l.endTime ? `〜${l.endTime}` : "") : "", icon: l.category === "移動" ? "route" : l.category === "食事" ? "food" : l.category === "観光" ? "pin" : l.category === "買い物" ? "bag" : "ticket", title: l.desc || l.category,
     sub: [l.category, l.category === "移動" ? [l.fromAddress, l.toAddress].filter(Boolean).join(" → ") : l.address].filter(Boolean).join(" ・ "), st: localState(l), edit: { kind: "local", id: l.id },
     map: l.category !== "移動" && l.address ? l.address : "",
@@ -690,8 +691,8 @@ function dayEvents(t, iso) {
   if (starting) {
     const h = hotelOf(t, starting) || {};
     ev.push(starting.noHotel
-      ? { k: h.checkinTime || "18:00", icon: "home", title: `${starting.lodgingLabel || "宿不要"}へ`, sub: splitCity(starting.city).main, edit: { kind: "stay", id: starting.id } }
-      : { k: h.checkinTime || "15:00", ci: !h.checkinTime, time: h.checkinTime, icon: "bed", title: "チェックイン", sub: h.name || "宿未定", st: stayState(t, starting), edit: { kind: "stay", id: starting.id }, map: h.address || "" });
+      ? { at: [[starting.city]], k: h.checkinTime || "18:00", icon: "home", title: `${starting.lodgingLabel || "宿不要"}へ`, sub: splitCity(starting.city).main, edit: { kind: "stay", id: starting.id } }
+      : { at: [[h.address, h.name, starting.city]], k: h.checkinTime || "15:00", ci: !h.checkinTime, time: h.checkinTime, icon: "bed", title: "チェックイン", sub: h.name || "宿未定", st: stayState(t, starting), edit: { kind: "stay", id: starting.id }, map: h.address || "" });
   }
   // 時刻のないチェックアウトはその日の最初の出発より前、チェックインは最後の到着より後に置く
   const deps = ev.filter(e => e.dep).map(e => e.k).sort(), arrs = ev.filter(e => e.arr).map(e => e.k).sort();
@@ -753,6 +754,7 @@ function DayDetail({ t, iso, setIso, onEdit, onAddLocal, onAddMove, onSuggest })
         <button className="iconbtn" aria-label="次の日" disabled={!canNext} onClick={() => setIso(addDays(iso, 1))} style={{ transform: "rotate(-90deg)" }}><Icon n="down" /></button>
       </div>
       <div className="card flush divide"><DayTimeline t={t} iso={iso} onEdit={onEdit} /></div>
+      <DayMap t={t} iso={iso} />
       <div className="row" style={{ flexWrap: "nowrap" }}>
         <button className="btn block" style={{ flex: 1 }} onClick={() => onAddLocal(iso)}><Icon n="plus" s={16} />予定を追加</button>
         {onAddMove && <button className="btn block" style={{ flex: 1 }} onClick={() => onAddMove(iso)}><Icon n="plus" s={16} />移動を追加</button>}

@@ -33,8 +33,12 @@ function Barcode({ seed, w = 150, h = 34 }) {
 }
 const MODE_ART = { "飛行機": "plane", "鉄道": "train", "夜行列車": "train", "バス": "bus", "フェリー": "ship", "夜行フェリー": "ship", "車": "car" };
 
+// しおりに入れるもの（表紙はいつも入れる）。日ごとの地図だけ、最初は入れない
+const SHIORI_PARTS = [["map", "ルートマップ", true], ["ov", "旅程表", true], ["ec", "出発前の手続き", true], ["days", "日ごとの予定", true], ["daymap", "日ごとの地図", false], ["st", "泊まるところ", true], ["tr", "交通", true], ["cs", "費用の目安", true], ["pk", "持ち物", true], ["em", "緊急時の情報", true], ["ph", "フレーズ集", true], ["mm", "メモ欄", true]];
+const shioriOn = (t, k) => { const v = (t.shioriParts || {})[k]; return v === undefined ? (SHIORI_PARTS.find(p => p[0] === k) || [])[2] !== false : !!v; };
 function shioriUnits(t) {
   const U = [];
+  const on = (k) => shioriOn(t, k);
   const r = tripRange(t);
   const H = (key, title, sub, en) => U.push({ key, keepNext: true, el: <div className="sh-h2"><span className="sh-h2t"><span className="sh-stamp">{en}</span>{title}</span>{sub && <small className="mono">{sub}</small>}</div> });
   // 表紙（1ページまるごと）
@@ -90,12 +94,13 @@ function shioriUnits(t) {
   ) });
   if (!r) return U;
   const days = Array.from({ length: r.days }, (_, i) => addDays(r.start, i));
-  if (routeOf(t).stops.some(x => x.stays.length)) {
+  if (on("map") && routeOf(t).stops.some(x => x.stays.length)) {
     H("map", "ルートマップ", `${route.length} CITIES`, "ROUTE MAP");
     U.push({ key: "mapimg", el: <div className="sh-map"><RouteMap t={t} width={PAGE_W - PAGE_PAD * 2} height={470} compact /></div> });
     U.push({ key: "maplegend", breakAfter: true, el: <div className="sh-maplegend"><MapLegend /></div> });
   }
   // 旅程表
+  if (on("ov")) {
   H("ov", "旅程表", `${r.days} DAYS`, "ITINERARY");
   U.push({ key: "ovh", el: <div className="sh-ovrow sh-ovhead-row"><span>DAY</span><span>DATE</span><span>DESTINATION</span><span>STAY</span></div> });
   days.forEach((d, i) => {
@@ -109,14 +114,15 @@ function shioriUnits(t) {
       </div>
     ) });
   });
+  }
   // 出発前の手続き
   const ecs = ((t.entryChecks && t.entryChecks.items) || []);
-  if (ecs.length) {
+  if (on("ec") && ecs.length) {
     H("ec", "出発前の手続き", `${ecs.filter(i => i.done).length}/${ecs.length} DONE`, "BEFORE YOU GO");
     ecs.forEach(i => U.push({ key: "ec" + i.id, el: <div className="sh-ec"><i className={i.done ? "on" : ""} /><span><b>{i.title}</b><small>{i.country}{i.applyBy ? ` ・ ${md(i.applyBy)}までに` : ""}{i.detail ? ` ・ ${i.detail}` : ""}</small></span></div> }));
   }
   // 日ごと
-  days.forEach((d, i) => {
+  if (on("days")) days.forEach((d, i) => {
     const { ev, head, sleeping, night } = dayEvents(t, d);
     const mv = transitsOf(t).find(x => isLeg(x) && x.departDate === d && MODE_ART[x.mode]);
     U.push({ key: "dh" + d, keepNext: true, gap: true, el: <div className="sh-dayh"><div className="sh-dayno"><small>DAY</small><b className="mono">{String(i + 1).padStart(2, "0")}</b></div><div className="sh-daymain"><span className="mono">{enDate(d)}</span><b>{head}</b></div><i className="sh-dayico"><Icon n={mv ? MODE_ART[mv.mode] : "pin"} s={20} w={1.5} /></i></div> });
@@ -130,10 +136,11 @@ function shioriUnits(t) {
     if (sleeping) U.push({ key: "dn" + d, el: <div className="sh-night"><span className="mono" style={{ letterSpacing: ".16em" }}>TONIGHT</span><b>{night.name || "宿未定"}</b>{night.address && <small>{night.address}</small>}</div> });
     const starting = staysOf(t).find(s => s.startDate === d);
     if (starting && starting.memo) U.push({ key: "dm" + d, el: <div className="sh-memo">{starting.memo}</div> });
+    if (on("daymap") && dayPoints(t, d).length >= 2) U.push({ key: "dmap" + d, el: <DayMap t={t} iso={d} width={PAGE_W - PAGE_PAD * 2} height={210} print /> });
   });
   // 泊まるところ
   const stays = sortItinerary(staysOf(t)).filter(s => isISO(s.startDate));
-  if (stays.length) {
+  if (on("st") && stays.length) {
     H("st", "泊まるところ", "", "STAY");
     stays.forEach(s => {
       const h = hotelOf(t, s) || {};
@@ -154,7 +161,7 @@ function shioriUnits(t) {
   }
   // 交通
   const trs = sortItinerary(transitsOf(t)).filter(x => isISO(x.departDate) && (isLeg(x) || transitState(x).key !== "free")); // 予約のいらない街の中の移動は日ごとのページだけ
-  if (trs.length) {
+  if (on("tr") && trs.length) {
     H("tr", "交通", "", "TRANSPORT");
     trs.forEach(x => U.push({ key: "tr" + x.id, el: (
       <div className="sh-tr">
@@ -166,7 +173,7 @@ function shioriUnits(t) {
   }
   // 費用の目安
   const cost = myShare({ ...t, myName: "" });
-  if (cost.total > 0) {
+  if (on("cs") && cost.total > 0) {
     H("cs", "費用の目安", "PER PERSON", "BUDGET");
     U.push({ key: "cs", el: (
       <div className="sh-cost">
@@ -180,7 +187,7 @@ function shioriUnits(t) {
   }
   // 持ち物
   const cats = Object.entries(t.packing || {}).filter(([, items]) => items.length);
-  if (cats.length) {
+  if (on("pk") && cats.length) {
     H("pk", "持ち物", "", "PACKING");
     cats.forEach(([c, items]) => U.push({ key: "pk" + c, el: (
       <div className="sh-pack"><b>{c}</b><div>{items.map(i => <span key={i.id}><i className={i.checked ? "on" : ""} />{i.name}</span>)}</div></div>
@@ -189,7 +196,7 @@ function shioriUnits(t) {
   // 緊急時の情報
   const em = t.emergency || {}, ecn = t.emergencyCountries || [];
   const mine = [["パスポート", [em.passportNo, em.passportExp && `有効期限 ${em.passportExp.replace(/-/g, ".")}`].filter(Boolean).join(" ・ ")], ["海外旅行保険", [em.insurer, em.policyNo && `証券番号 ${em.policyNo}`, em.insurerPhone].filter(Boolean).join(" ・ ")], ["連絡先", em.contacts], ["医療メモ", em.medical]].filter(([, v]) => v);
-  if (mine.length || ecn.length) {
+  if (on("em") && (mine.length || ecn.length)) {
     H("em", "緊急時の情報", "", "EMERGENCY");
     if (mine.length) U.push({ key: "emme", el: <div className="sh-kv sh-em">{mine.map(([k, v]) => <React.Fragment key={k}><span>{k}</span><span style={{ whiteSpace: "pre-wrap" }}>{v}</span></React.Fragment>)}</div> });
     ecn.forEach((c, i) => U.push({ key: "emc" + i, el: (
@@ -203,7 +210,7 @@ function shioriUnits(t) {
   const mode = t.shioriPhrases || "essential";
   const books = Object.values(t.phrases || {}).filter(p => (p.items || []).length && !SKIP_LANGS.has(p.lang));
   const en = (j) => PHRASE_EN[j] || j;
-  if (mode !== "none" && books.length) {
+  if (on("ph") && mode !== "none" && books.length) {
     const pick = (ph) => (ph.items || []).filter(i => i.cat !== "数字" && (mode === "all" || PHRASE_ESSENTIAL.has(i.ja)));
     const base = pick(books[0]).map(i => i.ja);
     const ja = uniq([...base, ...books.slice(1).flatMap(b => pick(b).map(i => i.ja))]);
@@ -229,8 +236,10 @@ function shioriUnits(t) {
     }
   }
   // メモ欄
-  H("mm", "メモ", "", "NOTES");
-  for (let i = 0; i < 8; i++) U.push({ key: "mm" + i, el: <div className="sh-line" /> });
+  if (on("mm")) {
+    H("mm", "メモ", "", "NOTES");
+    for (let i = 0; i < 8; i++) U.push({ key: "mm" + i, el: <div className="sh-line" /> });
+  }
   U.push({ key: "bye", gap: true, el: (
     <div className="tk-bye">
       <div><div className="tk-label">ADMIT ONE</div><b>BON VOYAGE</b><span>いってらっしゃい！よい旅を。</span></div>
@@ -356,7 +365,17 @@ function ShioriView({ t, canExport, update }) {
           <button className="btn primary" disabled={st.startsWith("PDFを作って")} onClick={save}>PDFで保存</button>
         </div>
       )}
-      {update && Object.keys(t.phrases || {}).length > 0 && (
+      {update && (
+        <div className="stack" style={{ gap: 6 }}>
+          <span className="small muted">しおりに入れるもの</span>
+          <div className="chips">
+            {SHIORI_PARTS.filter(([k]) => k !== "daymap" || shioriOn(t, "days")).map(([k, label]) => (
+              <button key={k} className="chip" aria-pressed={shioriOn(t, k)} onClick={() => update(tr => ({ ...tr, shioriParts: { ...(tr.shioriParts || {}), [k]: !shioriOn(tr, k) } }))}>{label}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {update && shioriOn(t, "ph") && Object.keys(t.phrases || {}).length > 0 && (
         <label className="row small" htmlFor="sh-phr-mode" style={{ gap: 8 }}>フレーズ集
           <select id="sh-phr-mode" className="input" style={{ width: "auto" }} value={t.shioriPhrases || "essential"} onChange={e => update(tr => ({ ...tr, shioriPhrases: e.target.value }))}>
             <option value="essential">主要なフレーズだけ（おすすめ）</option>

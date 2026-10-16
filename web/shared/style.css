@@ -342,3 +342,6 @@ details > summary{cursor:pointer}
 .brow2-g b.over{color:var(--danger)}
 .brow2.total{border-bottom:0;padding-bottom:4px}
 .brow2.total b{font-size:14px}
+
+.sh-daymap{margin:6px 0 12px}
+.sh-daymap svg{border:1px solid #DADDD6}

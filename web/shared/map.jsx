@@ -211,3 +211,65 @@ function MapLegend() {
     </div>
   );
 }
+
+// ================= 日ごとの地図 =================
+// その日の予定・移動・宿を時刻の順に番号で並べ、まっすぐな線でつなぐ（位置が分かるものだけ）。
+// 広い範囲なら陸地も描く。街の中だけのときは、位置関係が分かる図にする
+function dayPoints(t, iso) {
+  const pts = [];
+  dayEvents(t, iso).ev.forEach(e => (e.at || []).forEach(cands => {
+    const name = (cands || []).find(n => n && geoFor(n, t.geo));
+    if (!name) return;
+    const ll = geoFor(name, t.geo), last = pts[pts.length - 1];
+    if (last && Math.abs(last.ll[0] - ll[0]) < 0.002 && Math.abs(last.ll[1] - ll[1]) < 0.002) return;
+    // 名前：宿は宿の名前、予定はその名前、移動は場所の名前
+    const label = e.icon === "bed" ? (String(e.sub || "").split(" ・ ")[0] || name) : (e.edit && e.edit.kind === "local" && e.at.length === 1) ? e.title : splitCity(name).main;
+    pts.push({ ll, label: String(label).replace(/\s*\([A-Z]{3}\)\s*$/, ""), title: e.title, time: (e.time || "").slice(0, 5) });
+  }));
+  return pts;
+}
+function DayMap({ t, iso, width = 640, height = 300, print }) {
+  const pts = useMemo(() => dayPoints(t, iso), [t, iso]);
+  if (pts.length < 2) return print ? null : <p className="xs muted" style={{ margin: "4px 2px" }}>この日の地図：場所を2つ以上、Google の候補から選ぶと出ます。</p>;
+  let x0 = Math.min(...pts.map(p => p.ll[1])), x1 = Math.max(...pts.map(p => p.ll[1]));
+  let y0 = Math.min(...pts.map(p => mercY(p.ll[0]))), y1 = Math.max(...pts.map(p => mercY(p.ll[0])));
+  const minSpan = 0.02;
+  if (x1 - x0 < minSpan) { const c = (x0 + x1) / 2; x0 = c - minSpan / 2; x1 = c + minSpan / 2; }
+  if (y1 - y0 < minSpan) { const c = (y0 + y1) / 2; y0 = c - minSpan / 2; y1 = c + minSpan / 2; }
+  const padX = (x1 - x0) * 0.18, padY = (y1 - y0) * 0.25;
+  x0 -= padX; x1 += padX; y0 -= padY; y1 += padY;
+  const k = Math.min(width / (x1 - x0), height / (y1 - y0));
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const P = (lat, lng) => [width / 2 + (lng - cx) * k, height / 2 - (mercY(lat) - cy) * k];
+  const wide = (x1 - x0) > 1.2;
+  const land = wide ? worldPolys().filter(p => p.box[2] >= x0 - 1 && p.box[0] <= x1 + 1).map(p => {
+    let d = "";
+    for (let i = 0; i < p.pts.length; i += 2) { const [x, y] = P(p.pts[i + 1], p.pts[i]); d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1); }
+    return d + "Z";
+  }) : [];
+  const xy = pts.map(p => P(p.ll[0], p.ll[1]));
+  // 縮尺の目安（km）
+  const kmPerPx = (111.32 * Math.cos(((y0 + y1) / 2) * Math.PI / 180)) / k;
+  const scaleKm = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500].find(v => v / kmPerPx > width * 0.12) || 500;
+  return (
+    <div className={print ? "sh-daymap" : "card"} style={print ? undefined : { padding: 8 }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ display: "block", background: wide ? "#E3ECF5" : "#F3F4F1", borderRadius: 10 }} role="img" aria-label={`${md(iso)}の地図`}>
+        {!wide && Array.from({ length: 9 }, (_, i) => <line key={"g" + i} x1={(i + 1) * width / 10} y1="0" x2={(i + 1) * width / 10} y2={height} stroke="#E4E6E1" strokeWidth="1" />)}
+        {land.map((d, i) => <path key={i} d={d} fill="#FFFFFF" stroke="#DADDD6" strokeWidth=".6" />)}
+        {xy.slice(1).map((q, i) => <line key={"s" + i} x1={xy[i][0]} y1={xy[i][1]} x2={q[0]} y2={q[1]} stroke="#1D4ED8" strokeWidth="2" strokeDasharray="5 4" />)}
+        {xy.map(([x, y], i) => (
+          <g key={"p" + i}>
+            <circle cx={x} cy={y} r="11" fill="#15202B" />
+            <text x={x} y={y + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" fontFamily="Chivo Mono, monospace">{i + 1}</text>
+            <text x={x + 15} y={y + 4} fontSize="12" fill="#15202B" fontFamily="Noto Sans JP, sans-serif" stroke="#F3F4F1" strokeWidth="3" paintOrder="stroke">{pts[i].label.slice(0, 16)}</text>
+          </g>
+        ))}
+        <g transform={`translate(${width - 12 - scaleKm / kmPerPx}, ${height - 14})`}>
+          <line x1="0" y1="0" x2={scaleKm / kmPerPx} y2="0" stroke="#5A6470" strokeWidth="2" />
+          <text x={scaleKm / kmPerPx / 2} y="-5" textAnchor="middle" fontSize="10" fill="#5A6470" fontFamily="Chivo Mono, monospace">{scaleKm} km</text>
+        </g>
+      </svg>
+      <div className="xs muted" style={{ marginTop: 4 }}>{pts.map((p, i) => `${i + 1} ${p.time ? p.time + " " : ""}${p.title}`).join("　")}</div>
+    </div>
+  );
+}

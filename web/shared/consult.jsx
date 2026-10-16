@@ -151,6 +151,7 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
       <div className="row">{CONSULT_AIS.map(ai => <button key={ai.key} className="btn" onClick={() => open(ai)}>{ai.label}で相談</button>)}</div>
       {msg && <div className="note">{msg}</div>}
       <details><summary className="small muted">相談文を見る・コピーする</summary><textarea readOnly value={prompt} style={{ minHeight: 160, marginTop: 8, fontSize: 12 }} onFocus={e => e.target.select()} /></details>
+      {!canImport && <div className="note">この相談は、答えを読むだけです（アプリには取り込みません）。答えをアプリに取り込みたいときは、上で「この日の予定」「持ち物」「フレーズ集を作る」を選んでください。答えを貼り付ける欄が、この下に出ます。</div>}
       {canImport && <>
         <div className="formsec">答えを取り込む</div>
         <Field label="AIの答えをそのまま貼り付けてください"><textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="答えの全文を貼り付け（最後のJSONが読み取られます）" /></Field>

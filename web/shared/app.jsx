@@ -1123,9 +1123,10 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
         {sorted.map(x => { const r = tripRange(x.data); return (
           <button key={x.id} className="triprow" aria-current={x.id === currentId} onClick={() => onPick(x.id)}>
             <span style={{ minWidth: 0 }}><span className="t1" style={{ fontFamily: "var(--f-display)", fontWeight: 700 }}>{x.data.name}</span><span className="t2 mono">{r ? `${r.start.replace(/-/g, ".")} 〜 ${md(r.end)} ・ ${r.days}日間` : "日程未定"}</span></span>
-            <span className="pill tone-none">{tripStatusText(x.data)}</span>
+            <span className="row" style={{ gap: 6, flex: "none" }}>{x.joined && <span className="pill tone-none">参加</span>}{x.pass && <span className="pill tone-booked">パス</span>}<span className="pill tone-none">{tripStatusText(x.data)}</span></span>
           </button>); })}
       </div>
+      {typeof TrunkPlanLine === "function" && <TrunkPlanLine />}
       {limited && !form && <div className="note">{FREE_LIMIT_MSG}</div>}
       {limited && !form && typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
       {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "" })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
@@ -1180,6 +1181,7 @@ function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onReque
       </div>
       {FEATURES.mail && <div className="note">Gmailで予約メールにこのラベルを付けておくと、「予約・手配」の「Gmailから探す」でそのメールだけを読み取ります。読めるのは個人のGmailで、Claudeデスクトップアプリで開いたときだけです。</div>}
       {FEATURES.claudeShare ? <ShareSection t={t} onRequest={onRequest} busy={busy} /> : typeof TrunkShareSection === "function" ? <TrunkShareSection t={t} tripId={tripId} /> : null}
+      {typeof TrunkPlanSection === "function" && <><div className="formsec" /><TrunkPlanSection /></>}
       {typeof TrunkFeedbackSection === "function" && <><div className="formsec" /><TrunkFeedbackSection /></>}
       <div className="formsec" />
       <button className="btn block" onClick={onCopy}>コピーして新しい旅行を作る</button>

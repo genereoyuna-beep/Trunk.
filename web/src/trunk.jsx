@@ -28,6 +28,37 @@ function TrunkBuyPass() {
     </div>
   );
 }
+// 今のプラン（旅行一覧の下に1行、「共有と設定」に詳しく）
+function planSummary(ps) {
+  const items = [];
+  if (ps.until && Date.parse(ps.until) > Date.now()) items.push("3か月パス（" + fmtDay(ps.until) + "まで）");
+  if (ps.unusedTrip > 0) items.push("まだ使っていない旅行パス " + ps.unusedTrip + "枚");
+  return items;
+}
+function TrunkPlanLine() {
+  const ps = passWatch.use();
+  const items = planSummary(ps);
+  return <div className="small muted">今のプラン：{items.length ? items.join("・") : "無料（準備中の旅行は1つまで）"}</div>;
+}
+function TrunkPlanSection() {
+  const ps = passWatch.use();
+  const items = planSummary(ps);
+  const used = (ps.list || []).filter(p => p.kind === "trip" && p.used_at).length;
+  return (
+    <section className="stack" style={{ gap: 8 }}>
+      <div className="formsec">プラン</div>
+      <div className="card stack" style={{ gap: 6 }}>
+        <b>{items.length ? items.join("・") : "無料"}</b>
+        <span className="small muted">
+          {items.length ? "パスで準備している旅行は、旅行一覧で「パス」と表示されます。" : "準備中の旅行は1つまで無料です。終わった旅行と、招待されて参加した旅行は数えません。"}
+          {used > 0 ? "　これまでに使った旅行パス：" + used + "枚" : ""}
+        </span>
+        {ps.until && Date.parse(ps.until) > Date.now() && <span className="xs muted">期限が切れても、作った旅行はそのまま使えます。自動更新はありません。</span>}
+      </div>
+    </section>
+  );
+}
+
 // 支払いから戻ってきたとき・3か月パスの期限が近いときに、ホームに出す
 function TrunkPassBanner({ onTrips }) {
   const ps = passWatch.use();

@@ -1,5 +1,55 @@
 // ================= Trunk. だけの画面 =================
-// 一緒に編集する人（招待リンク）。共有リンク（見る専用）はこのあと作る
+// 見る専用の共有リンクと、そこから届いたリクエスト（作った人だけ）
+function TrunkViewShare({ tripId }) {
+  const [sh, setSh] = useState(undefined);
+  const [reqs, setReqs] = useState([]);
+  const [st, setSt] = useState("");
+  const reload = () => { Store.share(tripId).then(setSh).catch(() => setSh(null)); Store.requests(tripId).then(setReqs).catch(() => {}); };
+  useEffect(() => { setSh(undefined); setReqs([]); setSt(""); reload(); }, [tripId]);
+  const url = sh && sh.enabled ? location.origin + "/s/?k=" + sh.token : "";
+  const run = async (f, ok) => { setSt("busy"); try { await f(); setSt(ok || ""); reload(); } catch (e) { setSt("err"); } };
+  const copy = async () => { try { await navigator.clipboard.writeText(url); setSt("copied"); } catch (e) { setSt("copyerr"); } };
+  const fmt = (iso) => { const d = new Date(iso); return (d.getMonth() + 1) + "/" + d.getDate(); };
+  return (
+    <section className="stack" style={{ gap: 10 }}>
+      <div className="formsec">見せるだけの共有リンク</div>
+      <div className="note">リンクを開いた人は、ログインなしで旅程・しおり・地図を見られます（編集はできません）。緊急時の情報と支出の記録は見えません。いつ開いても最新の旅程です。</div>
+      {sh === undefined ? <div className="small muted">読み込み中…</div> : !url ? (
+        <button className="btn block" disabled={st === "busy"} onClick={() => run(() => Store.startShare(tripId))}>{sh ? "共有リンクをもう一度使う" : "共有リンクを作る"}</button>
+      ) : (
+        <div className="stack" style={{ gap: 8 }}>
+          <div className="mono small" style={{ wordBreak: "break-all", background: "var(--sunk)", borderRadius: 10, padding: "8px 10px" }}>{url}</div>
+          <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+            <button className="btn primary" onClick={copy}>リンクをコピー</button>
+            <a className="btn" href={url} target="_blank" rel="noopener">開いてみる</a>
+            <button className="btn" onClick={() => run(() => Store.stopShare(tripId), "stopped")}>共有を止める</button>
+          </div>
+        </div>
+      )}
+      {st === "copied" && <div className="small muted">コピーしました。LINE などで送ってください。</div>}
+      {st === "copyerr" && <div className="small muted">コピーできませんでした。上のリンクを長押ししてコピーしてください。</div>}
+      {st === "stopped" && <div className="small muted">共有を止めました。リンクはすぐに開けなくなります。</div>}
+      {st === "err" && <div className="err">うまくいきませんでした。通信を確かめて、もう一度お試しください。</div>}
+      {reqs.length > 0 && (
+        <div className="stack" style={{ gap: 8 }}>
+          <div className="small"><b>共有ページから届いたリクエスト</b></div>
+          {reqs.map(q => (
+            <div key={q.id} className="card stack" style={{ gap: 6, opacity: q.status === "done" ? .55 : 1 }}>
+              <div className="xs muted">{fmt(q.created_at)}　{q.name || "名前なし"}{q.status === "done" ? "　対応済み" : ""}</div>
+              <div style={{ whiteSpace: "pre-wrap" }}>{q.body}</div>
+              <div className="row" style={{ gap: 8 }}>
+                {q.status !== "done" && <button className="btn" onClick={() => run(() => Store.setRequest(q.id, "done"))}>対応した</button>}
+                <button className="btn ghost" onClick={() => run(() => Store.setRequest(q.id, "dismissed"))}>消す</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// 一緒に編集する人（招待リンク）
 function TrunkShareSection({ t, tripId }) {
   const [people, setPeople] = useState(null);
   const [link, setLink] = useState(null);
@@ -20,6 +70,7 @@ function TrunkShareSection({ t, tripId }) {
   const until = link ? new Date(link.expires_at) : null;
   return (
     <section className="stack" style={{ gap: 10 }}>
+      {owner ? <TrunkViewShare tripId={tripId} /> : <><div className="formsec">見せるだけの共有リンク</div><div className="small muted">共有リンクは、旅行を作った人が出せます。</div></>}
       <div className="formsec">一緒に編集する人</div>
       {people === null ? <div className="small muted">読み込み中…</div> : (
         <div className="stack" style={{ gap: 6 }}>

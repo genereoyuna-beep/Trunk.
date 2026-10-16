@@ -1,10 +1,26 @@
 // ================= 共有ページ（見る専用・アカウント不要） =================
 // share-build.js が旅行1件分のデータを window.__TRIP__ に埋め込む。編集や Gmail 連携は含まない。
 const noop = () => {};
-function RequestBox({ t }) {
+// onSend があるとき（Trunk.）は、リクエストをそのまま作った人のアプリに届ける。ないときは LINE で送る文章を作る
+function RequestBox({ t, onSend }) {
   const [name, setName] = useState("");
   const [text, setText] = useState("");
   const [copied, setCopied] = useState(false);
+  const [sent, setSent] = useState("");
+  if (onSend) {
+    const send = async () => { setSent("busy"); try { await onSend(name.trim(), text.trim()); setText(""); setSent("done"); } catch (e) { setSent("err"); } };
+    return (
+      <section className="card stack" style={{ gap: 10 }}>
+        <h3>リクエストを送る</h3>
+        <p className="small muted" style={{ margin: 0 }}>行きたい場所、食べたいもの、別行動したい日などを書いて送ってください。この旅程を作った人のアプリに届きます。</p>
+        <Field label="お名前"><TextIn value={name} onChange={setName} placeholder="例：ゆうこ" /></Field>
+        <Field label="リクエスト"><textarea value={text} maxLength={2000} onChange={e => { setText(e.target.value); if (sent === "done") setSent(""); }} placeholder="例：2日目に九份に行きたい！夜ごはんは小籠包がいいな" /></Field>
+        <div className="row"><button className="btn primary" disabled={!text.trim() || sent === "busy"} onClick={send}>{sent === "busy" ? "送っています…" : "送る"}</button></div>
+        {sent === "done" && <div className="note">送りました。作った人のアプリに届いています。</div>}
+        {sent === "err" && <div className="err">送れませんでした。時間をおいて、もう一度お試しください。</div>}
+      </section>
+    );
+  }
   const msg = `【${t.name} へのリクエスト】${name.trim() ? `（${name.trim()}）` : ""}\n${text.trim()}`;
   const copy = async () => { try { await navigator.clipboard.writeText(msg); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {} };
   return (
@@ -87,8 +103,8 @@ function ShareHome({ t, goDay }) {
     </div>
   );
 }
-function ShareApp() {
-  const payload = window.__TRIP__ || {};
+function ShareApp({ payload: given, onSend }) {
+  const payload = given || window.__TRIP__ || {};
   const t = withBuiltinPhrases(upgradeTrip(payload.data || {}));
   const r = tripRange(t), today = todayISO();
   const [view, setView] = useState("home");
@@ -131,11 +147,12 @@ function ShareApp() {
           {view === "shiori" && <Shiori t={t} />}
           {view === "phrases" && <PhraseView t={t} onSave={noop} canGenerate={false} />}
           {!r && view !== "home" && <p className="empty card">まだ日程がありません。</p>}
-          <RequestBox t={t} />
+          <RequestBox t={t} onSend={onSend} />
           <p className="xs muted" style={{ textAlign: "center" }}>最終更新 {payload.updatedAt ? new Date(payload.updatedAt).toLocaleString("ja-JP") : "—"}</p>
         </div>
       </main>
     </div>
   );
 }
-ReactDOM.createRoot(document.getElementById("root")).render(<ShareApp />);
+// Trunk. の共有ページは、データを読み込んでから自分で描く（window.__SHARE_LIVE__）
+if (!window.__SHARE_LIVE__) ReactDOM.createRoot(document.getElementById("root")).render(<ShareApp />);

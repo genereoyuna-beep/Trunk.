@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "sync": "node sync.js",
-    "build": "node build.js"
+    "build": "node build.js && node build-share.js"
   },
   "devDependencies": {
     "@babel/standalone": "7.23.10"

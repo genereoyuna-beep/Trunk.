@@ -95,6 +95,32 @@ const Store = {
     const { error } = await SB.from("trip_members").delete().eq("trip_id", tripId).eq("user_id", userId);
     if (error) throw error;
   },
+  // ===== 見る専用の共有リンク（作った人だけ） =====
+  async share(tripId) {
+    const { data } = await SB.from("shares").select("token,enabled").eq("trip_id", tripId).maybeSingle();
+    return data || null;
+  },
+  async startShare(tripId) {
+    const cur = await this.share(tripId);
+    if (cur) {
+      const { data, error } = await SB.from("shares").update({ enabled: true }).eq("trip_id", tripId).select("token,enabled").single();
+      if (error) throw error; return data;
+    }
+    const { data, error } = await SB.from("shares").insert({ trip_id: tripId }).select("token,enabled").single();
+    if (error) throw error; return data;
+  },
+  async stopShare(tripId) {
+    const { error } = await SB.from("shares").update({ enabled: false }).eq("trip_id", tripId);
+    if (error) throw error;
+  },
+  async requests(tripId) {
+    const { data, error } = await SB.from("share_requests").select("id,name,body,status,created_at").eq("trip_id", tripId).neq("status", "dismissed").order("created_at", { ascending: false }).limit(50);
+    if (error) throw error; return data || [];
+  },
+  async setRequest(id, status) {
+    const { error } = await SB.from("share_requests").update({ status }).eq("id", id);
+    if (error) throw error;
+  },
   async acceptInvite(token) {
     const { data, error } = await SB.rpc("accept_invite", { p_token: token });
     if (error) throw { code: (/invite_invalid|members_full/.exec(error.message || "") || ["error"])[0] };

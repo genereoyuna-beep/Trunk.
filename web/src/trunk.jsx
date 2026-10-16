@@ -21,7 +21,6 @@ function TrunkBuyPass() {
     <div className="stack" style={{ gap: 8 }}>
       <button className="btn primary block" disabled={st === "busy"} onClick={() => buy("trip")}>旅行パスを買う（1旅行 440円）</button>
       <button className="btn block" disabled={st === "busy"} onClick={() => buy("3m")}>3か月パスを買う（980円）</button>
-      {Date.now() < Date.parse("2027-02-01T00:00:00+09:00") && <div className="xs muted">割引コードをお持ちの方は、支払いの画面で入力できます（<a href="/#pricing" target="_blank" rel="noopener">公開記念キャンペーン</a>は2027年1月31日まで）。</div>}
       <div className="xs muted">支払いは Stripe の画面で行います（クレジットカード）。自動更新はありません。{passTest ? "（テストモード）" : ""}</div>
       {st === "busy" && <div className="small muted">支払いの画面に移動しています…</div>}
       {st === "notyet" && <div className="err">販売は2026年12月1日からです。</div>}

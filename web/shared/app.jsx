@@ -50,6 +50,38 @@ function SuggestIn({ value, onChange, options, ...p }) {
   const opts = uniq(options || []).filter(o => o !== value).slice(0, 80);
   return <><input type="text" list={id} value={value ?? ""} onChange={e => onChange(e.target.value)} autoComplete="off" {...p} /><datalist id={id}>{opts.map(o => <option key={o} value={o} />)}</datalist></>;
 }
+// 場所の入力：Trunk. では Google の候補を出す（Places）。ないとき（アーティファクト版）は今までどおり
+function PlaceIn({ value, onChange, onPick, kind, options, placeholder }) {
+  const [items, setItems] = useState([]);
+  const [open, setOpen] = useState(false);
+  const tm = useRef(null), seq = useRef(0);
+  if (typeof Places === "undefined") return options ? <SuggestIn value={value} onChange={onChange} options={options} placeholder={placeholder} /> : <TextIn value={value} onChange={onChange} placeholder={placeholder} />;
+  const type = (v) => {
+    onChange(v);
+    clearTimeout(tm.current);
+    const n = ++seq.current;
+    tm.current = setTimeout(() => { Places.suggest(v, kind).then(x => { if (n === seq.current) { setItems(x); setOpen(x.length > 0); } }).catch(() => setItems([])); }, 350);
+  };
+  const pick = async (it) => {
+    setOpen(false); setItems([]);
+    try { const r = await it.pick(); onPick ? onPick(r, it) : onChange(r.name || it.main); } catch (e) { onChange(it.main); }
+  };
+  return (
+    <div style={{ position: "relative" }}>
+      <input type="text" value={value ?? ""} placeholder={placeholder} autoComplete="off" onChange={e => type(e.target.value)} onFocus={() => items.length && setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 200)} />
+      {open && (
+        <div className="card flush divide" role="listbox" style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", zIndex: 30, boxShadow: "0 8px 24px rgba(21,32,43,.14)", maxHeight: 280, overflow: "auto" }}>
+          {items.map((it, i) => (
+            <button key={i} type="button" role="option" className="bookrow" style={{ gridTemplateColumns: "minmax(0,1fr)", width: "100%", textAlign: "left" }} onMouseDown={e => { e.preventDefault(); pick(it); }}>
+              <span style={{ minWidth: 0 }}><span className="t1">{it.main}</span>{it.sub && <span className="t2">{it.sub}</span>}</span>
+            </button>
+          ))}
+          <div className="xs muted" style={{ padding: "4px 12px", textAlign: "right" }}>Google の候補</div>
+        </div>
+      )}
+    </div>
+  );
+}
 function NumIn({ value, onChange, ...p }) { return <input type="number" inputMode="numeric" value={value === 0 || value ? value : ""} onWheel={e => e.target.blur()} onChange={e => onChange(e.target.value === "" ? 0 : Number(e.target.value))} {...p} />; }
 function DateIn({ value, onChange }) { return <input type="date" value={value || ""} onChange={e => onChange(e.target.value)} />; }
 function TimeIn({ value, onChange }) { return <input type="time" value={value || ""} onChange={e => onChange(e.target.value)} />; }
@@ -114,7 +146,7 @@ function StayEditor({ t, id, update, close }) {
   return (
     <>
       <div className="fgrid">
-        <Field label="都市" wide><SuggestIn value={s.city} onChange={v => setStay({ city: v })} options={sg.cities} placeholder="例：プラハ" /></Field>
+        <Field label="都市" wide><PlaceIn kind="city" value={s.city} onChange={v => setStay({ city: v })} onPick={(r, it) => setStay({ city: it.main })} options={sg.cities} placeholder="例：プラハ" /></Field>
         <Field label="到着日（泊まり始め）"><DateIn value={s.startDate} onChange={v => setStay({ startDate: v })} /></Field>
         <Field label="泊数"><select value={nightsOf(s)} onChange={e => setStay({ nights: Number(e.target.value) })}>{Array.from({ length: 31 }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り（0泊）" : `${i}泊`}</option>)}</select></Field>
         <Field label="メモ" wide><textarea value={s.memo || ""} onChange={e => setStay({ memo: e.target.value })} /></Field>
@@ -127,7 +159,7 @@ function StayEditor({ t, id, update, close }) {
           <div className="formsec">宿</div>
           <BookingStatus status={h.status || "候補"} paid={h.paymentStatus} openLabel="未手配" onStatus={v => setHotel({ status: v })} onPaid={v => setHotel({ paymentStatus: v })} />
           <div className="fgrid">
-            <Field label="宿泊先名" wide><TextIn value={h.name} onChange={v => setHotel({ name: v })} placeholder="候補の宿もここに" /></Field>
+            <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}) })} placeholder="候補の宿もここに" /></Field>
             <Field label="総額（円）"><NumIn value={h.total} onChange={v => setHotel({ total: v, perNight: Math.round(v / n) })} /></Field>
             <Field label="人数（総額は何人分か）"><select value={h.guests || guessGuests(t)} onChange={e => setHotel({ guests: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
             <Field label="チェックイン"><select value={h.checkinTime || ""} onChange={e => setHotel({ checkinTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
@@ -136,7 +168,7 @@ function StayEditor({ t, id, update, close }) {
             <Field label="予約番号"><TextIn value={h.confirmation} onChange={v => setHotel({ confirmation: v })} /></Field>
             <Field label="無料キャンセル期限"><DateIn value={h.cancelDeadline} onChange={v => setHotel({ cancelDeadline: v })} /></Field>
             <Field label="予約ページのURL"><TextIn value={h.url} onChange={v => setHotel({ url: v })} inputMode="url" /></Field>
-            <Field label="住所" wide><TextIn value={h.address} onChange={v => setHotel({ address: v })} /></Field>
+            <Field label="住所" wide><PlaceIn value={h.address} onChange={v => setHotel({ address: v })} onPick={(r, it) => setHotel({ address: r.address || it.main })} /></Field>
           </div>
           <div className="row">
             {safeUrl(h.url) && <a className="btn small" href={safeUrl(h.url)} target="_blank" rel="noopener noreferrer"><Icon n="ext" s={14} />予約ページ</a>}
@@ -242,12 +274,12 @@ function LocalEditor({ t, id, update, close }) {
         <Field label="終了"><TimeIn value={l.endTime} onChange={v => set({ endTime: v })} /></Field>
         {isMove ? (
           <>
-            <Field label="出発地"><SuggestIn value={l.fromAddress} onChange={v => set({ fromAddress: v })} options={[...sg.addresses, ...AIRPORTS, ...sg.cities]} /></Field>
-            <Field label="到着地"><SuggestIn value={l.toAddress} onChange={v => set({ toAddress: v })} options={[...sg.addresses, ...AIRPORTS, ...sg.cities]} /></Field>
+            <Field label="出発地"><PlaceIn value={l.fromAddress} onChange={v => set({ fromAddress: v })} onPick={(r, it) => set({ fromAddress: r.name || it.main })} options={[...sg.addresses, ...AIRPORTS, ...sg.cities]} /></Field>
+            <Field label="到着地"><PlaceIn value={l.toAddress} onChange={v => set({ toAddress: v })} onPick={(r, it) => set({ toAddress: r.name || it.main })} options={[...sg.addresses, ...AIRPORTS, ...sg.cities]} /></Field>
             <Field label="乗り物"><SuggestIn value={l.mode} onChange={v => set({ mode: v })} options={["電車", "地下鉄", "バス", "タクシー", "Uber", "徒歩", "船", "レンタカー", "送迎"]} /></Field>
           </>
         ) : (
-          <Field label="場所・住所" wide><SuggestIn value={l.address} onChange={v => set({ address: v })} options={[...sg.addresses, ...sg.cities]} /></Field>
+          <Field label="場所・住所" wide><PlaceIn value={l.address} onChange={v => set({ address: v })} onPick={(r, it) => set({ address: r.name || it.main })} options={[...sg.addresses, ...sg.cities]} /></Field>
         )}
         <Field label="金額（円）"><NumIn value={l.price} onChange={v => set({ price: v })} /></Field>
         <Field label="人数（金額は何人分か）"><select value={l.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>

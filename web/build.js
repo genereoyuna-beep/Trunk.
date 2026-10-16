@@ -4,7 +4,7 @@ const Babel = require('@babel/standalone');
 const fs = require('fs'), path = require('path');
 const out = process.argv[2] || path.resolve(__dirname, '../app/index.html');
 const S = (f) => fs.readFileSync(path.join(__dirname, f), 'utf8');
-const src = ['src/trunk-config.js', 'shared/model.js', 'shared/phrase-data.js', 'shared/world-data.js', 'shared/map.jsx', 'src/store.js', 'shared/app.jsx', 'shared/extras.jsx', 'shared/phrases.jsx', 'shared/shiori.jsx', 'shared/consult.jsx', 'src/trunk.jsx'].map(S).join('\n');
+const src = ['src/trunk-config.js', 'src/places.js', 'shared/model.js', 'shared/phrase-data.js', 'shared/world-data.js', 'shared/map.jsx', 'src/store.js', 'shared/app.jsx', 'shared/extras.jsx', 'shared/phrases.jsx', 'shared/shiori.jsx', 'shared/consult.jsx', 'src/trunk.jsx'].map(S).join('\n');
 const code = Babel.transform(src, { presets: ['react'] }).code.replace(/<\/script/gi, '<\\/script');
 const html = `<!DOCTYPE html>
 <html lang="ja">

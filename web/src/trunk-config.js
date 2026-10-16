@@ -4,3 +4,5 @@ const FEATURES = { ai: false, mail: false, claudeShare: false, account: true, ap
 const SUPABASE_URL = "https://nlstbgnflnchjpnqnelr.supabase.co";
 const SUPABASE_KEY = "sb_publishable_bLXkuhZMT1-Dv000H8Fm3g_8-mBaYPY"; // 公開用のキー（ブラウザに置いてよいもの）
 const SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, detectSessionInUrl: true, flowType: "pkce" } });
+// Google の場所の候補（Places）。ブラウザ用のキーで、使えるサイトを trunk-travelplanner.com に限っている
+const MAPS_KEY = "AIzaSyAR_qX5Ags7fGOfQ7Ik9HuSfsmtywLDyiQ";

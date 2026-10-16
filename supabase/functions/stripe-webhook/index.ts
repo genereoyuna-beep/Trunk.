@@ -19,6 +19,8 @@ Deno.serve(async (req) => {
     return new Response("bad signature", { status: 400 });
   }
 
+  // 失敗したときは理由を返す（Stripe の配信記録に残り、原因を調べられる。個人情報は入れない）
+  try {
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     const s = await stripe!.checkout.sessions.retrieve((event.data.object as Stripe.Checkout.Session).id, { expand: ["discounts.promotion_code"] });
     // 全額オフのコードで0円になったときは "no_payment_required" になる。これもパスを付ける
@@ -32,7 +34,10 @@ Deno.serve(async (req) => {
       { user_id: userId, kind, valid_until: validUntil, stripe_session: s.id, promo_code: promo, amount: s.amount_total },
       { onConflict: "stripe_session", ignoreDuplicates: true },
     );
-    if (error) return new Response("db error", { status: 500 }); // Stripe がもう一度送ってくる
+    if (error) return new Response("db error: " + error.message, { status: 500 }); // Stripe がもう一度送ってくる
+  }
+  } catch (e) {
+    return new Response("error: " + (e instanceof Error ? e.message : String(e)), { status: 500 });
   }
   return new Response("ok", { status: 200 });
 });

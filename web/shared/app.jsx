@@ -666,7 +666,7 @@ function dayEvents(t, iso) {
   const ending = stays.find(s => stayEnd(s) === iso), starting = stays.find(s => s.startDate === iso);
   const sleeping = stays.find(s => iso >= s.startDate && iso < stayEnd(s));
   const ev = [];
-  if (ending && !ending.noHotel) { const h = hotelOf(t, ending) || {}; ev.push({ at: [[h.address, h.name, ending.city]], k: h.checkoutTime || "10:00", co: !h.checkoutTime, time: h.checkoutTime, icon: "bed", title: "チェックアウト", sub: h.name || `${splitCity(ending.city).main}の宿`, edit: { kind: "stay", id: ending.id } }); }
+  if (ending && !ending.noHotel) { const h = hotelOf(t, ending) || {}; ev.push({ at: [[h.address, h.name]], k: h.checkoutTime || "10:00", co: !h.checkoutTime, time: h.checkoutTime, icon: "bed", title: "チェックアウト", sub: h.name || `${splitCity(ending.city).main}の宿`, edit: { kind: "stay", id: ending.id } }); }
   transitsOf(t).forEach(x => {
     const from = splitCity(x.fromCity).main, to = splitCity(x.toCity).main, dur = calcDuration(x), st = transitState(x);
     if (!isLeg(x)) {
@@ -692,7 +692,7 @@ function dayEvents(t, iso) {
     const h = hotelOf(t, starting) || {};
     ev.push(starting.noHotel
       ? { at: [[starting.city]], k: h.checkinTime || "18:00", icon: "home", title: `${starting.lodgingLabel || "宿不要"}へ`, sub: splitCity(starting.city).main, edit: { kind: "stay", id: starting.id } }
-      : { at: [[h.address, h.name, starting.city]], k: h.checkinTime || "15:00", ci: !h.checkinTime, time: h.checkinTime, icon: "bed", title: "チェックイン", sub: h.name || "宿未定", st: stayState(t, starting), edit: { kind: "stay", id: starting.id }, map: h.address || "" });
+      : { at: [[h.address, h.name]], k: h.checkinTime || "15:00", ci: !h.checkinTime, time: h.checkinTime, icon: "bed", title: "チェックイン", sub: h.name || "宿未定", st: stayState(t, starting), edit: { kind: "stay", id: starting.id }, map: h.address || "" });
   }
   // 時刻のないチェックアウトはその日の最初の出発より前、チェックインは最後の到着より後に置く
   const deps = ev.filter(e => e.dep).map(e => e.k).sort(), arrs = ev.filter(e => e.arr).map(e => e.k).sort();

@@ -1241,6 +1241,14 @@ function App() {
   const [menu, setMenu] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [notice, setNotice] = useState("");
+  const [privEm, setPrivEm] = useState({});
+  const emTimer = useRef(null);
+  useEffect(() => {
+    if (!tripId || !Store.loadPrivate) return;
+    let alive = true;
+    Store.loadPrivate(tripId).then(e => { if (alive) setPrivEm(m => ({ ...m, [tripId]: e || {} })); }).catch(() => {});
+    return () => { alive = false; };
+  }, [tripId]);
   const [inboxAll, setInboxAll] = useState([]);
   const [scan, setScan] = useState({ st: "idle", msg: "", more: false });
   const [scrolled, setScrolled] = useState(false);
@@ -1349,6 +1357,7 @@ function App() {
       }
     }, e => {
       if (e && e.code === "trip_limit") { opsRef.current[id] = []; setNotice(TRIP_RENEW_MSG); }
+      else if (e && e.code === "too_large") { opsRef.current[id] = []; setNotice(e.msg); }
       else if (e && e.code === "gone") { opsRef.current[id] = []; setNotice("この旅行は、作った人が削除したか、同行者から外されました。"); }
       else toast(e && e.code === "quota_exceeded" ? "保存できる容量を超えました" : "保存できませんでした。もう一度お試しください");
     });
@@ -1541,6 +1550,18 @@ function App() {
   if (!draft) return <div className="empty" style={{ paddingTop: 80 }}>読み込み中…</div>;
 
   const t = withBuiltinPhrases({ ...draft, phrases: { ...(draft.phrases || {}), ...Object.fromEntries(phraseDocs.map(p => [p.lang, p])) } });
+  // 緊急時の情報は人ごと（Trunk. の Store.loadPrivate）：一緒に編集する人にも見えない表に置く
+  const priv = Store.loadPrivate ? (privEm[tripId] || {}) : null;
+  const emT = priv ? { ...t, emergency: priv } : t;
+  const emUpdate = priv ? (fn) => {
+    const cur = { ...draftRef.current, emergency: privEm[tripId] || {} };
+    const nextEm = fn(cur).emergency || {};
+    setPrivEm(m => ({ ...m, [tripId]: nextEm }));
+    clearTimeout(emTimer.current);
+    emTimer.current = setTimeout(() => Store.savePrivate(tripId, nextEm).catch(() => toast("緊急時の情報を保存できませんでした")), 500);
+    // 国ごとの連絡先など、緊急時の情報以外の変更は旅行の中身へ
+    update(tr => { const { emergency, ...rest } = fn({ ...tr, emergency: nextEm }); return rest; });
+  } : update;
   // 持ち物は人ごと：同行者として参加した旅行では、自分の分（packingBy[自分のID]）を見せて、そこにだけ書く。作った人は今まで通り t.packing
   const me = Store.userId && Store.userId(), packMine = !!(me && Store.isJoined && Store.isJoined(tripId));
   const mineOf = (tr) => ((tr.packingBy || {})[me]) || { packing: {}, bags: [] };
@@ -1611,8 +1632,8 @@ function App() {
       <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={onImportFile} />
       {sheet && (
         <Sheet title={sheetTitle} onClose={closeSheet} full={sheet.kind === "shiori"}>
-          {sheet.kind === "shiori" && <ShioriView t={packT} canExport update={update} />}
-          {sheet.kind === "emergency" && <EmergencyView t={t} update={update} canEdit />}
+          {sheet.kind === "shiori" && <ShioriView t={priv ? { ...packT, emergency: priv } : packT} canExport update={update} />}
+          {sheet.kind === "emergency" && <EmergencyView t={emT} update={emUpdate} canEdit />}
           {sheet.kind === "consult" && <ConsultView t={t} update={update} initialTopic={sheet.topic} initialIso={sheet.iso} done={(m) => { toast(m); closeSheet(); }} />}
           {sheet.kind === "phrases" && <PhraseView t={t} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} onConsult={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "phrase" })} />}
           {sheet.kind === "suggest" && <DaySuggest t={t} iso={sheet.iso} update={update} done={(n) => { toast(`${n}件の予定を追加しました`); closeSheet(); }} />}

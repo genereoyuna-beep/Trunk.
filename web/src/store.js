@@ -42,7 +42,8 @@ const Store = {
     try {
       for (let i = 0; i < 4; i++) {
         const m = this.meta.get(id);
-        const { tripPass, ...body } = data;
+        // 緊急時の情報は旅行の中身に入れない（本人だけの trip_private に保存する）
+        const { tripPass, emergency, ...body } = data;
         const { data: v, error } = await SB.rpc("save_trip", { p_id: id, p_name: data.name || "新しい旅行", p_data: body, p_version: m ? m.version : null });
         if (!error) {
           this.meta.set(id, { ...(m || { pass: false, joined: false }), version: v });
@@ -50,6 +51,7 @@ const Store = {
           return data;
         }
         const msg = error.message || "";
+        if (/trip_too_large|trip_count_limit/.test(msg)) throw { code: "too_large", msg: /trip_count_limit/.test(msg) ? "旅行は1人300件までです。終わった旅行を整理してください。" : "この旅行は大きすぎて保存できません。写真のような大きなデータを貼り付けていないか確かめてください。" };
         if (/trip_limit/.test(msg)) { this.inFlight.delete(id); await this.load().catch(() => {}); throw { code: "trip_limit" }; }
         if (/gone/.test(msg)) { this.cache.delete(id); this.meta.delete(id); this.emit(); throw { code: "gone" }; }
         if (!/conflict|duplicate key/.test(msg)) throw error;
@@ -94,6 +96,16 @@ const Store = {
   },
   async removeMember(tripId, userId) {
     const { error } = await SB.from("trip_members").delete().eq("trip_id", tripId).eq("user_id", userId);
+    if (error) throw error;
+  },
+  // ===== 緊急時の情報（本人だけが読み書きできる） =====
+  async loadPrivate(tripId) {
+    const { data, error } = await SB.from("trip_private").select("emergency").eq("trip_id", tripId).eq("user_id", this.userId()).maybeSingle();
+    if (error) throw error;
+    return data ? data.emergency : null;
+  },
+  async savePrivate(tripId, emergency) {
+    const { error } = await SB.from("trip_private").upsert({ trip_id: tripId, user_id: this.userId(), emergency, updated_at: new Date().toISOString() }, { onConflict: "trip_id,user_id" });
     if (error) throw error;
   },
   // ===== 有料パス =====

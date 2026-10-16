@@ -45,7 +45,7 @@ fs.writeFileSync(out, html);
 // ホーム画面に追加したとき、アプリのように全画面で開くための設定（アプリと同じフォルダに置く）
 fs.writeFileSync(path.join(path.dirname(out), 'manifest.webmanifest'), JSON.stringify({
   name: 'Trunk.', short_name: 'Trunk.', lang: 'ja', start_url: './', scope: './', display: 'standalone',
-  background_color: '#F3F4F1', theme_color: '#F3F4F1',
-  icons: [{ src: '/icons/trunk-192.png', sizes: '192x192', type: 'image/png' }, { src: '/icons/trunk-512.png', sizes: '512x512', type: 'image/png' }]
+  background_color: '#15202B', theme_color: '#F3F4F1',
+  icons: [{ src: '/icons/trunk-192.png', sizes: '192x192', type: 'image/png' }, { src: '/icons/trunk-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
 }, null, 2));
 console.log('built', out, html.length);

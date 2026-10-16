@@ -5,7 +5,7 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F3F4F1",
+  "background_color": "#15202B",
   "theme_color": "#F3F4F1",
   "icons": [
     {
@@ -16,7 +16,8 @@
     {
       "src": "/icons/trunk-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

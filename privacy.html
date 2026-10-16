@@ -63,6 +63,24 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 .tbl .k{font-family:var(--f-display);font-weight:700;font-size:14px}
 .tbl .v{font-size:14.5px;color:var(--ink2)}
 @media(min-width:720px){.tbl .r{grid-template-columns:13em minmax(0,1fr)}}
+
+/* スマホ用：今いる章と目次（パソコンでは出さない） */
+.cbar{position:sticky;z-index:15;display:flex;gap:8px;align-items:center;background:rgba(243,244,241,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:8px 16px}
+.cbar button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:0 12px;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.cbar .cur{flex:1;min-width:0}
+.cbar .cur span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbar .cur i{font-style:normal;font-family:var(--f-mono);color:var(--muted);font-size:11px;flex:none}
+.cbar .up{flex:none;width:44px;justify-content:center;padding:0}
+@media(min-width:980px){.cbar{display:none}}
+.csheet{position:fixed;inset:0;z-index:60;background:rgba(21,32,43,.38);display:none}
+.csheet.on{display:block}
+.csheet .in{position:absolute;left:0;right:0;bottom:0;max-height:78vh;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.csheet .hd2{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.csheet .hd2 button{border:none;background:none;font:inherit;font-size:14px;color:var(--muted);padding:8px;cursor:pointer}
+.csheet a{display:flex;gap:12px;align-items:baseline;padding:12px 4px;border-bottom:1px solid var(--sunk);text-decoration:none;color:var(--ink);font-size:15px}
+.csheet a b{font-family:var(--f-mono);font-weight:500;color:var(--faint);font-size:12px;width:22px;flex:none}
+.csheet a.on{color:var(--blue);font-weight:700}
+.csheet a.on b{color:var(--blue)}
 </style>
 </head>
 <body>
@@ -78,16 +96,19 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
     <a class="btn primary" href="/app/">無料ではじめる</a>
   </div>
 </header>
+<div class="cbar" id="cbar"><button class="cur" id="ccur" aria-haspopup="dialog"><span>目次</span><i>目次 ▾</i></button><button class="up" aria-label="いちばん上へ" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button></div>
+<div class="csheet" id="csheet" role="dialog" aria-label="目次"><div class="in"><div class="hd2"><span class="eyebrow">目次</span><button id="cclose">閉じる</button></div><nav id="clist"></nav></div></div>
+
 <main class="wrap doc">
 <div class="eyebrow">Privacy</div>
 <h1>プライバシーポリシー</h1>
 <p class="updated">最終更新日: 2026年10月16日</p>
 <p>Trunk.（以下「本サービス」）は、旅行の日程・手配・予算・持ち物などをまとめて管理するためのWebアプリです。本ポリシーでは、本サービスが取得する情報と、その取り扱いについて説明します。</p>
 
-<h2><span class="no">01</span>取得する情報</h2>
+<h2 id="s01" data-no="01" data-sec="取得する情報"><span class="no">01</span>取得する情報</h2>
 <div class="tbl"><div class="r"><div class="k">Googleアカウントの情報</div><div class="v">ログインしたときに Google から提供される、メールアドレス・表示名・プロフィール画像のURL</div></div><div class="r"><div class="k">旅行のデータ</div><div class="v">入力された日程、宿・移動・予定、予算と支出、持ち物、参加者の名前、メモ、フレーズ集、緊急時の情報（パスポートや保険などを入力した場合）など</div></div><div class="r"><div class="k">共有ページからのリクエスト</div><div class="v">共有ページを見た人が送ったお名前（任意）とリクエストの内容</div></div><div class="r"><div class="k">機能の要望</div><div class="v">アプリから送られた要望の内容。送った人のアカウントと結びつけて保存しますが、名前やメールアドレスは送信内容に含めません</div></div><div class="r"><div class="k">お問い合わせ</div><div class="v">お問い合わせフォームに入力された返信先メールアドレス・お名前・内容</div></div><div class="r"><div class="k">端末内の保存</div><div class="v">ログイン状態の維持や、最後に開いた旅行などを、お使いのブラウザに保存します（後述）</div></div></div>
 
-<h2><span class="no">02</span>利用目的</h2>
+<h2 id="s02" data-no="02" data-sec="利用目的"><span class="no">02</span>利用目的</h2>
 <ul>
 <li>旅行の作成・保存・編集と、しおり・地図などの機能を提供するため</li>
 <li>共有リンクで旅程を見せる機能と、招待した人と一緒に編集する機能を提供するため</li>
@@ -96,19 +117,19 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 </ul>
 <p>これ以外の目的には利用しません。広告の配信や、行動を追跡する解析ツールは使っていません。</p>
 
-<h2><span class="no">03</span>データの保存場所</h2>
+<h2 id="s03" data-no="03" data-sec="データの保存場所"><span class="no">03</span>データの保存場所</h2>
 <p>旅行のデータとアカウントの情報は、データベースサービス Supabase の東京リージョン（日本）に保存します。保存したデータは、本人と、本人が招待した人だけが読み書きできるように制限しています。</p>
 
-<h2><span class="no">04</span>共有リンクと共同編集</h2>
+<h2 id="s04" data-no="04" data-sec="共有リンクと共同編集"><span class="no">04</span>共有リンクと共同編集</h2>
 <ul>
 <li><b>見せるだけの共有リンク</b>：リンクを知っている人は、ログインなしで旅程・しおり・地図などを見られます。緊急時の情報、支出の記録、ほかの参加者の持ち物は表示しません。リンクは推測されにくいランダムな文字列ですが、リンクを知った第三者による閲覧を完全に防ぐものではありません。「共有を止める」を押すと、すぐに開けなくなります。</li>
 <li><b>一緒に編集する（招待リンク）</b>：招待リンクから参加した人は、その旅行を見て編集できます。参加者どうしには、Googleアカウントの表示名が表示されます。招待リンクは30日で使えなくなり、作った人はいつでもリンクを止めたり、参加者を外したりできます。</li>
 </ul>
 
-<h2><span class="no">05</span>AIに相談</h2>
+<h2 id="s05" data-no="05" data-sec="AIに相談"><span class="no">05</span>AIに相談</h2>
 <p>「AIに相談」は、旅程をまとめた相談文を作り、あなたが選んだAIサービス（ChatGPT・Claude・Gemini）を開く機能です。本サービスがAIサービスにデータを直接送ることはありません。相談文は、あなたがボタンを押したときに、開いたページのアドレスやコピーした文章として、そのAIサービスに渡ります。相談文には、パスポートや保険などの緊急時の情報は入れません。AIサービスでの取り扱いには、各社のプライバシーポリシーが適用されます。</p>
 
-<h2><span class="no">06</span>利用している外部サービス</h2>
+<h2 id="s06" data-no="06" data-sec="利用している外部サービス"><span class="no">06</span>利用している外部サービス</h2>
 <ul>
 <li><b>Supabase</b>：データベース・ログインの仕組み</li>
 <li><b>Google</b>：Googleアカウントでのログイン、Webフォントの配信（Google Fonts）、お問い合わせの受付（Google フォーム）</li>
@@ -118,19 +139,19 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 </ul>
 <p>各サービスでの取り扱いには、各社のプライバシーポリシーが適用されます。</p>
 
-<h2><span class="no">07</span>第三者への提供</h2>
+<h2 id="s07" data-no="07" data-sec="第三者への提供"><span class="no">07</span>第三者への提供</h2>
 <p>法令に基づく場合を除き、本人の同意なく、取得した情報を第三者に提供しません。</p>
 
-<h2><span class="no">08</span>端末内の保存（Cookie・ローカルストレージ）</h2>
+<h2 id="s08" data-no="08" data-sec="端末内の保存（Cookie・ローカルストレージ）"><span class="no">08</span>端末内の保存（Cookie・ローカルストレージ）</h2>
 <p>ログイン状態の維持、最後に開いた旅行、一度だけ表示するお知らせを閉じたかどうかなどを、お使いのブラウザのローカルストレージに保存します。これらは本サービスの動作のためだけに使い、広告などには使いません。</p>
 
-<h2><span class="no">09</span>データの削除</h2>
+<h2 id="s09" data-no="09" data-sec="データの削除"><span class="no">09</span>データの削除</h2>
 <p>旅行は、アプリの「共有と設定」からいつでも削除できます。削除した旅行は元に戻せません。アカウントとすべてのデータの削除を希望される場合は、<a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせフォーム</a>からご連絡ください。</p>
 
-<h2><span class="no">10</span>改定</h2>
+<h2 id="s10" data-no="10" data-sec="改定"><span class="no">10</span>改定</h2>
 <p>本ポリシーは、必要に応じて改定することがあります。大切な変更がある場合は、本サイトでお知らせします。</p>
 
-<h2><span class="no">11</span>お問い合わせ</h2>
+<h2 id="s11" data-no="11" data-sec="お問い合わせ"><span class="no">11</span>お問い合わせ</h2>
 <p>本ポリシーに関するお問い合わせは、<a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせフォーム</a>からお願いします。</p>
 </main>
 <footer>
@@ -145,5 +166,22 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
     <span>© 2026 Trunk.</span>
   </div>
 </footer>
+<script>
+// スマホ用の目次：data-sec を付けた見出しから作り、読んでいる章を帯に出す
+(function(){
+  var secs=[].slice.call(document.querySelectorAll('[data-sec]'));if(!secs.length)return;
+  var bar=document.getElementById('cbar'),cur=document.getElementById('ccur'),sheet=document.getElementById('csheet'),list=document.getElementById('clist');
+  var hd=document.querySelector('header');
+  function place(){var h=hd?hd.getBoundingClientRect().height:0;bar.style.top=h+'px';document.documentElement.style.scrollPaddingTop=(h+bar.getBoundingClientRect().height+12)+'px'}
+  place();window.addEventListener('resize',place);
+  var links=secs.map(function(s,i){var a=document.createElement('a');a.href='#'+s.id;var no=s.getAttribute('data-no')||String(i+1).padStart(2,'0');a.innerHTML='<b>'+no+'</b><span></span>';a.lastChild.textContent=s.getAttribute('data-sec');a.addEventListener('click',function(){sheet.classList.remove('on')});list.appendChild(a);return a});
+  function set(i){links.forEach(function(a,k){a.classList.toggle('on',k===i)});cur.firstChild.textContent=i<0?'目次':secs[i].getAttribute('data-sec')}
+  function onScroll(){var y=(bar.getBoundingClientRect().bottom||0)+40,i=-1;secs.forEach(function(s,k){if(s.getBoundingClientRect().top<=y)i=k});set(i)}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  cur.addEventListener('click',function(){sheet.classList.add('on');var on=list.querySelector('.on');if(on)on.scrollIntoView({block:'center'})});
+  document.getElementById('cclose').addEventListener('click',function(){sheet.classList.remove('on')});
+  sheet.addEventListener('click',function(e){if(e.target===sheet)sheet.classList.remove('on')});
+})();
+</script>
 </body>
 </html>

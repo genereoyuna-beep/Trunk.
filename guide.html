@@ -70,7 +70,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(243,244,241,.92);backdro
 .mtoc[open] summary::after{content:"−"}
 .mtoc ol{list-style:none;padding-bottom:12px;columns:2;column-gap:16px}
 .mtoc a{display:block;font-size:13px;padding:4px 0;color:var(--ink2);text-decoration:none}
-@media(min-width:980px){.mtoc{display:none}}
+.mtoc{display:none}
 
 article{min-width:0;max-width:760px}
 .chap{padding:36px 0 8px;border-top:1px solid var(--line)}
@@ -157,6 +157,24 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 .ft nav{display:flex;flex-wrap:wrap;gap:8px 18px}
 .ft a{text-decoration:none;color:inherit}
 .ft a:hover{color:var(--ink)}
+
+/* スマホ用：今いる章と目次（パソコンでは出さない） */
+.cbar{position:sticky;z-index:15;display:flex;gap:8px;align-items:center;background:rgba(243,244,241,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:8px 16px}
+.cbar button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:0 12px;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.cbar .cur{flex:1;min-width:0}
+.cbar .cur span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbar .cur i{font-style:normal;font-family:var(--f-mono);color:var(--muted);font-size:11px;flex:none}
+.cbar .up{flex:none;width:44px;justify-content:center;padding:0}
+@media(min-width:980px){.cbar{display:none}}
+.csheet{position:fixed;inset:0;z-index:60;background:rgba(21,32,43,.38);display:none}
+.csheet.on{display:block}
+.csheet .in{position:absolute;left:0;right:0;bottom:0;max-height:78vh;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.csheet .hd2{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.csheet .hd2 button{border:none;background:none;font:inherit;font-size:14px;color:var(--muted);padding:8px;cursor:pointer}
+.csheet a{display:flex;gap:12px;align-items:baseline;padding:12px 4px;border-bottom:1px solid var(--sunk);text-decoration:none;color:var(--ink);font-size:15px}
+.csheet a b{font-family:var(--f-mono);font-weight:500;color:var(--faint);font-size:12px;width:22px;flex:none}
+.csheet a.on{color:var(--blue);font-weight:700}
+.csheet a.on b{color:var(--blue)}
 </style>
 </head>
 <body>
@@ -173,6 +191,9 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
     <a class="btn primary" href="/app/">無料ではじめる</a>
   </div>
 </header>
+<div class="cbar" id="cbar"><button class="cur" id="ccur" aria-haspopup="dialog"><span>目次</span><i>目次 ▾</i></button><button class="up" aria-label="いちばん上へ" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button></div>
+<div class="csheet" id="csheet" role="dialog" aria-label="目次"><div class="in"><div class="hd2"><span class="eyebrow">目次</span><button id="cclose">閉じる</button></div><nav id="clist"></nav></div></div>
+
 
 <main class="wrap">
   <div class="intro">
@@ -228,7 +249,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </details>
 
       <!-- 01 -->
-      <section class="chap" id="create">
+      <section class="chap" data-no="01" data-sec="旅行をつくる" id="create">
         <div class="chap-h"><span class="no">01</span><h2>旅行をつくる</h2></div>
         <p>旅行を保存するには、Google アカウントでログインします。新しいパスワードを作る必要はありません。</p>
         <ol class="steps">
@@ -247,7 +268,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 02 -->
-      <section class="chap" id="screens">
+      <section class="chap" data-no="02" data-sec="画面の見かた" id="screens">
         <div class="chap-h"><span class="no">02</span><h2>画面の見かた</h2></div>
         <p>スマホでは画面の下、パソコンでは左側に、5つのタブが並びます。上の旅行名を押すと、ほかの旅行に切り替えられます。</p>
         <div class="mock" aria-hidden="true">
@@ -278,7 +299,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 03 -->
-      <section class="chap" id="stay">
+      <section class="chap" data-no="03" data-sec="宿を入れる" id="stay">
         <div class="chap-h"><span class="no">03</span><h2>宿を入れる</h2></div>
         <p>まずは泊まる場所を入れると、旅行の骨組みができます。予約していなくても、「この街に泊まる」だけ先に入れておけば、未手配として残ります。</p>
         <ol class="steps">
@@ -301,7 +322,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 04 -->
-      <section class="chap" id="move">
+      <section class="chap" data-no="04" data-sec="移動を入れる" id="move">
         <div class="chap-h"><span class="no">04</span><h2>移動を入れる</h2></div>
         <p>飛行機や新幹線から、地下鉄・タクシー・徒歩まで、移動はすべて同じ「移動」で入れます。どこからどこへ、何で行くかを入れるだけです。</p>
         <ol class="steps">
@@ -321,7 +342,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 05 -->
-      <section class="chap" id="day">
+      <section class="chap" data-no="05" data-sec="1日の予定を入れる" id="day">
         <div class="chap-h"><span class="no">05</span><h2>1日の予定を入れる</h2></div>
         <p>旅程タブでは、日ごとに予定と移動が時刻順に並びます。宿と移動は自動でその日に入るので、あとは観光や食事を足していくだけです。</p>
         <ol class="steps">
@@ -340,7 +361,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 06 -->
-      <section class="chap" id="status">
+      <section class="chap" data-no="06" data-sec="手配もれを確かめる" id="status">
         <div class="chap-h"><span class="no">06</span><h2>手配もれを確かめる</h2></div>
         <p>出発前の確認は、ホームと予約・手配タブの2か所で。</p>
         <ol class="steps">
@@ -355,7 +376,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 07 -->
-      <section class="chap" id="money">
+      <section class="chap" data-no="07" data-sec="予算とお金" id="money">
         <div class="chap-h"><span class="no">07</span><h2>予算とお金</h2></div>
         <p>お金のタブでは、予算と実際にかかったお金を<b>1人あたり</b>で見られます。宿や移動、予定に入れた金額は自動で集計されます。</p>
         <div class="mock" aria-hidden="true">
@@ -370,7 +391,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 08 -->
-      <section class="chap" id="pack">
+      <section class="chap" data-no="08" data-sec="持ち物リスト" id="pack">
         <div class="chap-h"><span class="no">08</span><h2>持ち物リスト</h2></div>
         <p>持ち物タブで、旅行ごとのチェックリストを作れます。出発前に1つずつチェックしていきましょう。</p>
         <div class="mock check" aria-hidden="true">
@@ -383,7 +404,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 09 -->
-      <section class="chap" id="map">
+      <section class="chap" data-no="09" data-sec="ルートマップ" id="map">
         <div class="chap-h"><span class="no">09</span><h2>ルートマップ</h2></div>
         <p>旅程タブの <span class="ui">地図</span> で、泊まる街と移動のルートを地図で見られます。何も設定しなくても、宿と移動を入れた時点で自動で描かれます。</p>
         <div class="scroll"><table>
@@ -396,7 +417,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 10 -->
-      <section class="chap" id="shiori">
+      <section class="chap" data-no="10" data-sec="しおりPDF" id="shiori">
         <div class="chap-h"><span class="no">10</span><h2>しおりPDF</h2></div>
         <p>入力した旅程から、A5サイズのしおりを自動でつくります。表紙は搭乗券のデザインです。</p>
         <ol class="steps">
@@ -419,7 +440,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 11 -->
-      <section class="chap" id="share">
+      <section class="chap" data-no="11" data-sec="同行者と共有する" id="share">
         <div class="chap-h"><span class="no">11</span><h2>同行者と共有する</h2></div>
         <p>旅行ごとに共有リンクを発行できます。受け取った人は、ログインもアプリのインストールもいりません。</p>
         <ol class="steps">
@@ -458,7 +479,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 12 -->
-      <section class="chap" id="ai">
+      <section class="chap" data-no="12" data-sec="AIに相談" id="ai">
         <div class="chap-h"><span class="no">12</span><h2>AIに相談</h2></div>
         <p>あなたの ChatGPT・Claude・Gemini に、旅程をまとめた相談文つきで相談できます。返ってきた答えは、予定や持ち物の候補として取り込めます。</p>
         <ol class="steps">
@@ -472,7 +493,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 13 -->
-      <section class="chap" id="abroad">
+      <section class="chap" data-no="13" data-sec="海外旅行のとき" id="abroad">
         <div class="chap-h"><span class="no">13</span><h2>海外旅行のとき</h2></div>
         <h3>時差</h3>
         <p>時刻はすべて<b>現地の時刻</b>で入れます。行き先の国や都市から時差を自動で判断し、日本との差を表示します。サマータイムも考慮します。自動の判断が違うときは、移動の画面で手で直せます。</p>
@@ -486,7 +507,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 13 -->
-      <section class="chap" id="trip">
+      <section class="chap" data-no="14" data-sec="旅行中に使う" id="trip">
         <div class="chap-h"><span class="no">14</span><h2>旅行中に使う</h2></div>
         <div class="scroll"><table>
           <tr><th>やりたいこと</th><th>使う場所</th></tr>
@@ -499,7 +520,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 14 -->
-      <section class="chap" id="pass">
+      <section class="chap" data-no="15" data-sec="旅行パス" id="pass">
         <div class="chap-h"><span class="no">15</span><h2>旅行パス</h2></div>
         <p>2つ目の旅行を同時に準備するときは、旅行パスか3か月パスを使います。使える機能は無料と同じで、準備できる旅行の数だけが増えます。<b>2026年12月1日から販売します。</b></p>
         <div class="scroll"><table>
@@ -522,7 +543,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
       </section>
 
       <!-- 15 -->
-      <section class="chap" id="manage">
+      <section class="chap" data-no="16" data-sec="旅行の管理" id="manage">
         <div class="chap-h"><span class="no">16</span><h2>旅行の管理</h2></div>
         <div class="scroll"><table>
           <tr><th>やりたいこと</th><th>やり方</th></tr>
@@ -567,6 +588,23 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
   var map={};links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a});
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove('on')});var a=map[e.target.id];if(a)a.classList.add('on')}})},{rootMargin:'-20% 0px -70% 0px'});
   document.querySelectorAll('.chap').forEach(function(s){io.observe(s)});
+})();
+</script>
+<script>
+// スマホ用の目次：data-sec を付けた見出しから作り、読んでいる章を帯に出す
+(function(){
+  var secs=[].slice.call(document.querySelectorAll('[data-sec]'));if(!secs.length)return;
+  var bar=document.getElementById('cbar'),cur=document.getElementById('ccur'),sheet=document.getElementById('csheet'),list=document.getElementById('clist');
+  var hd=document.querySelector('header');
+  function place(){var h=hd?hd.getBoundingClientRect().height:0;bar.style.top=h+'px';document.documentElement.style.scrollPaddingTop=(h+bar.getBoundingClientRect().height+12)+'px'}
+  place();window.addEventListener('resize',place);
+  var links=secs.map(function(s,i){var a=document.createElement('a');a.href='#'+s.id;var no=s.getAttribute('data-no')||String(i+1).padStart(2,'0');a.innerHTML='<b>'+no+'</b><span></span>';a.lastChild.textContent=s.getAttribute('data-sec');a.addEventListener('click',function(){sheet.classList.remove('on')});list.appendChild(a);return a});
+  function set(i){links.forEach(function(a,k){a.classList.toggle('on',k===i)});cur.firstChild.textContent=i<0?'目次':secs[i].getAttribute('data-sec')}
+  function onScroll(){var y=(bar.getBoundingClientRect().bottom||0)+40,i=-1;secs.forEach(function(s,k){if(s.getBoundingClientRect().top<=y)i=k});set(i)}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  cur.addEventListener('click',function(){sheet.classList.add('on');var on=list.querySelector('.on');if(on)on.scrollIntoView({block:'center'})});
+  document.getElementById('cclose').addEventListener('click',function(){sheet.classList.remove('on')});
+  sheet.addEventListener('click',function(e){if(e.target===sheet)sheet.classList.remove('on')});
 })();
 </script>
 </body>

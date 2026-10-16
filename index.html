@@ -340,6 +340,24 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 .rv{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
 .rv.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}.btn{transition:none}}
+
+/* スマホ用：今いる章と目次（パソコンでは出さない） */
+.cbar{position:sticky;z-index:15;display:flex;gap:8px;align-items:center;background:rgba(243,244,241,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:8px 16px}
+.cbar button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:0 12px;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.cbar .cur{flex:1;min-width:0}
+.cbar .cur span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbar .cur i{font-style:normal;font-family:var(--f-mono);color:var(--muted);font-size:11px;flex:none}
+.cbar .up{flex:none;width:44px;justify-content:center;padding:0}
+@media(min-width:980px){.cbar{display:none}}
+.csheet{position:fixed;inset:0;z-index:60;background:rgba(21,32,43,.38);display:none}
+.csheet.on{display:block}
+.csheet .in{position:absolute;left:0;right:0;bottom:0;max-height:78vh;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.csheet .hd2{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.csheet .hd2 button{border:none;background:none;font:inherit;font-size:14px;color:var(--muted);padding:8px;cursor:pointer}
+.csheet a{display:flex;gap:12px;align-items:baseline;padding:12px 4px;border-bottom:1px solid var(--sunk);text-decoration:none;color:var(--ink);font-size:15px}
+.csheet a b{font-family:var(--f-mono);font-weight:500;color:var(--faint);font-size:12px;width:22px;flex:none}
+.csheet a.on{color:var(--blue);font-weight:700}
+.csheet a.on b{color:var(--blue)}
 </style>
 </head>
 <body>
@@ -360,6 +378,9 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
     <a class="btn primary" href="/app/">無料ではじめる</a>
   </div>
 </header>
+<div class="cbar" id="cbar"><button class="cur" id="ccur" aria-haspopup="dialog"><span>目次</span><i>目次 ▾</i></button><button class="up" aria-label="いちばん上へ" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button></div>
+<div class="csheet" id="csheet" role="dialog" aria-label="目次"><div class="in"><div class="hd2"><span class="eyebrow">目次</span><button id="cclose">閉じる</button></div><nav id="clist"></nav></div></div>
+
 
 <main>
 <!-- HERO -->
@@ -432,7 +453,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- FEATURES -->
-<section id="features">
+<section id="features" data-sec="機能">
   <div class="wrap">
     <div class="sec-head rv">
       <div class="eyebrow">Features</div>
@@ -479,7 +500,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- SHIORI -->
-<section class="dark" id="shiori">
+<section class="dark" id="shiori" data-sec="しおり">
   <div class="wrap feat">
     <div class="feat-copy rv">
       <div class="eyebrow">03 · Travel booklet</div>
@@ -528,7 +549,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- ROUTE MAP -->
-<section id="map">
+<section id="map" data-sec="ルートマップ">
   <div class="wrap feat">
     <div class="feat-copy rv">
       <div class="eyebrow">04 · Route map</div>
@@ -560,7 +581,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- SHARE -->
-<section class="band" id="share">
+<section class="band" id="share" data-sec="共有・一緒に編集">
   <div class="wrap feat rev">
     <div class="feat-copy rv">
       <div class="eyebrow">05 · Share</div>
@@ -589,7 +610,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- ABROAD -->
-<section id="abroad">
+<section id="abroad" data-sec="海外旅行">
   <div class="wrap">
     <div class="sec-head rv">
       <div class="eyebrow">06 · Overseas</div>
@@ -617,7 +638,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- ASK AI -->
-<section class="band" id="ai">
+<section class="band" id="ai" data-sec="AIに相談">
   <div class="wrap feat">
     <div class="feat-copy rv">
       <div class="eyebrow">07 · Ask AI</div>
@@ -643,7 +664,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- STEPS -->
-<section id="how">
+<section id="how" data-sec="はじめ方・ホーム画面">
   <div class="wrap">
     <div class="sec-head rv">
       <div class="eyebrow">How it works</div>
@@ -686,7 +707,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- PRICING -->
-<section id="pricing">
+<section id="pricing" data-sec="料金">
   <div class="wrap">
     <div class="sec-head rv">
       <div class="eyebrow">Pricing</div>
@@ -702,7 +723,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <ul>
           <li>日ごとの予定・手配・予算・持ち物</li>
           <li>ルートマップ・しおりPDF</li>
-          <li>共有リンク</li>
+          <li>共有リンク・一緒に編集</li>
           <li>割り勘の精算・外貨の円換算</li>
           <li>フレーズ集・AIに相談</li>
           <li>終わった旅行は何件でも保存</li>
@@ -751,7 +772,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- FAQ -->
-<section class="band" id="faq">
+<section class="band" id="faq" data-sec="よくある質問">
   <div class="wrap">
     <div class="sec-head rv">
       <div class="eyebrow">FAQ</div>
@@ -811,6 +832,23 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
   if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in')});return}
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});
   els.forEach(function(e){io.observe(e)});
+})();
+</script>
+<script>
+// スマホ用の目次：data-sec を付けた見出しから作り、読んでいる章を帯に出す
+(function(){
+  var secs=[].slice.call(document.querySelectorAll('[data-sec]'));if(!secs.length)return;
+  var bar=document.getElementById('cbar'),cur=document.getElementById('ccur'),sheet=document.getElementById('csheet'),list=document.getElementById('clist');
+  var hd=document.querySelector('header');
+  function place(){var h=hd?hd.getBoundingClientRect().height:0;bar.style.top=h+'px';document.documentElement.style.scrollPaddingTop=(h+bar.getBoundingClientRect().height+12)+'px'}
+  place();window.addEventListener('resize',place);
+  var links=secs.map(function(s,i){var a=document.createElement('a');a.href='#'+s.id;var no=s.getAttribute('data-no')||String(i+1).padStart(2,'0');a.innerHTML='<b>'+no+'</b><span></span>';a.lastChild.textContent=s.getAttribute('data-sec');a.addEventListener('click',function(){sheet.classList.remove('on')});list.appendChild(a);return a});
+  function set(i){links.forEach(function(a,k){a.classList.toggle('on',k===i)});cur.firstChild.textContent=i<0?'目次':secs[i].getAttribute('data-sec')}
+  function onScroll(){var y=(bar.getBoundingClientRect().bottom||0)+40,i=-1;secs.forEach(function(s,k){if(s.getBoundingClientRect().top<=y)i=k});set(i)}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  cur.addEventListener('click',function(){sheet.classList.add('on');var on=list.querySelector('.on');if(on)on.scrollIntoView({block:'center'})});
+  document.getElementById('cclose').addEventListener('click',function(){sheet.classList.remove('on')});
+  sheet.addEventListener('click',function(e){if(e.target===sheet)sheet.classList.remove('on')});
 })();
 </script>
 </body>

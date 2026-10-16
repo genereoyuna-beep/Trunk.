@@ -252,7 +252,8 @@ function shioriUnits(t) {
 // 高さを測ってページに振り分ける
 function usePagination(units) {
   const measureRef = useRef(null);
-  const [pages, setPages] = useState(null);
+  // ページ割りは、どの units で計ったかと一緒に持つ（入れるものを変えた直後に古い割り付けで描かないように）
+  const [paged, setPaged] = useState(null);
   const [fontTick, setFontTick] = useState(0);
   useEffect(() => { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setFontTick(x => x + 1)); }, []);
   React.useLayoutEffect(() => {
@@ -271,9 +272,9 @@ function usePagination(units) {
       if (u.breakAfter) flush(); // ルートマップのページはここで区切る
     });
     flush();
-    setPages(out);
+    setPaged({ units, out });
   }, [units, fontTick]);
-  return { measureRef, pages };
+  return { measureRef, pages: paged && paged.units === units ? paged.out : null };
 }
 
 function ShioriPage({ t, n, total, children }) {

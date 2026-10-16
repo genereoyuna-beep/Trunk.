@@ -139,7 +139,7 @@ function StayEditor({ t, id, update, close }) {
             <Field label="住所" wide><TextIn value={h.address} onChange={v => setHotel({ address: v })} /></Field>
           </div>
           <div className="row">
-            {h.url && <a className="btn small" href={h.url} target="_blank" rel="noopener noreferrer"><Icon n="ext" s={14} />予約ページ</a>}
+            {safeUrl(h.url) && <a className="btn small" href={safeUrl(h.url)} target="_blank" rel="noopener noreferrer"><Icon n="ext" s={14} />予約ページ</a>}
             {(h.address || s.city) && <a className="btn small" href={`https://www.google.com/maps?q=${encodeURIComponent(h.address || splitCity(s.city).main)}`} target="_blank" rel="noopener noreferrer"><Icon n="pin" s={14} />地図</a>}
           </div>
         </>
@@ -825,7 +825,7 @@ function InboxItem({ item, t, onApply, onDecide }) {
         <span className={"pill " + (cancelled ? "tone-open" : e.is_request ? "tone-none" : "tone-booked")}>{cancelled ? "キャンセル" : e.is_request ? "リクエスト" : e.booking_status === "changed" ? "変更" : "予約"}</span>
         <b style={{ flex: 1, minWidth: 0 }}>{e.summary || item.subject}</b>
       </div>
-      <div className="xs muted">{item.from}{item.receivedAt ? ` ・ ${new Date(item.receivedAt).toLocaleDateString("ja-JP")}` : ""}{item.url && <> ・ <a href={item.url} target="_blank" rel="noopener noreferrer">メールを開く</a></>}</div>
+      <div className="xs muted">{item.from}{item.receivedAt ? ` ・ ${new Date(item.receivedAt).toLocaleDateString("ja-JP")}` : ""}{safeUrl(item.url) && <> ・ <a href={safeUrl(item.url)} target="_blank" rel="noopener noreferrer">メールを開く</a></>}</div>
       <div style={{ fontWeight: 500 }}>→ {p.target}</div>
       {p.dateCheck && <div className="small" style={{ color: p.dateCheck.ok ? "var(--blue)" : "var(--danger)" }}>{p.dateCheck.ok ? "✓ " : "⚠ "}{p.dateCheck.text}</div>}
       {foreign && !cancelled && (
@@ -1160,7 +1160,7 @@ function ShareSection({ t, onRequest, busy }) {
           <div className="row" style={{ flexWrap: "nowrap" }}>
             <input className="input mono" style={{ fontSize: 12 }} readOnly value={t.shareUrl} aria-label="共有ページのURL" onFocus={e => e.target.select()} />
             <button className="btn small" onClick={copy}>{copied ? "コピーしました" : "コピー"}</button>
-            <a className="btn small" href={t.shareUrl} target="_blank" rel="noopener noreferrer"><Icon n="ext" s={14} /></a>
+            <a className="btn small" href={safeUrl(t.shareUrl) || undefined} target="_blank" rel="noopener noreferrer"><Icon n="ext" s={14} /></a>
           </div>
           <div className="xs muted">最終更新 {t.shareUpdatedAt ? new Date(t.shareUpdatedAt).toLocaleString("ja-JP") : "—"}。旅程を変えたら、Claudeに「{t.name}の共有ページを更新して」と頼むと反映されます。</div>
         </>

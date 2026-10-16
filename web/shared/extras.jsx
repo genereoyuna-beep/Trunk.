@@ -46,7 +46,7 @@ function EntryChecks({ t, update }) {
                 <span className="t1" style={{ whiteSpace: "normal", textDecoration: i.done ? "line-through" : "none", color: i.done ? "var(--faint)" : undefined }}>{i.title}</span>
                 <span className="xs muted" style={{ display: "block" }}>{i.country}{i.applyBy ? ` ・ ${md(i.applyBy)}までに` : ""}</span>
                 {!i.done && i.detail && <span className="small" style={{ display: "block", color: "var(--muted)" }}>{i.detail}</span>}
-                {!i.done && i.url && <a className="xs" href={i.url} target="_blank" rel="noopener noreferrer">公式サイト</a>}
+                {!i.done && safeUrl(i.url) && <a className="xs" href={safeUrl(i.url)} target="_blank" rel="noopener noreferrer">公式サイト</a>}
               </span>
             </label>
           ))}

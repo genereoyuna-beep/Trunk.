@@ -15,6 +15,8 @@ function todayISO() {
 const wdOf = (iso) => (iso ? WD[new Date(iso + "T00:00:00Z").getUTCDay()] : "");
 const md = (iso) => (iso ? `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}` : "");
 const yen = (n) => "¥" + Math.round(Number(n) || 0).toLocaleString("ja-JP");
+// 入力されたリンクは http(s) だけを開く（javascript: などで始まるリンクでプログラムを動かされないように）
+const safeUrl = (u) => { const s = String(u || "").trim(); return /^https?:\/\//i.test(s) ? s : null; };
 const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
 function uid() { return Date.now() + Math.random(); }
 // 「ストックホルム（友人宅・ミッドサマー）」→ 都市名と補足に分ける

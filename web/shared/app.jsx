@@ -57,7 +57,8 @@ function PlaceIn({ value, onChange, onPick, kind, options, placeholder }) {
   const tm = useRef(null), seq = useRef(0);
   if (typeof Places === "undefined") return options ? <SuggestIn value={value} onChange={onChange} options={options} placeholder={placeholder} /> : <TextIn value={value} onChange={onChange} placeholder={placeholder} />;
   const q = String(value || "").trim().toLowerCase();
-  const local = uniq((options || []).filter(Boolean)).filter(o => o !== value && (!q || o.toLowerCase().includes(q))).slice(0, q ? 4 : 8);
+  // 何も打っていないときは何も出さない。打ったら、旅行の中の場所で合うものを少しだけ先に出す
+  const local = q ? uniq((options || []).filter(Boolean)).filter(o => o !== value && o.toLowerCase().includes(q)).slice(0, 3) : [];
   const type = (v) => {
     onChange(v); setOpen(true);
     clearTimeout(tm.current);

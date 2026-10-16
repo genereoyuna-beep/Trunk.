@@ -3,496 +3,815 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trunk. — あなたの旅を大切に。</title>
-<meta name="description" content="日程・スポット・移動・予算・持ち物をまとめて管理。URLひとつで友達・家族と共有できる、シンプルな旅行プランナー。">
-<meta property="og:title" content="Trunk. 旅行プランナー">
-<meta property="og:description" content="旅行の日程をまとめてURLで共有。無料・登録不要。">
-<meta property="og:url" content="https://trunk-travelplanner.com/">
+<title>Trunk. — 旅の段取りを、一日ずつ。</title>
+<meta name="description" content="宿と移動の手配状況、1日の流れ、予算をひとつに。仕上がった旅程は搭乗券のようなしおりにして、同行者にリンクで渡せる旅行プランナーです。">
+<meta property="og:title" content="Trunk. — 旅の段取りを、一日ずつ。">
+<meta property="og:description" content="手配もれが見える旅行プランナー。しおりPDFとリンク共有つき。">
 <meta property="og:type" content="website">
-<meta name="twitter:card" content="summary">
+<meta property="og:url" content="https://trunk-travelplanner.com/">
+<link rel="icon" href="/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --navy:#18243d;
-  --navy2:#223052;
-  --accent:#0096c7;
-  --accent2:#48cae4;
-  --accent3:#90e0ef;
-  --bg:#f5f8ff;
-  --surface:#ffffff;
-  --muted:#5a6a8a;
-  --border:#dce8f5;
-  --grid-color:rgba(24,36,61,.055);
+  --ground:#F3F4F1; --surface:#FFFFFF; --sunk:#ECEEE9; --sunk2:#E4E6E1; --line:#DADDD6;
+  --ink:#15202B; --ink2:#3D4650; --muted:#5A6470; --faint:#8A929A;
+  --blue:#1D4ED8; --blue-soft:#E3ECFD;
+  --orange:#B45309; --orange-ink:#8A3B06; --orange-bar:#E8892B; --orange-soft:#FDEBD3;
+  --f-display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-mono:"Chivo Mono","Noto Sans JP","Hiragino Sans",sans-serif;
+  color-scheme:light;
 }
+*{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--navy);overflow-x:hidden;line-height:1.6}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+img,svg{display:block;max-width:100%}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+@media(min-width:720px){.wrap{padding:0 28px}}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;line-height:1.3;text-wrap:balance}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:12px;font-size:15px;font-weight:700;text-decoration:none;border:1.5px solid var(--ink);transition:transform .15s ease,background .15s ease}
+.btn:hover{transform:translateY(-1px)}
+.btn.primary{background:var(--ink);color:#F3F4F1}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--surface)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 
-.grid-bg{position:absolute;inset:0;
-  background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),
-                   linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);
-  background-size:44px 44px;pointer-events:none}
+/* ---- header ---- */
+header{position:sticky;top:0;z-index:20;background:rgba(243,244,241,.92);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid transparent}
+header.scrolled{border-bottom-color:var(--line)}
+.hd{display:flex;align-items:center;gap:20px;height:62px}
+.logo{font-family:var(--f-display);font-weight:900;font-size:22px;letter-spacing:.01em;text-decoration:none}
+.logo span{color:var(--blue)}
+.hd nav{display:none;gap:22px;margin-left:12px}
+.hd nav a{font-size:13.5px;color:var(--ink2);text-decoration:none}
+.hd nav a:hover{color:var(--ink)}
+.hd .btn{min-height:40px;padding:0 16px;font-size:13.5px;margin-left:auto}
+@media(min-width:820px){.hd nav{display:flex}}
 
-/* NAV */
-nav{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
-.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:54px}
-.nav-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--navy);white-space:nowrap;flex:0 0 auto}
-.nav-logo span{color:var(--accent)}
-.nav-links{display:flex;gap:28px;align-items:center}
-.nav-links a{font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .18s}
-.nav-links a:hover{color:var(--navy)}
-.nav-btn{background:var(--accent);color:#fff;padding:9px 22px;font-size:14px;font-weight:600;border:none;border-radius:6px;cursor:pointer;text-decoration:none;transition:opacity .15s;letter-spacing:.2px}
-.nav-btn:hover{opacity:.88}
+/* ---- hero ---- */
+.hero{padding:40px 0 64px;position:relative}
+.hero-grid{display:grid;gap:44px;align-items:center}
+@media(min-width:960px){.hero{padding:64px 0 96px}.hero-grid{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:56px}}
+.hero h1{font-size:clamp(34px,8.4vw,60px);font-weight:900;letter-spacing:-.01em;margin:14px 0 18px;line-height:1.18}
+.hero h1 em{font-style:normal;background:linear-gradient(transparent 62%,var(--blue-soft) 62%)}
+.lead{font-size:16px;color:var(--ink2);max-width:34em}
+@media(min-width:720px){.lead{font-size:17px}}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.facts{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;font-size:12.5px;color:var(--muted)}
+.facts span{display:inline-flex;align-items:center;gap:6px}
+.facts span::before{content:"";width:6px;height:6px;border-radius:3px;background:var(--blue)}
 
-/* HERO */
-.hero{min-height:100vh;display:flex;align-items:center;background:var(--bg);position:relative;overflow:hidden;padding:80px 40px}
-.hero-inner{max-width:1140px;width:100%;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;position:relative;z-index:1}
-.hero-left{max-width:520px}
-.badge{display:inline-block;background:rgba(0,150,199,.08);color:var(--accent);border:1.5px solid rgba(0,150,199,.2);font-size:11px;font-weight:600;padding:5px 14px;border-radius:4px;letter-spacing:1.5px;margin-bottom:28px;text-transform:uppercase}
-.hero h1{font-family:'Syne',sans-serif;font-size:clamp(40px,5.5vw,66px);font-weight:800;line-height:1.06;letter-spacing:-2px;margin-bottom:20px}
-.hero h1 em{color:var(--accent);font-style:normal}
-.hero-sub{font-size:15px;font-weight:400;color:var(--muted);font-style:italic;letter-spacing:.01em;margin-bottom:18px}
-.hero-desc{font-size:16px;font-weight:400;color:var(--muted);line-height:1.8;margin-bottom:40px}
-.hero-cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:40px}
-.btn-main{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:.2px;transition:opacity .15s}
-.btn-main:hover{opacity:.88}
-.btn-ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--muted);padding:13px 24px;border-radius:6px;border:1.5px solid var(--border);font-size:15px;font-weight:500;text-decoration:none;transition:border-color .2s,color .2s}
-.btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
-.pin-row{display:flex;gap:8px;flex-wrap:wrap}
-.pin{display:flex;align-items:center;gap:8px;background:var(--surface);border:1.5px solid var(--border);border-radius:6px;padding:8px 14px;font-size:13px;font-weight:500;color:var(--navy);box-shadow:0 2px 8px rgba(24,36,61,.05)}
-.pin-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+/* phone + ticket composition */
+.stage{position:relative;max-width:520px;margin:0 auto;width:100%;padding-bottom:40px}
+.phone{position:relative;width:min(300px,78%);background:var(--ground);border:9px solid var(--ink);border-radius:38px;box-shadow:0 30px 60px -24px rgba(21,32,43,.45);overflow:hidden}
+.phone-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 6px}
+.phone-top b{font-family:var(--f-display);font-size:14px}
+.phone-top i{font-style:normal;font-family:var(--f-mono);font-size:10px;color:var(--muted)}
+.daytabs{display:flex;gap:6px;padding:4px 12px 10px;overflow:hidden}
+.daytabs span{flex:none;font-family:var(--f-mono);font-size:10.5px;padding:5px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.daytabs span.on{background:var(--ink);border-color:var(--ink);color:#F3F4F1}
+.tl{background:var(--surface);margin:0 10px 12px;border-radius:14px;padding:6px 12px}
+.ev{display:grid;grid-template-columns:42px 12px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12px;line-height:1.45}
+.ev:last-child{border-bottom:0}
+.ev .t{font-family:var(--f-mono);font-weight:600;font-size:11.5px}
+.ev .dot{width:9px;height:9px;border-radius:5px;border:2px solid var(--ink);margin-top:4px}
+.ev .dot.mv{border-color:var(--blue);background:var(--blue)}
+.ev small{display:block;color:var(--muted);font-size:10.5px}
+.ev .pill{margin-top:3px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.pill::before{content:"";width:5px;height:5px;border-radius:3px;background:currentColor}
+.open{background:var(--orange-soft);color:var(--orange-ink)}
+.booked{background:var(--blue-soft);color:var(--blue)}
+.night{margin:0 10px 14px;background:var(--blue-soft);border-radius:12px;padding:8px 12px;font-size:11px}
+.night b{display:block;font-size:12px}
+.night span{color:var(--blue);font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em}
+.navbar{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--line);padding:7px 0 10px;font-size:9px;color:var(--muted);text-align:center}
+.navbar b{color:var(--ink)}
 
-/* JOURNAL CARD */
-.hero-right{position:relative}
-.journal-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 24px 64px rgba(24,36,61,.14),0 4px 16px rgba(24,36,61,.06);padding:24px 22px;max-width:380px;margin:0 auto;position:relative;z-index:1}
-.jc-header{border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:14px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.jc-title{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;color:var(--navy)}
-.jc-date{font-size:12px;color:var(--muted);white-space:nowrap}
-.jc-entry{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid rgba(220,232,245,.8)}
-.jc-entry:last-of-type{border-bottom:none}
-.jc-ico{font-size:16px;flex-shrink:0;margin-top:2px}
-.jc-body{flex:1}
-.jc-time{font-size:11px;color:var(--accent);font-weight:600;letter-spacing:.06em}
-.jc-name{font-size:13px;font-weight:600;color:var(--navy);line-height:1.3}
-.jc-note{font-size:11px;color:var(--muted)}
-.jc-tag{flex-shrink:0;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;letter-spacing:.04em}
-.jc-tag.ok{background:rgba(0,150,199,.08);border:1px solid rgba(0,150,199,.2);color:var(--accent)}
-.jc-footer{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.jc-budget{font-size:13px;color:var(--muted)}
-.jc-budget strong{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:var(--navy)}
-.jc-members{display:flex;gap:0}
-.jc-member{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0;border:2px solid var(--surface)}
-.jc-member:nth-child(1){background:var(--accent)}
-.jc-member:nth-child(2){background:var(--navy);margin-left:-6px}
-.jc-member:nth-child(3){background:#48cae4;margin-left:-6px}
-.card-shadow-deco{position:absolute;width:90%;height:10px;background:rgba(24,36,61,.06);border-radius:0 0 10px 10px;bottom:-8px;left:5%;filter:blur(6px)}
+.ticket{position:absolute;right:0;bottom:0;width:min(290px,72%);background:#fff;border-radius:10px;box-shadow:0 26px 50px -20px rgba(21,32,43,.42);overflow:hidden;transform:rotate(3deg)}
+.tk-band{background:var(--ink);color:#F3F4F1;display:flex;justify-content:space-between;align-items:baseline;padding:9px 14px;font-family:var(--f-mono)}
+.tk-band b{font-size:12px;letter-spacing:.2em}.tk-band span{font-size:8px;letter-spacing:.2em;color:#B9C2CC}
+.tk-main{padding:12px 14px 10px}
+.tk-label{font-family:var(--f-mono);font-size:7.5px;letter-spacing:.22em;color:var(--muted)}
+.tk-name{font-family:var(--f-display);font-size:17px;margin:1px 0 8px}
+.tk-route{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:8px 0}
+.tk-route b{display:block;font-family:var(--f-mono);font-size:28px;line-height:1}
+.tk-route small{display:block;font-size:9px;color:var(--ink2);margin-top:3px}
+.tk-plane{display:flex;align-items:center;gap:4px;color:var(--blue)}.tk-plane i{width:16px;border-top:1.5px dashed var(--blue)}
+.tk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.tk-grid div span{display:block;font-family:var(--f-mono);font-size:11px}
+.tk-perf{position:relative;border-top:1.5px dashed var(--ink);margin:0 12px}
+.tk-perf::before,.tk-perf::after{content:"";position:absolute;top:-10px;width:18px;height:18px;border-radius:50%;background:var(--ground);border:1.5px solid var(--ink)}
+.tk-perf::before{left:-22px}.tk-perf::after{right:-22px}
+.tk-stub{display:flex;justify-content:space-between;align-items:flex-end;padding:9px 14px 11px}
+.tk-stub b{font-family:var(--f-mono);font-size:12px}
+.barcode{width:84px;height:26px;background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 3px,var(--ink) 3px 4px,transparent 4px 7px,var(--ink) 7px 10px,transparent 10px 11px)}
 
-/* TRUST */
-.trust{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:18px 40px}
-.trust-inner{max-width:1140px;margin:0 auto;display:flex;gap:32px;align-items:center;justify-content:center;flex-wrap:wrap}
-.trust-item{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--muted)}
-.trust-item span{font-size:16px}
+/* ---- sections ---- */
+section{padding:72px 0}
+@media(min-width:960px){section{padding:104px 0}}
+.sec-head{max-width:640px;margin-bottom:40px}
+.sec-head h2{font-size:clamp(26px,5.4vw,40px);font-weight:900;margin:10px 0 14px}
+.sec-head p{color:var(--ink2)}
+.band{background:var(--surface)}
+.dark{background:var(--ink);color:#F3F4F1}
+.dark .eyebrow{color:#B9C2CC}
+.dark .sec-head p{color:#C9D0D7}
 
-/* SECTION COMMON */
-.sec-label{font-size:11px;font-weight:600;letter-spacing:2.5px;color:var(--accent);margin-bottom:10px;text-transform:uppercase}
-.sec-title{font-family:'Syne',sans-serif;font-size:clamp(26px,4vw,36px);font-weight:800;letter-spacing:-1px;line-height:1.1;margin-bottom:12px}
-.sec-title em{color:var(--accent);font-style:normal}
-.sec-desc{font-size:16px;color:var(--muted);line-height:1.75;max-width:520px}
+/* problems */
+.probs{display:grid;gap:12px}
+@media(min-width:760px){.probs{grid-template-columns:repeat(3,1fr);gap:16px}}
+.prob{background:var(--surface);border-radius:16px;padding:20px 20px 22px;border:1px solid var(--line)}
+.prob .q{font-family:var(--f-display);font-weight:700;font-size:17px;margin-bottom:8px}
+.prob p{font-size:13.5px;color:var(--muted)}
+.prob .n{font-family:var(--f-mono);font-size:11px;color:var(--blue);letter-spacing:.16em}
 
-/* FEATURES */
-.features{background:var(--navy);padding:88px 40px;color:#fff}
-.features-top{max-width:1140px;margin:0 auto 56px;display:flex;align-items:flex-end;justify-content:space-between;gap:32px;flex-wrap:wrap}
-.features .sec-label{color:var(--accent2)}
-.features .sec-title{color:#fff}
-.features .sec-desc{color:rgba(255,255,255,.45);max-width:360px}
-.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;max-width:1140px;margin:0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.07);border-radius:12px;overflow:hidden}
-.feat-card{background:var(--navy);padding:30px 26px;transition:background .18s}
-.feat-card:hover{background:var(--navy2)}
-.feat-ico{font-size:30px;margin-bottom:16px;line-height:1}
-.feat-card h3{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px;letter-spacing:-.2px}
-.feat-card p{font-size:13px;color:rgba(255,255,255,.42);line-height:1.7}
+/* feature rows */
+.feat{display:grid;gap:36px;align-items:center}
+.feat + .feat{margin-top:88px}
+@media(min-width:900px){.feat{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:64px}.feat.rev .feat-copy{order:2}}
+.feat-copy h3{font-size:clamp(22px,4.4vw,30px);font-weight:900;margin:10px 0 14px}
+.feat-copy p{color:var(--ink2)}
+.feat-copy ul{list-style:none;margin-top:18px;display:grid;gap:10px}
+.feat-copy li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:14px}
+.feat-copy li::before{content:"";width:14px;height:14px;margin-top:5px;border-radius:4px;border:1.5px solid var(--blue);background:linear-gradient(var(--blue),var(--blue)) center/6px 6px no-repeat}
+.panel{background:var(--surface);border-radius:20px;padding:18px;border:1px solid var(--line);box-shadow:0 24px 50px -36px rgba(21,32,43,.5)}
+.dark .panel{border-color:#2A3743}
 
-/* HOW */
-.how{background:var(--bg);padding:88px 40px;position:relative;overflow:hidden}
-.how-inner{max-width:700px;margin:0 auto;position:relative;z-index:1;text-align:center}
-.how .sec-label{text-align:center}
-.how .sec-title{text-align:center;margin-bottom:6px}
-.how .sec-desc{margin:0 auto 44px;text-align:center}
-.steps{display:flex;flex-direction:column;gap:14px;text-align:left}
-.step{display:flex;gap:18px;align-items:flex-start;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:20px 22px;transition:border-color .2s,box-shadow .2s}
-.step:hover{border-color:rgba(0,150,199,.3);box-shadow:0 4px 20px rgba(0,150,199,.08)}
-.step-num{width:34px;height:34px;border-radius:6px;flex-shrink:0;background:var(--navy);color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center}
-.step h4{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:5px;letter-spacing:-.3px}
-.step p{font-size:13px;color:var(--muted);line-height:1.7}
+/* status board */
+.board-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.board-h b{font-family:var(--f-display);font-size:15px}
+.meter{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--sunk);margin-bottom:14px}
+.meter i{display:block}
+.brow{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 2px;border-top:1px solid var(--sunk);font-size:13px}
+.brow .d{font-family:var(--f-mono);font-size:11px;color:var(--muted);line-height:1.35}
+.brow b{display:block;font-weight:500}
+.brow small{color:var(--muted);font-size:11.5px}
+.brow.todo{background:linear-gradient(90deg,var(--orange-soft),transparent 70%);border-radius:10px;padding-left:8px;margin:2px -6px;border-top-color:transparent}
+.todo-cta{margin-top:12px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1.5px dashed var(--orange-bar);font-size:12.5px;color:var(--orange-ink)}
 
-/* DETAILS */
-.details{background:var(--surface);padding:88px 40px;border-top:1px solid var(--border)}
-.details-inner{max-width:1140px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center}
-.details-right .sec-label{text-align:left}
-.details-right .sec-title{text-align:left;margin-bottom:10px}
-.details-right .sec-desc{font-size:15px;margin-bottom:32px}
-.feature-list{display:flex;flex-direction:column;gap:12px}
-.fl-item{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:8px;background:var(--bg);border:1.5px solid var(--border);font-size:14px;font-weight:500;color:var(--navy)}
-.fl-item .fl-ico{font-size:20px;flex-shrink:0;width:28px;text-align:center}
-.fl-item .fl-text{flex:1}
-.fl-item .fl-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(0,150,199,.08);color:var(--accent);border:1px solid rgba(0,150,199,.18);letter-spacing:.04em;white-space:nowrap}
-.budget-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(24,36,61,.09);padding:22px}
-.budget-card h4{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;margin-bottom:14px;color:var(--navy)}
-.bv-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(220,232,245,.8);font-size:13px}
-.bv-row:last-of-type{border-bottom:none}
-.bv-name{flex:1;font-weight:500;color:var(--navy)}
-.bv-amt{font-family:'DM Sans',sans-serif;font-weight:700;color:var(--accent);font-size:14px;text-align:right}
-.bv-who{font-size:11px;color:var(--muted);text-align:right}
-.bv-total{margin-top:14px;padding-top:14px;border-top:2px solid var(--border);display:flex;justify-content:space-between;align-items:baseline}
-.bv-total-label{font-size:13px;color:var(--muted)}
-.bv-total-amt{font-family:'DM Sans',sans-serif;font-size:24px;font-weight:800;color:var(--navy)}
-.share-card{margin-top:16px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:10px}
-.share-url{font-family:'DM Sans',monospace;font-size:12px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.share-btn{flex-shrink:0;font-size:12px;font-weight:600;background:var(--accent);color:#fff;padding:6px 14px;border-radius:5px;letter-spacing:.04em}
+/* day timeline big */
+.dayhead{display:flex;align-items:stretch;background:var(--ink);color:#F3F4F1;border-radius:12px;overflow:hidden;margin-bottom:10px}
+.dayhead .no{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 14px;border-right:1.5px dashed #5A6470}
+.dayhead .no small{font-family:var(--f-mono);font-size:9px;letter-spacing:.22em;color:#B9C2CC}
+.dayhead .no b{font-size:24px;line-height:1;font-family:var(--f-mono)}
+.dayhead .mid{padding:8px 14px}
+.dayhead .mid small{display:block;font-size:10.5px;letter-spacing:.12em;color:#B9C2CC;font-family:var(--f-mono)}
+.dayhead .mid b{font-family:var(--f-display);font-size:17px}
+.bigtl .ev{grid-template-columns:52px 14px minmax(0,1fr) auto;font-size:13.5px;padding:11px 0}
+.bigtl .ev .t{font-size:13px}
+.bigtl .ev small{font-size:11.5px}
+.bigtl .ev .yen{font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.tz{display:flex;gap:10px;align-items:center;margin-top:10px;font-size:12px;color:var(--muted);background:var(--sunk);border-radius:10px;padding:8px 12px}
+.tz b{font-family:var(--f-mono);color:var(--ink);font-size:12px}
 
-/* QUOTE */
-.quote{background:var(--navy);padding:72px 40px;text-align:center;color:#fff;position:relative;overflow:hidden}
-.quote::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 120%,rgba(0,150,199,.2) 0%,transparent 70%)}
-.quote blockquote{font-family:'Syne',sans-serif;font-size:clamp(20px,3vw,28px);font-weight:700;line-height:1.35;letter-spacing:-.5px;margin:0 auto 20px;color:#fff;position:relative;z-index:1}
-.quote blockquote em{color:var(--accent2);font-style:normal}
-.quote cite{font-size:13px;color:rgba(255,255,255,.35);position:relative;z-index:1}
+/* shiori pages */
+.pages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.pg{background:#fff;color:var(--ink);border-radius:6px;box-shadow:0 20px 40px -18px rgba(0,0,0,.5);overflow:hidden;aspect-ratio:148/210;display:flex;flex-direction:column}
+.pg.second{margin-top:36px}
+.pg .tk-main{flex:1;display:flex;flex-direction:column;gap:8px;padding:10px 12px}
+.pg .tk-band{padding:7px 10px;white-space:nowrap}.pg .tk-band b{font-size:clamp(8px,1.6vw,11px)}.pg .tk-band span{font-size:clamp(5px,1vw,7px)}
+.pg .tk-route small{font-size:clamp(6px,1.2vw,9px)}.pg .tk-stub{padding:7px 12px 9px}.pg .tk-stub b{font-size:clamp(8px,1.5vw,11px)}
+.pg .tk-name{font-size:clamp(13px,2.6vw,18px)}
+.pg .tk-route b{font-size:clamp(18px,4.6vw,30px)}
+.pg-run{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:7px;letter-spacing:.16em;color:var(--muted);border-bottom:1px solid var(--ink);padding:9px 12px 4px;margin:0 0 6px}
+.pg-h{display:flex;align-items:baseline;justify-content:space-between;margin:0 12px 6px;padding-bottom:4px;border-bottom:2px solid var(--blue);font-family:var(--f-display);font-weight:700;font-size:clamp(11px,2.2vw,14px)}
+.pg-h small{font-family:var(--f-mono);font-size:7px;letter-spacing:.16em;color:var(--muted)}
+.pg-row{display:grid;grid-template-columns:22px 44px minmax(0,1fr);gap:6px;margin:0 12px;padding:4px 0;border-bottom:1px solid var(--sunk);font-size:clamp(8px,1.7vw,10.5px);line-height:1.4}
+.pg-row .dn{color:var(--blue);font-weight:600;font-family:var(--f-mono)}
+.pg-row .dt{font-family:var(--f-mono);color:var(--muted)}
+.pg-map{margin:8px 12px 0;flex:1;border-radius:4px;background:var(--sunk);position:relative;overflow:hidden}
+.pg-foot{text-align:center;font-family:var(--f-mono);font-size:7px;color:var(--muted);padding:6px 0 8px}
+.shiori-note{margin-top:22px;display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid #3A4753;color:#DDE3E8}
 
-/* CTA */
-.cta{background:var(--bg);padding:96px 40px;text-align:center;position:relative;overflow:hidden}
-.cta .sec-title{font-size:clamp(28px,4.5vw,44px);margin-bottom:14px}
-.cta .sec-title em{color:var(--accent);font-family:'DM Sans',sans-serif;font-size:.9em;font-weight:700;letter-spacing:-.5px}
-.cta .sec-desc{margin:0 auto 36px;text-align:center}
-.cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
-.btn-accent{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:15px 40px;border-radius:6px;font-size:16px;font-weight:600;text-decoration:none;box-shadow:0 6px 28px rgba(0,150,199,.3);transition:opacity .15s;letter-spacing:.2px}
-.btn-accent:hover{opacity:.88}
-.cta-note{font-size:13px;color:var(--muted)}
-.cta-tags{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
-.cta-tag{font-size:12px;font-weight:500;color:var(--muted);background:var(--surface);border:1.5px solid var(--border);padding:5px 12px;border-radius:20px}
+/* route map */
+.mapbox{position:relative;border-radius:16px;overflow:hidden;background:#EEF1EC;border:1px solid var(--line)}
+.mapleg{display:flex;flex-wrap:wrap;gap:14px;padding:12px 16px;font-size:12px;color:var(--muted);background:var(--surface);border-top:1px solid var(--line)}
+.mapleg span{display:inline-flex;align-items:center;gap:6px}
+.mapleg i{display:inline-block;width:18px;border-top:2px solid var(--ink)}
+.mapleg i.fl{border-top:2px dashed var(--blue)}
+.mapleg i.st{width:10px;height:10px;border-radius:5px;background:var(--ink);border:0}
 
-/* FOOTER */
-footer{background:var(--navy);color:rgba(255,255,255,.25);text-align:center;padding:24px 40px;font-size:12px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.footer-logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:rgba(255,255,255,.5)}
-.footer-logo span{color:var(--accent)}
+/* share */
+.share{display:grid;gap:14px}
+@media(min-width:620px){.share{grid-template-columns:1fr 1.15fr;align-items:start}}
+@media(min-width:900px){.share{grid-template-columns:1fr}}
+.sh-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.sh-card .eyebrow{font-size:10px}
+.linkbox{display:flex;align-items:center;gap:8px;margin:10px 0 12px;padding:9px 12px;border-radius:10px;background:var(--sunk);font-family:var(--f-mono);font-size:11.5px;color:var(--ink2);overflow:hidden;white-space:nowrap}
+.linkbox span{overflow:hidden;text-overflow:ellipsis}
+.who{display:flex;gap:-6px}
+.who i{width:28px;height:28px;border-radius:14px;border:2px solid var(--surface);display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:11px;font-weight:700;color:#fff;margin-right:-6px}
+.req{border-left:3px solid var(--blue);background:var(--blue-soft);border-radius:0 10px 10px 0;padding:10px 12px;font-size:13px;margin-top:10px}
+.req small{display:block;color:var(--muted);font-size:11px;margin-bottom:2px}
+.req-actions{display:flex;gap:8px;margin-top:10px}
+.mini{white-space:nowrap;font-size:11.5px;padding:5px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+.mini.on{background:var(--ink);color:#F3F4F1;border-color:var(--ink)}
 
-/* ANIMATIONS */
-@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.reveal{opacity:0;transform:translateY(24px);transition:opacity .65s ease,transform .65s ease}
-.reveal.visible{opacity:1;transform:none}
-.hero-left>*{opacity:0;animation:fadeUp .8s ease forwards}
-.badge{animation-delay:.1s}
-.hero h1{animation-delay:.25s}
-.hero-sub{animation-delay:.38s}
-.hero-desc{animation-delay:.48s}
-.hero-cta{animation-delay:.58s}
-.pin-row{animation-delay:.7s}
-.hero-right{opacity:0;animation:fadeIn 1s ease .6s forwards}
+/* abroad */
+.tiles{display:grid;gap:12px}
+@media(min-width:760px){.tiles{grid-template-columns:repeat(3,1fr);gap:16px}}
+.tile{background:var(--surface);border-radius:16px;padding:20px;border:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.tile h3{font-size:17px}
+.tile p{font-size:13.5px;color:var(--muted)}
+.phr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:4px 12px;font-size:12.5px;background:var(--sunk);border-radius:10px;padding:10px 12px}
+.phr span:nth-child(odd){color:var(--muted)}
+.phr span:nth-child(even){font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;font-weight:600}
+.clock{display:flex;justify-content:space-between;align-items:center;background:var(--sunk);border-radius:10px;padding:10px 12px}
+.clock div{text-align:center}
+.clock b{display:block;font-family:var(--f-mono);font-size:22px;line-height:1.1}
+.clock small{font-size:10.5px;color:var(--muted)}
+.clock .diff{font-family:var(--f-mono);font-size:11px;color:var(--blue);border:1px solid var(--blue);border-radius:999px;padding:2px 8px}
+.settle{display:grid;gap:6px;background:var(--sunk);border-radius:10px;padding:10px 12px;font-size:12.5px}
+.settle div{display:flex;justify-content:space-between;align-items:center}
+.settle b{font-family:var(--f-mono)}
 
-/* RESPONSIVE */
-@media(max-width:900px){
-  .hero-inner,.details-inner{grid-template-columns:1fr}
-  .hero-right{display:none}
-  .feat-grid{grid-template-columns:1fr 1fr}
-}
-@media(max-width:640px){
-  nav .nav-links{display:none}
-  .nav-inner{padding:0 20px}
-  .hero,.features,.how,.details,.quote,.cta{padding:64px 20px}
-  .feat-grid{grid-template-columns:1fr}
-  .trust{padding:16px 20px}
-  footer{padding:20px;justify-content:center}
-}
+
+/* ask ai */
+.ai-topics{display:grid;gap:6px;margin-bottom:12px}
+.ai-topic{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--line);font-size:13px;background:var(--surface)}
+.ai-topic i{width:14px;height:14px;border-radius:7px;border:1.5px solid var(--line);flex:none}
+.ai-topic.on{border-color:var(--ink)}.ai-topic.on i{border:4px solid var(--ink)}
+.ai-topic small{color:var(--muted);font-size:11px;margin-left:auto}
+.ai-btns{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+.ai-btn{font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:10px;border:1.5px solid var(--ink);background:var(--surface)}
+.ai-btn.on{background:var(--ink);color:#F3F4F1}
+.ai-flow{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;color:var(--muted);margin:2px 0 8px}
+.ai-flow span{flex:1;border-top:1.5px dashed var(--line)}
+.ai-pick{display:grid;gap:6px}
+.ai-pick div{display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 12px;border-radius:10px;background:var(--sunk)}
+.ai-pick b{font-family:var(--f-mono);font-size:12px;width:40px}
+.ai-pick em{font-style:normal;margin-left:auto;font-size:11px;color:var(--muted)}
+.ai-pick i{width:16px;height:16px;border-radius:4px;background:var(--ink);box-shadow:inset 0 0 0 3px var(--sunk);flex:none}
+
+
+/* launch promo */
+.promo-bar{background:var(--orange-bar);color:#fff;font-size:13px;font-weight:700;text-align:center;padding:8px 16px;line-height:1.5}
+.promo-bar a{color:#fff}
+.promo-bar .mono{background:rgba(255,255,255,.22);padding:1px 7px;border-radius:6px;margin:0 2px}
+.promo-badge{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:7px 14px;border-radius:999px;background:var(--orange-soft);color:var(--orange-ink);font-size:13px;font-weight:700;text-decoration:none}
+.promo-badge b{background:var(--orange-bar);color:#fff;border-radius:999px;padding:1px 9px;font-size:12px}
+.deal{margin:4px 0 14px;padding:10px 12px;border-radius:12px;background:var(--orange-soft);color:var(--orange-ink);font-size:13px;line-height:1.5}
+.deal b{font-family:var(--f-mono);font-size:22px;color:var(--orange-ink)}
+.deal s{color:var(--muted)}
+.deal small{display:block;font-size:11.5px;margin-top:2px}
+.promo-box{margin-top:22px;display:grid;gap:6px;justify-items:start;padding:18px 20px;border-radius:16px;border:2px dashed var(--orange-bar);background:var(--surface);max-width:1080px}
+.promo-box h3{font-size:19px}
+.promo-box .code{font-family:var(--f-mono);font-size:24px;font-weight:600;letter-spacing:.12em;padding:4px 14px;border-radius:10px;background:var(--orange-soft);color:var(--orange-ink)}
+.promo-box p{font-size:13.5px;color:var(--ink2)}
+
+/* steps */
+.steps{display:grid;gap:14px;counter-reset:s}
+@media(min-width:820px){.steps{grid-template-columns:repeat(3,1fr);gap:18px}}
+.step{position:relative;background:var(--surface);border-radius:16px;padding:22px 20px;border:1px solid var(--line)}
+.step .no{font-family:var(--f-mono);font-size:12px;letter-spacing:.2em;color:var(--blue)}
+.step h3{font-size:19px;margin:6px 0 8px}
+.step p{font-size:13.5px;color:var(--muted)}
+
+/* home screen */
+.homescreen{margin-top:40px;display:grid;gap:14px}
+@media(min-width:820px){.homescreen{grid-template-columns:1fr 1fr;gap:18px}}
+.hs-head{grid-column:1/-1}
+.hs-head h3{font-size:22px;margin:4px 0 6px}
+.hs-head p{font-size:14px;color:var(--ink2)}
+.hs-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+.hs-card h4{font-family:var(--f-display);font-size:17px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.hs-card h4 span{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;color:var(--muted);font-weight:500}
+.hs-card ol{list-style:none;counter-reset:h;display:grid;gap:9px;font-size:14px}
+.hs-card li{counter-increment:h;display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px}
+.hs-card li::before{content:counter(h);width:22px;height:22px;border-radius:11px;background:var(--ink);color:#F3F4F1;font-family:var(--f-mono);font-size:11px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.hs-card .k{display:inline-block;padding:0 7px;border-radius:6px;background:var(--sunk);font-weight:700;font-size:13px}
+.hs-note{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+/* request */
+.ask{margin-top:22px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.ask h3{font-size:17px;margin-bottom:2px}
+.ask p{font-size:13.5px;color:var(--muted)}
+
+/* pricing */
+.plans{display:grid;gap:16px;max-width:1080px}
+@media(min-width:760px){.plans{grid-template-columns:1fr 1fr}}@media(min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{background:var(--surface);border-radius:20px;padding:26px 22px;border:1px solid var(--line);display:flex;flex-direction:column}
+.plan{position:relative}
+.plan.pass{border:2px solid var(--ink)}
+.plan .eyebrow{margin-bottom:6px}
+.plan h3{font-size:22px}
+.price{display:flex;align-items:baseline;gap:6px;margin:12px 0 4px}
+.price b{font-family:var(--f-mono);font-size:44px;line-height:1;font-weight:600}
+.price span{font-size:13px;color:var(--muted)}
+.plan .sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+.plan ul{list-style:none;display:grid;gap:9px;font-size:14px;margin-bottom:22px;word-break:auto-phrase}
+.plan li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px}
+.plan li::before{content:"✓";font-family:var(--f-mono);color:var(--blue);font-weight:600}
+.plan .btn{margin-top:auto}
+.plan .badge{position:absolute;top:-12px;left:22px;background:var(--ink);color:#F3F4F1;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;padding:3px 10px;border-radius:999px}
+.price-note{margin-top:16px;font-size:12.5px;color:var(--muted)}
+
+/* faq */
+.faq{max-width:760px;display:grid;gap:10px}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 18px}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;font-weight:700;font-size:15px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--f-mono);font-size:20px;color:var(--muted);transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{padding:0 0 16px;color:var(--ink2);font-size:14px}
+
+/* final cta */
+.final{text-align:center}
+.final h2{font-size:clamp(28px,6vw,46px);font-weight:900;margin:12px 0 14px}
+.final p{color:#C9D0D7}
+.final .cta{justify-content:center}
+.final .btn.primary{background:#F3F4F1;color:var(--ink);border-color:#F3F4F1}
+.final .stub{display:inline-flex;gap:16px;align-items:center;margin-top:40px;border:1.5px dashed #5A6470;border-radius:12px;padding:12px 18px;font-family:var(--f-mono);font-size:12px;color:#B9C2CC;text-align:left}
+.final .stub b{display:block;font-size:20px;letter-spacing:.12em;color:#F3F4F1}
+
+footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
+.ft{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between}
+.ft nav{display:flex;flex-wrap:wrap;gap:8px 18px}
+.ft a{text-decoration:none}
+.ft a:hover{color:var(--ink)}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}.btn{transition:none}}
 </style>
 </head>
 <body>
 
-<script>
-(function(){
-  const h=location.hash;
-  if(h.startsWith('#v1/')||h.startsWith('#v1s/')||h.startsWith('#v2/')){
-    location.replace('./app/'+h);
-  }
-})();
-</script>
-
-<nav>
-  <div class="nav-inner">
-    <div class="nav-logo">Trunk<span>.</span></div>
-    <div class="nav-links">
+<div class="promo-bar" data-promo>公開記念：2026年12月1日〜2027年1月31日、コード <span class="mono">TRUNKSTART</span> で旅行パス・3か月パスが<b>半額</b>　<a href="#pricing">くわしく</a></div>
+<header id="hd">
+  <div class="wrap hd">
+    <a class="logo" href="/" aria-label="Trunk. トップ">Trunk<span>.</span></a>
+    <nav aria-label="ページ内">
       <a href="#features">機能</a>
-      <a href="#how">使い方</a>
-      <a href="#details">詳細</a>
-    </div>
-    <a class="nav-btn" href="./app/">＋ 新規作成</a>
+      <a href="#shiori">しおり</a>
+      <a href="#share">共有</a>
+      <a href="#ai">AIに相談</a>
+      <a href="/guide.html">使い方</a>
+      <a href="#pricing">料金</a>
+      <a href="#faq">よくある質問</a>
+    </nav>
+    <a class="btn primary" href="/app/">無料ではじめる</a>
   </div>
-</nav>
+</header>
 
-<section class="hero">
-  <div class="grid-bg"></div>
-  <div class="hero-inner">
-    <div class="hero-left">
-      <div class="badge">FREE · NO SIGN-UP</div>
-      <h1>あなたの旅を<br><em>大切に。</em></h1>
-      <p class="hero-sub">旅の記憶は、準備から始まる。</p>
-      <p class="hero-desc">スケジュール管理から予算精算・持ち物リストまで、<br>大切な人との旅を、もっと丁寧に計画するための旅行プランナーです。</p>
-      <div class="hero-cta">
-        <a class="btn-main" href="./app/">＋ 旅行プランを作る</a>
-        <a class="btn-ghost" href="#features">機能を見る</a>
+<main>
+<!-- HERO -->
+<div class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Travel planner · Trunk.</div>
+      <h1>旅の段取りを、<br><em>一日ずつ</em>。</h1>
+      <p class="lead">宿と移動の手配状況、1日の流れ、予算をひとつの画面に。仕上がった旅程は搭乗券のようなしおりにして、同行者にリンクで渡せます。</p>
+      <div class="cta">
+        <a class="btn primary" href="/app/">無料で旅行をつくる</a>
+        <a class="btn ghost" href="#features">機能を見る</a>
       </div>
-      <div class="pin-row">
-        <div class="pin"><div class="pin-dot"></div>📍 東京 → 京都</div>
-        <div class="pin"><div class="pin-dot"></div>✈️ 成田 → バンコク</div>
-        <div class="pin"><div class="pin-dot"></div>🚢 那覇 → 石垣</div>
+      <a class="promo-badge" href="#pricing" data-promo><b>半額</b>公開記念キャンペーン 12/1〜1/31</a>
+      <div class="facts"><span>Googleアカウントで保存</span><span>同行者はログイン不要</span><span>スマホでもPCでも</span></div>
+    </div>
+
+    <div class="stage" aria-hidden="true">
+      <div class="phone">
+        <div class="phone-top"><b>ソウル 3泊4日</b><i class="mono">12.04 — 12.07</i></div>
+        <div class="daytabs"><span>DAY 1</span><span class="on">DAY 2</span><span>DAY 3</span><span>DAY 4</span></div>
+        <div class="tl">
+          <div class="ev"><span class="t">09:00</span><i class="dot"></i><div>景福宮<small>韓服レンタルは前日予約</small></div></div>
+          <div class="ev"><span class="t">11:40</span><i class="dot mv"></i><div>地下鉄 3号線 → 鍾路3街<small>約15分</small></div></div>
+          <div class="ev"><span class="t">12:00</span><i class="dot"></i><div>広蔵市場でお昼<small>ピンデトク、麻薬キンパ</small></div></div>
+          <div class="ev"><span class="t">15:00</span><i class="dot"></i><div>聖水洞のカフェ巡り</div></div>
+          <div class="ev"><span class="t">19:00</span><i class="dot"></i><div>明洞で夕食<span class="pill booked">予約済み</span></div></div>
+        </div>
+        <div class="night"><span>STAY · 2泊目</span><b>明洞のホテル</b>チェックイン 15:00</div>
+        <div class="navbar"><span><b>ホーム</b></span><span>旅程</span><span>手配</span><span>お金</span><span>持ち物</span></div>
+      </div>
+
+      <div class="ticket">
+        <div class="tk-band"><b>BOARDING PASS</b><span>TRAVEL ITINERARY</span></div>
+        <div class="tk-main">
+          <div class="tk-label">TRIP</div>
+          <div class="tk-name">ソウル 3泊4日</div>
+          <div class="tk-route">
+            <div><div class="tk-label">FROM</div><b>HND</b><small>東京・羽田</small></div>
+            <div class="tk-plane"><i></i><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 16l20-6-20-6 4 6-4 6z"/></svg><i></i></div>
+            <div style="text-align:right"><div class="tk-label">TO</div><b>ICN</b><small>ソウル・仁川</small></div>
+          </div>
+          <div class="tk-grid">
+            <div><div class="tk-label">DEPART</div><span>12.04</span></div>
+            <div><div class="tk-label">DAYS</div><span>4</span></div>
+            <div><div class="tk-label">PAX</div><span>3</span></div>
+          </div>
+        </div>
+        <div class="tk-perf"></div>
+        <div class="tk-stub"><div><div class="tk-label">STUB</div><b>HND → ICN</b></div><div class="barcode"></div></div>
       </div>
     </div>
-    <div class="hero-right">
-      <div class="journal-card">
-        <div class="jc-header">
-          <div class="jc-title">🏔 北海道 4泊5日の旅</div>
-          <div class="jc-date">2025年6月28日〜</div>
-        </div>
-        <div class="jc-entry">
-          <div class="jc-ico">✈️</div>
-          <div class="jc-body">
-            <div class="jc-time">09:30</div>
-            <div class="jc-name">ANA 771便 羽田 → 新千歳</div>
-            <div class="jc-note">シートD列確保済み</div>
-          </div>
-          <div class="jc-tag ok">予約済</div>
-        </div>
-        <div class="jc-entry">
-          <div class="jc-ico">🍜</div>
-          <div class="jc-body">
-            <div class="jc-time">13:30</div>
-            <div class="jc-name">さっぽろラーメン山頭火</div>
-            <div class="jc-note">みんな味噌派</div>
-          </div>
-        </div>
-        <div class="jc-entry">
-          <div class="jc-ico">🏨</div>
-          <div class="jc-body">
-            <div class="jc-time">16:00</div>
-            <div class="jc-name">JRタワーホテル日航札幌</div>
-            <div class="jc-note">確認番号: HTL-8829</div>
-          </div>
-          <div class="jc-tag ok">予約済</div>
-        </div>
-        <div class="jc-footer">
-          <div class="jc-budget">今日の費用: <strong>¥42,000</strong></div>
-          <div class="jc-members">
-            <div class="jc-member">田</div>
-            <div class="jc-member">鈴</div>
-            <div class="jc-member">中</div>
-          </div>
-        </div>
-      </div>
-      <div class="card-shadow-deco"></div>
-    </div>
-  </div>
-</section>
-
-<div class="trust">
-  <div class="trust-inner">
-    <div class="trust-item"><span>✓</span> ログイン不要</div>
-    <div class="trust-item"><span>✓</span> インストール不要</div>
-    <div class="trust-item"><span>🔒</span> データはURLに圧縮</div>
-    <div class="trust-item"><span>📱</span> スマホでも見れる</div>
-    <div class="trust-item"><span>🎉</span> 完全無料</div>
   </div>
 </div>
 
-<section class="features" id="features">
-  <div class="features-top reveal">
-    <div>
-      <div class="sec-label">FEATURES</div>
-      <div class="sec-title">旅に必要なものが<br><em>すべて揃う</em></div>
+<!-- PROBLEMS -->
+<section class="band" id="why">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">Why Trunk.</div>
+      <h2>旅の準備、どこかに<br>抜けがありませんか。</h2>
+      <p>メモアプリ、予約メール、スクショ、グループトーク。情報が散らばるほど、手配もれや「結局何時集合？」が起きます。</p>
     </div>
-    <p class="sec-desc">計画から共有まで、旅のすべてを一つのツールで。<br>アカウント登録もインストールも不要です。</p>
-  </div>
-  <div class="feat-grid reveal">
-    <div class="feat-card">
-      <div class="feat-ico">📅</div>
-      <h3>タイムライン管理</h3>
-      <p>日程ごとにエントリーを並べ、時刻・アイコン・メモを細かく設定。ドラッグ&ドロップで順序を自由に変更できます。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">🔗</div>
-      <h3>URLで即共有</h3>
-      <p>プランを圧縮URLに変換してシェア。受け取った相手がすぐに閲覧・編集できます。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">✅</div>
-      <h3>予約管理</h3>
-      <p>要予約→予約済みをワンタップで切り替え。確認番号・予約URLも一緒に保存できます。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">🌏</div>
-      <h3>海外旅行対応</h3>
-      <p>タイムゾーンを日ごとに設定。現地時間と日本時間をDST込みで自動変換。海外旅行も安心。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">🗺️</div>
-      <h3>Google Maps 連携</h3>
-      <p>スポット名を入力すると住所が自動補完。移動エントリーのルート表示も、アプリを離れずに確認できます。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">💰</div>
-      <h3>予算・ワリカン計算</h3>
-      <p>費用を入力するだけで自動集計。立替者を指定すれば精算額をリアルタイムで算出します。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">🧳</div>
-      <h3>持ち物リスト</h3>
-      <p>パッキングリストを作成してチェック管理。印刷にも対応し、出発前の準備をスムーズに。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">💬</div>
-      <h3>コメント・メモ機能</h3>
-      <p>メンバーとのコメントをプランに直接残せます。「ここ行きたい」を気軽に共有しましょう。</p>
-    </div>
-    <div class="feat-card">
-      <div class="feat-ico">📋</div>
-      <h3>持ち物テンプレート</h3>
-      <p>海外旅行・国内旅行・キャンプなど用途別のテンプレートを用意。ゼロからのリスト作成不要。</p>
+    <div class="probs">
+      <div class="prob rv"><div class="n">01</div><div class="q">2泊目の宿、取ったっけ？</div><p>宿と移動を日付で並べ、まだ手配していないものを橙色で目立たせます。</p></div>
+      <div class="prob rv"><div class="n">02</div><div class="q">何時にどこへ行けばいい？</div><p>1日ごとのタイムラインで、移動時間も含めて流れがひと目でわかります。</p></div>
+      <div class="prob rv"><div class="n">03</div><div class="q">同行者に何度も説明している</div><p>リンクを送るだけ。相手はログインなしで、いつでも最新の旅程を見られます。</p></div>
     </div>
   </div>
 </section>
 
-<section class="how" id="how">
-  <div class="grid-bg"></div>
-  <div class="how-inner reveal">
-    <div class="sec-label">HOW IT WORKS</div>
-    <div class="sec-title"><span style="font-family:'DM Sans',sans-serif;font-weight:700">3</span>ステップで使える</div>
-    <p class="sec-desc">アプリのインストールもアカウント登録も不要。<br>ブラウザを開いて、今すぐ始められます。</p>
+<!-- FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">Features</div>
+      <h2>計画から当日まで、<br>この1つで足ります。</h2>
+    </div>
+
+    <div class="feat rv">
+      <div class="feat-copy">
+        <div class="eyebrow">01 · Booking status</div>
+        <h3>手配もれが、色でわかる。</h3>
+        <p>宿・飛行機・電車をすべて日付順に並べ、「未手配」と「予約済み」を色分けします。何を取ればいいかが、開いた瞬間にわかります。</p>
+        <ul><li>未手配の宿や移動は橙色で表示</li><li>予約番号やチェックイン時刻も一緒に保存</li><li>何人で行くかを入れると、予算は1人あたりで集計</li></ul>
+      </div>
+      <div class="panel" aria-hidden="true">
+        <div class="board-h"><b>予約・手配</b><span class="mono" style="font-size:12px;color:var(--muted)">5 / 6 済み</span></div>
+        <div class="meter"><i style="width:83%;background:var(--blue)"></i><i style="width:17%;background:var(--orange-bar)"></i></div>
+        <div class="brow"><span class="d">12.04<br>THU</span><div><b>羽田 → 仁川</b><small>08:55 発 · 11:25 着</small></div><span class="pill booked">予約済み</span></div>
+        <div class="brow"><span class="d">12.04<br>THU</span><div><b>明洞のホテル · 1泊目</b><small>チェックイン 15:00</small></div><span class="pill booked">予約済み</span></div>
+        <div class="brow todo"><span class="d">12.05<br>FRI</span><div><b>2泊目の宿</b><small>まだ決まっていません</small></div><span class="pill open">未手配</span></div>
+        <div class="brow"><span class="d">12.06<br>SAT</span><div><b>弘大のゲストハウス</b><small>チェックイン 16:00</small></div><span class="pill booked">予約済み</span></div>
+        <div class="brow"><span class="d">12.07<br>SUN</span><div><b>仁川 → 羽田</b><small>18:30 発 · 20:55 着</small></div><span class="pill booked">予約済み</span></div>
+        <div class="todo-cta"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>12月5日の宿を手配しましょう</div>
+      </div>
+    </div>
+
+    <div class="feat rev rv">
+      <div class="feat-copy">
+        <div class="eyebrow">02 · Day timeline</div>
+        <h3>1日の動きが、<br>時刻表みたいに見える。</h3>
+        <p>数日の旅行ほど、1日の流れが大切です。予定と移動を時刻順に並べ、その日泊まる宿まで1画面に収めます。</p>
+        <ul><li>移動の所要時間も入れて、無理のない計画に</li><li>海外の時差は自動で入力。日本時間との差も表示</li><li>スポット名を入れると住所が候補に出る</li></ul>
+      </div>
+      <div class="panel bigtl" aria-hidden="true">
+        <div class="dayhead"><div class="no"><small>DAY</small><b>1</b></div><div class="mid"><small>2026.12.04 THU</small><b>東京 → ソウル</b></div></div>
+        <div class="ev"><span class="t">06:30</span><i class="dot"></i><div>羽田空港 第3ターミナル<small>オンラインチェックイン済み</small></div><span class="yen"></span></div>
+        <div class="ev"><span class="t">08:55</span><i class="dot mv"></i><div>羽田 → 仁川<small>2時間30分 · 座席 32A</small></div><span class="yen">¥28,400</span></div>
+        <div class="ev"><span class="t">12:10</span><i class="dot mv"></i><div>空港鉄道 AREX → ソウル駅<small>約45分</small></div><span class="yen">₩9,500</span></div>
+        <div class="ev"><span class="t">15:00</span><i class="dot"></i><div>明洞のホテルにチェックイン<span class="pill booked">予約済み</span></div><span class="yen"></span></div>
+        <div class="ev"><span class="t">18:30</span><i class="dot"></i><div>サムギョプサルで夕食<small>3人で予約</small></div><span class="yen">₩45,000</span></div>
+        <div class="tz"><b>UTC+9</b>ソウルは日本と同じ時刻です</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SHIORI -->
+<section class="dark" id="shiori">
+  <div class="wrap feat">
+    <div class="feat-copy rv">
+      <div class="eyebrow">03 · Travel booklet</div>
+      <h3 style="color:#F3F4F1">しおりは、<br>搭乗券のデザインで。</h3>
+      <p style="color:#C9D0D7">入力した旅程から、表紙・ルートマップ・旅程表・日ごとの予定・宿と移動の一覧まで、A5サイズのしおりを自動でつくります。PDFで保存して、印刷もそのままどうぞ。</p>
+      <div class="shiori-note"><span class="tag">表紙</span><span class="tag">ルートマップ</span><span class="tag">旅程表</span><span class="tag">日ごとの予定</span><span class="tag">宿・移動</span><span class="tag">持ち物</span><span class="tag">フレーズ集</span></div>
+    </div>
+    <div class="pages rv" aria-hidden="true">
+      <div class="pg">
+        <div class="tk-band"><b>BOARDING PASS</b><span>TRAVEL ITINERARY</span></div>
+        <div class="tk-main">
+          <div><div class="tk-label">TRIP</div><div class="tk-name">ソウル 3泊4日</div></div>
+          <div class="tk-route">
+            <div><div class="tk-label">FROM</div><b>HND</b><small>東京・羽田</small></div>
+            <div class="tk-plane"><i></i><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 16l20-6-20-6 4 6-4 6z"/></svg><i></i></div>
+            <div style="text-align:right"><div class="tk-label">TO</div><b>ICN</b><small>ソウル・仁川</small></div>
+          </div>
+          <div class="tk-grid"><div><div class="tk-label">DEPART</div><span>12.04</span></div><div><div class="tk-label">RETURN</div><span>12.07</span></div><div><div class="tk-label">CITIES</div><span>2</span></div></div>
+        </div>
+        <div class="tk-perf" style="--ground:#15202B"></div>
+        <div class="tk-stub"><div><div class="tk-label">STUB</div><b>HND → ICN</b></div><div class="barcode" style="width:64px;height:20px"></div></div>
+      </div>
+      <div class="pg second">
+        <div class="pg-run"><span>TRUNK. · ITINERARY</span><span>P.3</span></div>
+        <div class="pg-h">旅程表<small>4 DAYS</small></div>
+        <div class="pg-row"><span class="dn">1</span><span class="dt">12.04</span><span>東京 → ソウル / 明洞</span></div>
+        <div class="pg-row"><span class="dn">2</span><span class="dt">12.05</span><span>景福宮 · 広蔵市場 · 聖水洞</span></div>
+        <div class="pg-row"><span class="dn">3</span><span class="dt">12.06</span><span>水原日帰り / 弘大</span></div>
+        <div class="pg-row"><span class="dn">4</span><span class="dt">12.07</span><span>買い物 → 帰国</span></div>
+        <div class="pg-map">
+          <svg viewBox="0 0 200 150" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+            <path d="M40 20 C60 30 70 60 62 90 C58 110 70 130 90 145 L0 150 L0 0 L30 0 Z" fill="#DDE2D9"/>
+            <path d="M150 60 C170 70 190 90 200 95 L200 150 L120 150 C130 120 140 90 150 60Z" fill="#DDE2D9"/>
+            <path d="M58 64 Q120 20 170 104" fill="none" stroke="#1D4ED8" stroke-width="1.6" stroke-dasharray="4 3"/>
+            <path d="M58 64 L64 92" fill="none" stroke="#15202B" stroke-width="1.6"/>
+            <circle cx="58" cy="64" r="4" fill="#15202B"/><circle cx="64" cy="92" r="3" fill="#15202B"/><circle cx="170" cy="104" r="3" fill="#fff" stroke="#15202B" stroke-width="1.5"/>
+            <text x="66" y="62" font-size="8" font-family="Noto Sans JP" fill="#15202B">ソウル</text>
+            <text x="70" y="96" font-size="7" font-family="Noto Sans JP" fill="#3D4650">水原</text>
+            <text x="150" y="120" font-size="7" font-family="Noto Sans JP" fill="#3D4650">東京</text>
+          </svg>
+        </div>
+        <div class="pg-foot">— 3 —</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROUTE MAP -->
+<section id="map">
+  <div class="wrap feat">
+    <div class="feat-copy rv">
+      <div class="eyebrow">04 · Route map</div>
+      <h3>どこを回るか、<br>地図でひと目に。</h3>
+      <p>泊まる街と移動を、自動で地図に描きます。周遊旅行でも、街の順番と泊数がすぐにわかります。</p>
+      <ul><li>宿泊地は黒い点、飛行機は青い点線</li><li>しおりにもそのまま入ります</li></ul>
+    </div>
+    <div class="mapbox rv" aria-hidden="true">
+      <svg viewBox="0 0 560 360" width="100%">
+        <rect width="560" height="360" fill="#EEF1EC"/>
+        <g fill="#DDE2D9">
+          <path d="M60 0 L210 0 C200 40 230 70 220 110 C214 140 250 160 240 200 C232 232 260 262 250 300 C246 320 260 345 250 360 L60 360 C40 300 70 250 50 200 C30 150 70 90 50 40Z"/>
+          <path d="M380 120 C420 110 470 140 500 130 C530 120 560 140 560 140 L560 360 L360 360 C380 320 350 280 370 240 C385 210 360 170 380 120Z"/>
+        </g>
+        <path d="M168 132 C260 60 360 110 440 250" fill="none" stroke="#1D4ED8" stroke-width="2.4" stroke-dasharray="7 5"/>
+        <path d="M168 132 L178 182 L150 232 L196 300" fill="none" stroke="#15202B" stroke-width="2.4" stroke-linejoin="round"/>
+        <g font-family="Noto Sans JP, sans-serif" font-size="14">
+          <circle cx="168" cy="132" r="8" fill="#15202B"/><text x="102" y="128" font-weight="700" fill="#15202B">ソウル</text><text x="102" y="146" font-size="11" fill="#5A6470">2泊</text>
+          <circle cx="178" cy="182" r="5" fill="#15202B"/><text x="190" y="187" fill="#3D4650" font-size="12">水原</text>
+          <circle cx="150" cy="232" r="7" fill="#15202B"/><text x="72" y="237" font-weight="700" fill="#15202B">全州</text><text x="72" y="253" font-size="11" fill="#5A6470">1泊</text>
+          <circle cx="196" cy="300" r="7" fill="#15202B"/><text x="210" y="305" font-weight="700" fill="#15202B">釜山</text><text x="210" y="321" font-size="11" fill="#5A6470">1泊</text>
+          <circle cx="440" cy="250" r="7" fill="#fff" stroke="#15202B" stroke-width="2.4"/><text x="400" y="282" fill="#3D4650" font-size="12">東京（出発）</text>
+          <g transform="translate(300 82) rotate(18)" fill="#1D4ED8"><path d="M-8 4 L10 0 L-8 -4 L-4 0Z"/></g>
+        </g>
+      </svg>
+      <div class="mapleg"><span><i class="st"></i>宿泊地</span><span><i></i>陸路</span><span><i class="fl"></i>飛行機</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SHARE -->
+<section class="band" id="share">
+  <div class="wrap feat rev">
+    <div class="feat-copy rv">
+      <div class="eyebrow">05 · Share</div>
+      <h3>同行者には、<br>リンクを送るだけ。</h3>
+      <p>旅行ごとに共有リンクを発行できます。受け取った人はアカウントもアプリも不要。いつ開いても最新の旅程としおりが見られます。</p>
+      <ul><li>一緒に準備する人は、招待リンクから参加して編集できます（無料・持ち物は人ごと）</li><li>見せる相手は旅行ごとに変えられます</li><li>リンクはいつでも止められます</li><li>「ここに行きたい」は、共有ページからリクエストで届きます</li></ul>
+    </div>
+    <div class="share rv" aria-hidden="true">
+      <div class="sh-card">
+        <div class="eyebrow">Share link</div>
+        <div class="linkbox"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg><span>trunk-travelplanner.com/s/k7x2m9</span></div>
+        <div class="row" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div class="who"><i style="background:#1D4ED8">あ</i><i style="background:#B45309">け</i><i style="background:#15202B">み</i></div>
+          <span class="mini on">リンクをコピー</span>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:12px">LINE やメールでそのまま送れます</p>
+      </div>
+      <div class="sh-card">
+        <div class="eyebrow">Request</div>
+        <div class="req"><small>けんた · 共有ページから</small>水原で華城の夜景を見たい！</div>
+        <div class="req" style="border-left-color:var(--orange-bar);background:var(--orange-soft)"><small>みさき · 共有ページから</small>変換プラグ、1つ持っていくね</div>
+        <div class="req-actions"><span class="mini on">対応した</span><span class="mini">消す</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABROAD -->
+<section id="abroad">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">06 · Overseas</div>
+      <h2>海外旅行の<br>「ちょっと困る」も。</h2>
+      <p>時差、言葉、お金の計算。海外ならではの面倒を、旅程と一緒に片づけます。</p>
+    </div>
+    <div class="tiles">
+      <div class="tile rv">
+        <h3>時差は自動で</h3>
+        <p>行き先の時刻と日本時間を並べて表示。サマータイムも考慮します。</p>
+        <div class="clock" aria-hidden="true"><div><b>09:00</b><small>パリ</small></div><span class="diff">−8h</span><div><b>17:00</b><small>日本</small></div></div>
+      </div>
+      <div class="tile rv">
+        <h3>現地のフレーズ集</h3>
+        <p>行き先の言葉で、あいさつや買い物・食事の定番フレーズを。しおりにも載せられます。</p>
+        <div class="phr" aria-hidden="true"><span>ありがとう</span><span>감사합니다</span><span>これをください</span><span>이거 주세요</span><span>いくらですか？</span><span>얼마예요?</span></div>
+      </div>
+      <div class="tile rv">
+        <h3>立て替えと精算</h3>
+        <p>誰が何を払ったかを入れると、最後に誰が誰にいくら払えばいいかを計算します。外貨は円に換算して集計します。</p>
+        <div class="settle" aria-hidden="true"><div><span>けんた → あおい</span><b>¥8,200</b></div><div><span>みさき → あおい</span><b>¥3,450</b></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ASK AI -->
+<section class="band" id="ai">
+  <div class="wrap feat">
+    <div class="feat-copy rv">
+      <div class="eyebrow">07 · Ask AI</div>
+      <h3>いつもの AI に、<br>旅程ごと相談。</h3>
+      <p>ChatGPT・Claude・Gemini に、旅程をまとめた相談文つきでワンタップ。返ってきた答えを貼り付ければ、予定や持ち物の候補として取り込めます。</p>
+      <ul><li>この日の予定・旅程の見直し・持ち物・自由な質問</li><li>あなた自身の AI を使うので、追加の料金はかかりません</li><li>パスポートなどの個人情報は、相談文に入りません</li></ul>
+    </div>
+    <div class="panel rv" aria-hidden="true">
+      <div class="ai-topics">
+        <div class="ai-topic on"><i></i>この日の予定<small>DAY 2 · 12/5</small></div>
+        <div class="ai-topic"><i></i>旅程全体の見直し</div>
+        <div class="ai-topic"><i></i>持ち物</div>
+      </div>
+      <div class="ai-btns"><span class="ai-btn on">ChatGPT で相談</span><span class="ai-btn">Claude で相談</span><span class="ai-btn">Gemini で相談</span></div>
+      <div class="ai-flow"><span></span>答えを貼り付けて取り込む<span></span></div>
+      <div class="ai-pick">
+        <div><i></i><b>09:00</b>景福宮<em>観光</em></div>
+        <div><i></i><b>12:00</b>広蔵市場でお昼<em>食事</em></div>
+        <div><i></i><b>15:00</b>北村韓屋村をおさんぽ<em>観光</em></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">How it works</div>
+      <h2>はじめ方は、3ステップ。</h2>
+    </div>
     <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div>
-          <h4>日程を作る</h4>
-          <p>出発日を設定し、Day1から順に日程カードを追加。各カードにスポット・移動・食事などのエントリーを並べます。</p>
-        </div>
+      <div class="step rv"><div class="no">STEP 01</div><h3>旅行をつくる</h3><p>行き先と日付を入れるだけ。日ごとの枠が自動でできあがります。</p></div>
+      <div class="step rv"><div class="no">STEP 02</div><h3>宿と移動、予定を入れる</h3><p>決まったものから順に。未手配のものは橙色で残るので、あとから埋めれば大丈夫です。</p></div>
+      <div class="step rv"><div class="no">STEP 03</div><h3>しおりにして、共有する</h3><p>リンクを同行者に送れば準備完了。PDFのしおりは印刷して持って行けます。</p></div>
+    </div>
+    <p class="rv" style="margin-top:22px"><a class="btn ghost" href="/guide.html">くわしい使い方を見る</a></p>
+
+    <div class="homescreen" id="homescreen">
+      <div class="hs-head rv">
+        <div class="eyebrow">Home screen</div>
+        <h3>スマホのホーム画面に置いておく</h3>
+        <p>ホーム画面に追加すると、アプリと同じようにアイコンから1タップで開けます。インストールや容量の心配はありません。</p>
       </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div>
-          <h4>詳細を整える</h4>
-          <p>時刻・費用・予約状況・住所・リンクを各エントリーに設定。Maps APIでスポット名を入力すれば住所が自動補完されます。</p>
-        </div>
+      <div class="hs-card rv">
+        <h4>iPhone <span>SAFARI</span></h4>
+        <ol>
+          <li><span>Safari で Trunk. を開いて、ログインする</span></li>
+          <li><span>画面下の <span class="k">共有</span>（四角から上向きの矢印）を押す</span></li>
+          <li><span>メニューを下にずらして <span class="k">ホーム画面に追加</span> を押す</span></li>
+          <li><span>右上の <span class="k">追加</span> を押す</span></li>
+        </ol>
       </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div>
-          <h4>仲間と共有する</h4>
-          <p>「共有」ボタンでプランをURLに変換します。そのまま送るだけで、相手がすぐに閲覧・編集できます。</p>
-        </div>
+      <div class="hs-card rv">
+        <h4>Android <span>CHROME</span></h4>
+        <ol>
+          <li><span>Chrome で Trunk. を開いて、ログインする</span></li>
+          <li><span>右上の <span class="k">︙</span>（メニュー）を押す</span></li>
+          <li><span><span class="k">ホーム画面に追加</span> を押す</span></li>
+          <li><span><span class="k">インストール</span> または <span class="k">追加</span> を押す</span></li>
+        </ol>
       </div>
+      <p class="hs-note rv">LINE や Instagram の中で開いた場合は、右上のメニューから「ブラウザで開く」を選んでから追加してください。ホーム画面のウィジェット（アプリを開かずに予定が見える小さな表示）には、今は対応していません。</p>
     </div>
   </div>
 </section>
 
-<section class="details" id="details">
-  <div class="details-inner">
-    <div class="details-left reveal">
-      <div class="budget-card">
-        <h4>💰 旅行費用 〜北海道3泊4日</h4>
-        <div class="bv-row">
-          <div class="bv-name">✈️ 往復航空券</div>
-          <div>
-            <div class="bv-amt">¥38,400</div>
-            <div class="bv-who">田中さん立替</div>
-          </div>
-        </div>
-        <div class="bv-row">
-          <div class="bv-name">🏨 ホテル（3泊）</div>
-          <div>
-            <div class="bv-amt">¥54,000</div>
-            <div class="bv-who">鈴木さん立替</div>
-          </div>
-        </div>
-        <div class="bv-row">
-          <div class="bv-name">🍽 食事・観光</div>
-          <div>
-            <div class="bv-amt">¥24,600</div>
-            <div class="bv-who">現地で割り勘</div>
-          </div>
-        </div>
-        <div class="bv-total">
-          <div class="bv-total-label">合計（3人）</div>
-          <div class="bv-total-amt">¥117,000</div>
-        </div>
-        <div class="share-card">
-          <div class="share-url">trunk-travelplanner.com/app/#v2/eJytkIIvwi…</div>
-          <div class="share-btn">コピー</div>
-        </div>
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">Pricing</div>
+      <h2>機能はぜんぶ無料。<br>旅行が重なったときだけ。</h2>
+      <p>準備中の旅行が1つなら、ずっと無料。機能もすべて使えます。<br>旅行の準備が重なったときだけ、パスを1回買ってください。月額の支払いはありません。</p>
+    </div>
+    <div class="plans">
+      <div class="plan rv">
+        <div class="eyebrow">Free</div>
+        <h3>無料</h3>
+        <div class="price"><b>0</b><span>円</span></div>
+        <div class="sub">準備中の旅行が1つなら、ずっと無料。</div>
+        <ul>
+          <li>日ごとの予定・手配・予算・持ち物</li>
+          <li>ルートマップ・しおりPDF</li>
+          <li>共有リンク</li>
+          <li>割り勘の精算・外貨の円換算</li>
+          <li>フレーズ集・AIに相談</li>
+          <li>終わった旅行は何件でも保存</li>
+          <li>広告なし</li>
+        </ul>
+        <a class="btn ghost" href="/app/">無料ではじめる</a>
+      </div>
+      <div class="plan pass rv">
+        <span class="badge">12.01 START</span>
+        <div class="eyebrow">Per trip</div>
+        <h3>旅行パス</h3>
+        <div class="price"><b>440</b><span>円（税込）/ 1旅行</span></div>
+        <div class="deal" data-promo>公開記念 <s>440円</s> → <b>220</b>円<small>コード TRUNKSTART・2027年1月31日まで</small></div>
+        <div class="sub">もう1つ旅行を準備したいときに。</div>
+        <ul>
+          <li>無料の1つとは別に、旅行を1つ作れる</li>
+          <li>その旅行が終わるまで使える</li>
+          <li>1回払い・自動更新なし</li>
+        </ul>
+        <a class="btn primary" href="/app/">まずは無料で旅行をつくる</a>
+      </div>
+      <div class="plan pass rv">
+        <span class="badge">12.01 START</span>
+        <div class="eyebrow">3 months</div>
+        <h3>3か月パス</h3>
+        <div class="price"><b>980</b><span>円（税込）/ 3か月</span></div>
+        <div class="deal" data-promo>公開記念 <s>980円</s> → <b>490</b>円<small>コード TRUNKSTART・2027年1月31日まで</small></div>
+        <div class="sub">旅行の予定が続く時期に。</div>
+        <ul>
+          <li>3か月間、旅行をいくつでも作れる</li>
+          <li>旅行パス3回分より安い</li>
+          <li>期限後も、作った旅行はそのまま使える</li>
+          <li>1回払い・自動更新なし</li>
+        </ul>
+        <a class="btn primary" href="/app/">まずは無料で旅行をつくる</a>
       </div>
     </div>
-    <div class="details-right reveal">
-      <div class="sec-label">DETAILS</div>
-      <div class="sec-title">細かいところまで、<br><em>ちゃんと使える</em></div>
-      <p class="sec-desc">シンプルに見えて、実際の旅行で必要な機能をしっかり持っています。</p>
-      <div class="feature-list">
-        <div class="fl-item">
-          <div class="fl-ico">🌏</div>
-          <div class="fl-text">タイムゾーン自動変換（DST対応）</div>
-          <div class="fl-badge">海外対応</div>
-        </div>
-        <div class="fl-item">
-          <div class="fl-ico">💱</div>
-          <div class="fl-text">複数通貨の費用入力・自動円換算</div>
-          <div class="fl-badge">外貨対応</div>
-        </div>
-        <div class="fl-item">
-          <div class="fl-ico">📱</div>
-          <div class="fl-text">スマホ・タブレット完全対応</div>
-          <div class="fl-badge">レスポンシブ</div>
-        </div>
-        <div class="fl-item">
-          <div class="fl-ico">🔒</div>
-          <div class="fl-text">データはURLに圧縮・サーバー不使用</div>
-          <div class="fl-badge">プライバシー</div>
-        </div>
-      </div>
+    <div class="promo-box rv" data-promo>
+      <div class="eyebrow" style="color:var(--orange-ink)">Launch campaign</div>
+      <h3>公開記念：どちらのパスも半額</h3>
+      <span class="code">TRUNKSTART</span>
+      <p>2026年12月1日〜2027年1月31日、お支払いの画面でこのコードを入れると、旅行パス・3か月パスが50%オフになります（お一人さま1回）。</p>
+    </div>
+    <p class="price-note">終わった旅行は数に入らないので、旅行が終われば次の旅行はまた無料で作れます。パスの期限が切れても、作った旅行は消えません。始まった旅行の日程を先へ動かして次の旅行に作り替えると、新しい旅行として数えます（付いていたパスはそこで使い終わり）。前の旅行を下書きにしたいときは「コピーして新しい旅行を作る」が使えます。お支払いはクレジットカード（Stripe）です。詳しくは<a href="/tokushoho.html">特定商取引法に基づく表記</a>をご覧ください。</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="band" id="faq">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">FAQ</div>
+      <h2>よくある質問</h2>
+    </div>
+    <div class="faq">
+      <details><summary>無料でどこまで使えますか？</summary><p>すべての機能が無料で使えます。無料で準備できる旅行は1つずつで、2つ目の旅行を同時に準備するときだけ旅行パス（440円）が必要です。終わった旅行はいくつでも残せます。</p></details>
+      <details><summary>アカウント登録は必要ですか？</summary><p>旅行を保存するには Google アカウントでのログインが必要です。新しくパスワードを作る必要はありません。</p></details>
+      <details><summary>同行者もログインが必要ですか？</summary><p>いいえ。共有リンクを開くだけで、旅程としおりを見られます。アプリのインストールも不要です。</p></details>
+      <details><summary>同行者と一緒に編集できますか？</summary><p>はい、無料でできます。「共有と設定」から招待リンクを送ると、相手は Google でログインして参加し、一緒に旅程を直せます。持ち物リストは人ごとに分かれます。参加した旅行は相手の無料の枠に数えません。見るだけの人には、ログイン不要の共有リンクを送れます。</p></details>
+      <details><summary>AI は使えますか？</summary><p>「AIに相談」から、あなたの ChatGPT・Claude・Gemini を、旅程をまとめた相談文つきで開けます。返ってきた答えを貼り付けると、予定や持ち物の候補として取り込めます。Trunk. が AI に直接データを送ることはなく、パスポートなどの個人情報は相談文に入りません。</p></details>
+      <details><summary>スマホで使えますか？</summary><p>はい。ブラウザで動くので、iPhone・Android・パソコンのどれでも使えます。<a href="#homescreen">ホーム画面に追加</a>すると、アプリのようにアイコンから開けます。電波のない場所に備えるなら、しおりをPDFで保存しておくと安心です。</p></details>
+      <details><summary>旅行パスはいつから買えますか？</summary><p>2026年12月1日から販売します。それまでは無料版でお使いください。</p></details>
+      <details><summary>旅行パスは誰が買えばいいですか？</summary><p>2つ目の旅行を作る人です。招待されて参加した旅行は数えないので、同行者が買う必要はありません。</p></details>
+      <details><summary>ほしい機能があります</summary><p>ぜひ教えてください。アプリのメニューの「共有と設定」にある「ほしい機能・困ったこと」から、ひとことで送れます（名前やメールアドレスは送られません）。いただいた声は、次に作る機能を決めるときにすべて読んでいます。</p></details>
+      <details><summary>旅行パスと3か月パスの違いは？</summary><p>旅行パス（440円）は1つの旅行ごと、3か月パス（980円）は3か月の間なら旅行をいくつでも準備できます。無料の1つとは別に3つ以上の旅行を準備するなら、3か月パスがお得です（旅行パス3回で1,320円）。どちらも自動更新はなく、期限が切れても今ある旅行はそのまま見られて編集もできます。</p></details>
+    </div>
+    <div class="ask rv">
+      <div><h3>ほしい機能を募集中です</h3><p>使う前の方も歓迎です。いただいた声から、次に作るものを決めています。</p></div>
+      <a class="btn ghost" href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">要望を送る</a>
     </div>
   </div>
 </section>
 
-<section class="quote">
-  <blockquote>「旅の計画自体が、<em>旅の一部</em>だと思える」</blockquote>
-  <cite>— Trunk. ユーザーより</cite>
-</section>
-
-<section class="cta">
-  <div class="grid-bg"></div>
-  <div style="position:relative;z-index:1">
-    <div class="sec-label" style="text-align:center">GET STARTED</div>
-    <div class="sec-title">次の旅を、<em>Trunk.</em> で</div>
-    <p class="sec-desc">無料でログイン不要、ブラウザだけで今すぐ始められます。</p>
-    <div class="cta-btns">
-      <a class="btn-accent" href="./app/">＋ 旅行プランを作る</a>
-      <a class="btn-ghost" href="#features">機能を見る</a>
-    </div>
-    <div class="cta-tags">
-      <span class="cta-tag">✓ インストール不要</span>
-      <span class="cta-tag">✓ アカウント登録なし</span>
-      <span class="cta-tag">🎉 完全無料</span>
-      <span class="cta-tag">📱 スマホ対応</span>
-    </div>
+<!-- FINAL -->
+<section class="dark final">
+  <div class="wrap rv">
+    <div class="eyebrow">Next trip</div>
+    <h2>次の旅を、<br>ここから組み立てよう。</h2>
+    <p>行き先と日付を入れるだけで、すぐにはじめられます。</p>
+    <div class="cta"><a class="btn primary" href="/app/">無料で旅行をつくる</a></div>
+    <div class="stub"><div><b>HAVE A NICE TRIP</b>TRUNK-TRAVELPLANNER.COM</div><div class="barcode" style="background:repeating-linear-gradient(90deg,#B9C2CC 0 2px,transparent 2px 3px,#B9C2CC 3px 4px,transparent 4px 7px,#B9C2CC 7px 10px,transparent 10px 11px)"></div></div>
   </div>
 </section>
+</main>
 
 <footer>
-  <div class="footer-logo">Trunk<span>.</span></div>
-  <div>あなたの旅を大切に。</div>
-  <div><a href="/privacy.html" style="color:inherit">プライバシーポリシー</a> ・ © 2026 Trunk. All rights reserved.</div>
+  <div class="wrap ft">
+    <a class="logo" href="/" style="font-size:18px">Trunk<span>.</span></a>
+    <nav aria-label="フッター">
+      <a href="/guide.html">使い方ガイド</a>
+      <a href="/privacy.html">プライバシーポリシー</a>
+      <a href="/tokushoho.html">特定商取引法に基づく表記</a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせ</a>
+    </nav>
+    <span>© 2026 Trunk.</span>
+  </div>
 </footer>
 
 <script>
-const io=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target)}})
-},{threshold:0.12});
-document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+(function(){
+  if (Date.now() > Date.parse("2027-01-31T23:59:59+09:00")) document.querySelectorAll("[data-promo]").forEach(function(e){ e.remove(); });
+  var hd=document.getElementById('hd');
+  var onScroll=function(){hd.classList.toggle('scrolled',window.scrollY>8)};
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  var els=document.querySelectorAll('.rv');
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in')});return}
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});
+  els.forEach(function(e){io.observe(e)});
+})();
 </script>
 </body>
 </html>

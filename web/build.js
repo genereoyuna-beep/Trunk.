@@ -1,8 +1,8 @@
-// 使い方: npm install のあと npm run build → ../beta/index.html ができる（公開前の確認用）
+// 使い方: npm install のあと npm run build → ../app/index.html（アプリ本体）と ../s/index.html（共有ページ）ができる
 // アプリ本体はアーティファクト版と共通（shared/、node sync.js で更新）。Trunk. だけの部分は src/。
 const Babel = require('@babel/standalone');
 const fs = require('fs'), path = require('path');
-const out = process.argv[2] || path.resolve(__dirname, '../beta/index.html');
+const out = process.argv[2] || path.resolve(__dirname, '../app/index.html');
 const S = (f) => fs.readFileSync(path.join(__dirname, f), 'utf8');
 const src = ['src/trunk-config.js', 'shared/model.js', 'shared/phrase-data.js', 'shared/world-data.js', 'shared/map.jsx', 'src/store.js', 'shared/app.jsx', 'shared/extras.jsx', 'shared/phrases.jsx', 'shared/shiori.jsx', 'shared/consult.jsx', 'src/trunk.jsx'].map(S).join('\n');
 const code = Babel.transform(src, { presets: ['react'] }).code.replace(/<\/script/gi, '<\\/script');
@@ -12,7 +12,7 @@ const html = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Trunk.</title>
-<meta name="robots" content="noindex">
+
 <link rel="icon" href="/icon.png">
 <link rel="apple-touch-icon" href="/icons/trunk-180.png">
 <link rel="manifest" href="manifest.webmanifest">

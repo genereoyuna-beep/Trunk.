@@ -4,57 +4,90 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>プライバシーポリシー | Trunk.</title>
-<meta name="robots" content="noindex">
+<link rel="icon" href="/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --navy:#18243d;--accent:#0096c7;--bg:#f5f8ff;--surface:#ffffff;
-  --muted:#5a6a8a;--border:#dce8f5;
+  --ground:#F3F4F1; --surface:#FFFFFF; --sunk:#ECEEE9; --sunk2:#E4E6E1; --line:#DADDD6;
+  --ink:#15202B; --ink2:#3D4650; --muted:#5A6470; --faint:#8A929A;
+  --blue:#1D4ED8; --blue-soft:#E3ECFD;
+  --orange:#B45309; --orange-ink:#8A3B06; --orange-bar:#E8892B; --orange-soft:#FDEBD3;
+  --f-display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-mono:"Chivo Mono","Noto Sans JP","Hiragino Sans",sans-serif;
+  color-scheme:light;
 }
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--navy);line-height:1.8}
-nav{background:var(--surface);border-bottom:1px solid var(--border)}
-.nav-inner{max-width:760px;margin:0 auto;padding:0 20px;height:54px;display:flex;align-items:center}
-.nav-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--navy);text-decoration:none}
-.nav-logo span{color:var(--accent)}
-main{max-width:760px;margin:0 auto;padding:56px 20px 80px}
-h1{font-family:'Syne',sans-serif;font-size:clamp(26px,4vw,34px);font-weight:800;letter-spacing:-1px;margin-bottom:8px}
-.updated{font-size:13px;color:var(--muted);margin-bottom:40px}
-p,li{font-size:15px;color:var(--navy)}
-p{margin-bottom:12px}
-a{color:var(--accent)}
-table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:14px}
-th,td{text-align:left;padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
-th{color:var(--muted);font-weight:600;width:11em}
-@media(max-width:560px){th,td{display:block;width:auto;border:none;padding:4px 0}td{padding-bottom:14px;border-bottom:1px solid var(--border)}}
-footer{border-top:1px solid var(--border);padding:24px 20px;text-align:center;font-size:12px;color:var(--muted)}
-h2{font-family:'Syne','DM Sans',sans-serif;font-size:19px;font-weight:700;margin:36px 0 12px}
-ul{margin:0 0 12px 20px}
-li{margin-bottom:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.8;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--blue)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;line-height:1.35;text-wrap:balance}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+@media(min-width:720px){.wrap{padding:0 28px}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;border:1.5px solid var(--ink)}
+.btn.primary{background:var(--ink);color:#F3F4F1}
+.btn.ghost{background:transparent;color:var(--ink)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+header{position:sticky;top:0;z-index:20;background:rgba(243,244,241,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hd{display:flex;align-items:center;gap:20px;height:62px}
+.logo{font-family:var(--f-display);font-weight:900;font-size:22px;text-decoration:none;color:var(--ink)}
+.logo span{color:var(--blue)}
+.hd nav{display:none;gap:22px;margin-left:12px}
+.hd nav a{font-size:13.5px;color:var(--ink2);text-decoration:none}
+.hd nav a[aria-current="page"]{color:var(--ink);font-weight:700}
+.hd .btn{margin-left:auto;min-height:40px;font-size:13.5px}
+@media(min-width:820px){.hd nav{display:flex}}
+footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
+.ft{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between}
+.ft nav{display:flex;flex-wrap:wrap;gap:8px 18px}
+.ft a{text-decoration:none;color:inherit}
+.ft a:hover{color:var(--ink)}
+
+.doc{max-width:820px;padding-top:44px;padding-bottom:80px}
+.doc h1{font-size:clamp(28px,5.6vw,40px);font-weight:900;margin:10px 0 6px}
+.doc .updated{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-bottom:28px}
+.doc h2{font-size:20px;margin:40px 0 12px;display:flex;gap:10px;align-items:baseline}
+.doc h2 .no{font-family:var(--f-mono);font-size:13px;color:var(--blue);font-weight:600;letter-spacing:.08em}
+.doc p{color:var(--ink2);margin-bottom:12px}
+.doc ul{list-style:none;display:grid;gap:8px;margin:0 0 14px}
+.doc ul li{position:relative;padding-left:16px;color:var(--ink2)}
+.doc ul li::before{content:"";position:absolute;left:2px;top:.75em;width:6px;height:6px;border-radius:3px;background:var(--faint)}
+.doc b{color:var(--ink)}
+.tbl{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:8px 0 18px}
+.tbl .r{display:grid;gap:4px 18px;padding:14px 18px;border-top:1px solid var(--sunk)}
+.tbl .r:first-child{border-top:none}
+.tbl .k{font-family:var(--f-display);font-weight:700;font-size:14px}
+.tbl .v{font-size:14.5px;color:var(--ink2)}
+@media(min-width:720px){.tbl .r{grid-template-columns:13em minmax(0,1fr)}}
 </style>
 </head>
 <body>
-
-<nav><div class="nav-inner"><a class="nav-logo" href="/">Trunk<span>.</span></a></div></nav>
-
-<main>
+<header>
+  <div class="wrap hd">
+    <a class="logo" href="/" aria-label="Trunk. トップ">Trunk<span>.</span></a>
+    <nav aria-label="サイト">
+      <a href="/#features">機能</a>
+      <a href="/guide.html">使い方</a>
+      <a href="/#pricing">料金</a>
+      <a href="/#faq">よくある質問</a>
+    </nav>
+    <a class="btn primary" href="/app/">無料ではじめる</a>
+  </div>
+</header>
+<main class="wrap doc">
+<div class="eyebrow">Privacy</div>
 <h1>プライバシーポリシー</h1>
 <p class="updated">最終更新日: 2026年10月16日</p>
 <p>Trunk.（以下「本サービス」）は、旅行の日程・手配・予算・持ち物などをまとめて管理するためのWebアプリです。本ポリシーでは、本サービスが取得する情報と、その取り扱いについて説明します。</p>
 
-<h2>1. 取得する情報</h2>
-<table>
-<tr><th>Googleアカウントの情報</th><td>ログインしたときに Google から提供される、メールアドレス・表示名・プロフィール画像のURL</td></tr>
-<tr><th>旅行のデータ</th><td>入力された日程、宿・移動・予定、予算と支出、持ち物、参加者の名前、メモ、フレーズ集、緊急時の情報（パスポートや保険などを入力した場合）など</td></tr>
-<tr><th>共有ページからのリクエスト</th><td>共有ページを見た人が送ったお名前（任意）とリクエストの内容</td></tr>
-<tr><th>機能の要望</th><td>アプリから送られた要望の内容。送った人のアカウントと結びつけて保存しますが、名前やメールアドレスは送信内容に含めません</td></tr>
-<tr><th>お問い合わせ</th><td>お問い合わせフォームに入力された返信先メールアドレス・お名前・内容</td></tr>
-<tr><th>端末内の保存</th><td>ログイン状態の維持や、最後に開いた旅行などを、お使いのブラウザに保存します（後述）</td></tr>
-</table>
+<h2><span class="no">01</span>取得する情報</h2>
+<div class="tbl"><div class="r"><div class="k">Googleアカウントの情報</div><div class="v">ログインしたときに Google から提供される、メールアドレス・表示名・プロフィール画像のURL</div></div><div class="r"><div class="k">旅行のデータ</div><div class="v">入力された日程、宿・移動・予定、予算と支出、持ち物、参加者の名前、メモ、フレーズ集、緊急時の情報（パスポートや保険などを入力した場合）など</div></div><div class="r"><div class="k">共有ページからのリクエスト</div><div class="v">共有ページを見た人が送ったお名前（任意）とリクエストの内容</div></div><div class="r"><div class="k">機能の要望</div><div class="v">アプリから送られた要望の内容。送った人のアカウントと結びつけて保存しますが、名前やメールアドレスは送信内容に含めません</div></div><div class="r"><div class="k">お問い合わせ</div><div class="v">お問い合わせフォームに入力された返信先メールアドレス・お名前・内容</div></div><div class="r"><div class="k">端末内の保存</div><div class="v">ログイン状態の維持や、最後に開いた旅行などを、お使いのブラウザに保存します（後述）</div></div></div>
 
-<h2>2. 利用目的</h2>
+<h2><span class="no">02</span>利用目的</h2>
 <ul>
 <li>旅行の作成・保存・編集と、しおり・地図などの機能を提供するため</li>
 <li>共有リンクで旅程を見せる機能と、招待した人と一緒に編集する機能を提供するため</li>
@@ -63,19 +96,19 @@ li{margin-bottom:6px}
 </ul>
 <p>これ以外の目的には利用しません。広告の配信や、行動を追跡する解析ツールは使っていません。</p>
 
-<h2>3. データの保存場所</h2>
+<h2><span class="no">03</span>データの保存場所</h2>
 <p>旅行のデータとアカウントの情報は、データベースサービス Supabase の東京リージョン（日本）に保存します。保存したデータは、本人と、本人が招待した人だけが読み書きできるように制限しています。</p>
 
-<h2>4. 共有リンクと共同編集</h2>
+<h2><span class="no">04</span>共有リンクと共同編集</h2>
 <ul>
 <li><b>見せるだけの共有リンク</b>：リンクを知っている人は、ログインなしで旅程・しおり・地図などを見られます。緊急時の情報、支出の記録、ほかの参加者の持ち物は表示しません。リンクは推測されにくいランダムな文字列ですが、リンクを知った第三者による閲覧を完全に防ぐものではありません。「共有を止める」を押すと、すぐに開けなくなります。</li>
 <li><b>一緒に編集する（招待リンク）</b>：招待リンクから参加した人は、その旅行を見て編集できます。参加者どうしには、Googleアカウントの表示名が表示されます。招待リンクは30日で使えなくなり、作った人はいつでもリンクを止めたり、参加者を外したりできます。</li>
 </ul>
 
-<h2>5. AIに相談</h2>
+<h2><span class="no">05</span>AIに相談</h2>
 <p>「AIに相談」は、旅程をまとめた相談文を作り、あなたが選んだAIサービス（ChatGPT・Claude・Gemini）を開く機能です。本サービスがAIサービスにデータを直接送ることはありません。相談文は、あなたがボタンを押したときに、開いたページのアドレスやコピーした文章として、そのAIサービスに渡ります。相談文には、パスポートや保険などの緊急時の情報は入れません。AIサービスでの取り扱いには、各社のプライバシーポリシーが適用されます。</p>
 
-<h2>6. 利用している外部サービス</h2>
+<h2><span class="no">06</span>利用している外部サービス</h2>
 <ul>
 <li><b>Supabase</b>：データベース・ログインの仕組み</li>
 <li><b>Google</b>：Googleアカウントでのログイン、Webフォントの配信（Google Fonts）、お問い合わせの受付（Google フォーム）</li>
@@ -85,22 +118,32 @@ li{margin-bottom:6px}
 </ul>
 <p>各サービスでの取り扱いには、各社のプライバシーポリシーが適用されます。</p>
 
-<h2>7. 第三者への提供</h2>
+<h2><span class="no">07</span>第三者への提供</h2>
 <p>法令に基づく場合を除き、本人の同意なく、取得した情報を第三者に提供しません。</p>
 
-<h2>8. 端末内の保存（Cookie・ローカルストレージ）</h2>
+<h2><span class="no">08</span>端末内の保存（Cookie・ローカルストレージ）</h2>
 <p>ログイン状態の維持、最後に開いた旅行、一度だけ表示するお知らせを閉じたかどうかなどを、お使いのブラウザのローカルストレージに保存します。これらは本サービスの動作のためだけに使い、広告などには使いません。</p>
 
-<h2>9. データの削除</h2>
+<h2><span class="no">09</span>データの削除</h2>
 <p>旅行は、アプリの「共有と設定」からいつでも削除できます。削除した旅行は元に戻せません。アカウントとすべてのデータの削除を希望される場合は、<a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせフォーム</a>からご連絡ください。</p>
 
-<h2>10. 改定</h2>
+<h2><span class="no">10</span>改定</h2>
 <p>本ポリシーは、必要に応じて改定することがあります。大切な変更がある場合は、本サイトでお知らせします。</p>
 
-<h2>11. お問い合わせ</h2>
+<h2><span class="no">11</span>お問い合わせ</h2>
 <p>本ポリシーに関するお問い合わせは、<a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせフォーム</a>からお願いします。</p>
 </main>
-
-<footer><a href="/tokushoho.html" style="color:inherit">特定商取引法に基づく表記</a> ・ © 2026 Trunk. All rights reserved.</footer>
+<footer>
+  <div class="wrap ft">
+    <a class="logo" href="/" style="font-size:18px">Trunk<span>.</span></a>
+    <nav aria-label="フッター">
+      <a href="/guide.html">使い方ガイド</a>
+      <a href="/privacy.html">プライバシーポリシー</a>
+      <a href="/tokushoho.html">特定商取引法に基づく表記</a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせ</a>
+    </nav>
+    <span>© 2026 Trunk.</span>
+  </div>
+</footer>
 </body>
 </html>

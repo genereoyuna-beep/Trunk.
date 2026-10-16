@@ -22,6 +22,7 @@ const Store = {
       meta.set(r.id, { version: r.version, pass: !!r.pass_id, joined: r.owner_id !== me });
     });
     this.cache = cache; this.meta = meta;
+    await this.loadPasses().catch(() => {});
     this.emit();
   },
   watchTrips(cb, onErr) {
@@ -94,6 +95,27 @@ const Store = {
   async removeMember(tripId, userId) {
     const { error } = await SB.from("trip_members").delete().eq("trip_id", tripId).eq("user_id", userId);
     if (error) throw error;
+  },
+  // ===== 有料パス =====
+  // passState：使っていない旅行パスの数と、3か月パスの期限。旅行一覧と一緒に読み直す
+  passState: { unusedTrip: 0, until: null, list: [] },
+  async loadPasses() {
+    const { data, error } = await SB.from("passes").select("id,kind,valid_until,used_at,created_at").order("created_at", { ascending: false });
+    if (error) return;
+    const now = Date.now();
+    const valid3m = data.filter(p => p.kind === "3m" && p.valid_until && Date.parse(p.valid_until) > now).map(p => p.valid_until).sort();
+    this.passState = { unusedTrip: data.filter(p => p.kind === "trip" && !p.used_at).length, until: valid3m.length ? valid3m[valid3m.length - 1] : null, list: data };
+    passWatch.emit();
+  },
+  canExceed() { const p = this.passState; return p.unusedTrip > 0 || (p.until && Date.parse(p.until) > Date.now()); },
+  async buy(kind) {
+    const { data, error } = await SB.functions.invoke("create-checkout", { body: { kind } });
+    if (error || !data || !data.url) {
+      let code = "error";
+      try { const b = await error.context.json(); code = b.error || code; } catch (e) {}
+      throw { code };
+    }
+    location.href = data.url;
   },
   // ===== 見る専用の共有リンク（作った人だけ） =====
   async share(tripId) {

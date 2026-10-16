@@ -1127,6 +1127,7 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
           </button>); })}
       </div>
       {limited && !form && <div className="note">{FREE_LIMIT_MSG}</div>}
+      {limited && !form && typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
       {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "" })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
       {form && (
         <section className="card stack" style={{ gap: 10 }}>
@@ -1318,7 +1319,8 @@ function App() {
   };
   const flushNow = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; const id = idRef.current, d = draftRef.current; if (id && d) save(id, d); } };
   const pickTrip = (id) => { flushNow(); rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("home"); };
-  const atLimit = !!FEATURES.freeLimit && activeTripCount(trips) >= FEATURES.freeLimit;
+  // パス（使っていない旅行パス、期間中の3か月パス）があれば、枠を超えても作れる（Trunk. の Store.canExceed）
+  const atLimit = !!FEATURES.freeLimit && activeTripCount(trips) >= FEATURES.freeLimit && !(Store.canExceed && Store.canExceed());
   const createTrip = async (form) => {
     if (atLimit) { toast("無料版では旅行は1つずつです"); return; }
     flushNow();
@@ -1536,6 +1538,7 @@ function App() {
         ))}
       </nav>
       <main className="main">
+        {tab === "home" && typeof TrunkPassBanner === "function" && <TrunkPassBanner onTrips={() => setSheet({ kind: "trips" })} />}
         {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
         {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}

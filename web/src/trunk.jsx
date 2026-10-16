@@ -1,4 +1,63 @@
 // ================= Trunk. だけの画面 =================
+// ===== 有料パス =====
+const PASS_SALES_START = Date.parse("2026-12-01T00:00:00+09:00");
+// 12/1より前に試すとき（Stripe のテスト環境）は、アプリを ?passtest=1 で開く
+const passTest = (() => { try { if (new URLSearchParams(location.search).get("passtest") === "1") sessionStorage.setItem("trunk-passtest", "1"); return sessionStorage.getItem("trunk-passtest") === "1"; } catch (e) { return false; } })();
+const passWatch = {
+  subs: new Set(),
+  emit() { this.subs.forEach(f => f(Date.now())); },
+  use() { const [, set] = useState(0); useEffect(() => { this.subs.add(set); return () => { this.subs.delete(set); }; }, []); return Store.passState; },
+};
+const fmtDay = (iso) => { const d = new Date(iso); return (d.getMonth() + 1) + "月" + d.getDate() + "日"; };
+function TrunkBuyPass() {
+  const [st, setSt] = useState("");
+  const open = passTest || Date.now() >= PASS_SALES_START;
+  const buy = async (kind) => {
+    setSt("busy");
+    try { await Store.buy(kind); } catch (e) { setSt(e.code === "not_yet" ? "notyet" : "err"); }
+  };
+  if (!open) return <div className="note">旅行パス・3か月パスは、2026年12月1日から購入できます。それまでは、今の旅行が終わると次の旅行を無料で作れます。</div>;
+  return (
+    <div className="stack" style={{ gap: 8 }}>
+      <button className="btn primary block" disabled={st === "busy"} onClick={() => buy("trip")}>旅行パスを買う（1旅行 440円）</button>
+      <button className="btn block" disabled={st === "busy"} onClick={() => buy("3m")}>3か月パスを買う（980円）</button>
+      {Date.now() < Date.parse("2027-02-01T00:00:00+09:00") && <div className="xs muted">公開記念：2027年1月31日まで、支払いの画面でコード <b className="mono">TRUNKSTART</b> を入れると半額です（お一人さま1回）。</div>}
+      <div className="xs muted">支払いは Stripe の画面で行います（クレジットカード）。自動更新はありません。{passTest ? "（テストモード）" : ""}</div>
+      {st === "busy" && <div className="small muted">支払いの画面に移動しています…</div>}
+      {st === "notyet" && <div className="err">販売は2026年12月1日からです。</div>}
+      {st === "err" && <div className="err">支払いの画面を開けませんでした。時間をおいて、もう一度お試しください。</div>}
+    </div>
+  );
+}
+// 支払いから戻ってきたとき・3か月パスの期限が近いときに、ホームに出す
+function TrunkPassBanner({ onTrips }) {
+  const ps = passWatch.use();
+  const [paid, setPaid] = useState(() => { try { return sessionStorage.getItem("trunk-paid") || ""; } catch (e) { return ""; } });
+  useEffect(() => {
+    if (!paid || paid === "cancel") return;
+    // Stripe からの知らせが少し遅れることがあるので、何回か読み直す
+    let n = 0; const iv = setInterval(() => { n++; Store.loadPasses(); if (n >= 5) clearInterval(iv); }, 2000);
+    return () => clearInterval(iv);
+  }, [paid]);
+  const close = () => { try { sessionStorage.removeItem("trunk-paid"); } catch (e) {} setPaid(""); };
+  if (paid === "cancel") return <section className="card row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><span className="small">支払いを取りやめました。料金はかかっていません。</span><button className="btn ghost" onClick={close}>閉じる</button></section>;
+  if (paid) {
+    const ready = paid === "3m" ? !!ps.until : ps.unusedTrip > 0;
+    return (
+      <section className="card stack" style={{ gap: 8, marginBottom: 14, border: "2px solid var(--blue)" }}>
+        <b>{ready ? (paid === "3m" ? "3か月パスが使えるようになりました" : "旅行パスが使えるようになりました") : "お支払いを確かめています…"}</b>
+        <span className="small muted">{ready ? (paid === "3m" ? fmtDay(ps.until) + "まで、旅行をいくつでも作れます。" : "「新しい旅行」で作った旅行に、このパスが使われます。") : "少しだけお待ちください。数分たっても変わらないときは、お問い合わせフォームからご連絡ください。"}</span>
+        <div className="row" style={{ gap: 8 }}>{ready && <button className="btn primary" onClick={() => { close(); onTrips(); }}>新しい旅行を作る</button>}<button className="btn ghost" onClick={close}>閉じる</button></div>
+      </section>
+    );
+  }
+  if (ps.until) {
+    const left = Math.ceil((Date.parse(ps.until) - Date.now()) / 86400000);
+    if (left <= 7) return <div className="note" style={{ marginBottom: 14 }}>3か月パスは <b>{fmtDay(ps.until)}</b> までです（あと{left}日）。期限後も、作った旅行はそのまま使えます。新しく旅行を作るには、無料の枠かパスが必要になります。</div>;
+  }
+  return null;
+}
+
 // 共有ページから届いた新しいリクエストの数を、30秒ごとと画面に戻ったときに確かめる（作った人の旅行だけ）
 const requestWatch = {
   tripId: null, count: 0, subs: new Set(), timer: null,
@@ -223,6 +282,7 @@ function Root() {
       const err = q.get("error_description") || "";
       await Store.init().catch(() => {});
       // 招待リンク（?join=）：ログインしていなければ、ログイン後に戻ってきたときに受ける
+      if (q.get("paid")) { try { sessionStorage.setItem("trunk-paid", q.get("paid")); } catch (e) {} }
       const join = q.get("join") || (() => { try { return sessionStorage.getItem("trunk-join"); } catch (e) { return null; } })();
       let joinErr = "";
       if (join && !Store.session) { try { sessionStorage.setItem("trunk-join", join); } catch (e) {} }
@@ -233,7 +293,7 @@ function Root() {
       }
       if (alive) setSt({ ready: true, session: Store.session, err, joinErr, joining: !!join });
       // ログインから戻ってきたときの ?code= を消す
-      if (q.has("code") || q.has("error") || q.has("join")) history.replaceState(null, "", location.pathname + location.hash);
+      if (q.has("code") || q.has("error") || q.has("join") || q.has("paid") || q.has("passtest")) history.replaceState(null, "", location.pathname + location.hash);
     })();
     const { data } = SB.auth.onAuthStateChange((_e, session) => { Store.session = session; if (alive) setSt(s => ({ ...s, ready: true, session })); });
     return () => { alive = false; data.subscription.unsubscribe(); };

@@ -51,15 +51,20 @@ function shioriUnits(t) {
   const toCode = (round && firstMove && codeFor(firstMove.toCity)) || codeFor(toPlace);
   const BigPlace = ({ code, name }) => code ? <b className="mono">{code}</b> : <b className="tk-bigname">{splitCity(name).main || "—"}</b>;
   const pax = (t.participants || []).join(" / ") || "—";
+  // 表紙の真ん中のマーク：街から街への移動でいちばん多い手段（同じなら飛行機を優先）
+  const legModes = transitsOf(t).filter(isLeg).map(x => MODE_ART[x.mode]).filter(Boolean);
+  const modeCount = legModes.reduce((m, k) => ({ ...m, [k]: (m[k] || 0) + 1 }), {});
+  const mainMode = Object.keys(modeCount).sort((a, b) => modeCount[b] - modeCount[a] || (a === "plane" ? -1 : b === "plane" ? 1 : 0))[0] || "plane";
+  const ticketLabel = mainMode === "train" ? "TRAIN TICKET" : mainMode === "bus" ? "BUS TICKET" : mainMode === "ship" ? "FERRY TICKET" : mainMode === "car" ? "ROAD TRIP" : "BOARDING PASS";
   U.push({ key: "cover", page: true, el: (
     <div className="tk">
-      <div className="tk-band"><b>BOARDING PASS</b><span>TRAVEL ITINERARY</span></div>
+      <div className="tk-band"><b>{ticketLabel}</b><span>TRAVEL ITINERARY</span></div>
       <div className="tk-main">
         <div className="tk-label">TRIP</div>
         <h1 className="tk-name">{t.name}</h1>
         <div className="tk-route">
           <div><div className="tk-label">FROM</div><BigPlace code={fromCode} name={startPlace} />{fromCode && <span>{placeLabel(startPlace)}</span>}</div>
-          <div className="tk-plane"><span /><Icon n="plane" s={20} w={1.6} /><span /></div>
+          <div className="tk-plane"><span /><Icon n={mainMode} s={20} w={1.6} /><span /></div>
           <div style={{ textAlign: "right" }}><div className="tk-label">{round ? "TO / ROUND TRIP" : "TO"}</div><BigPlace code={toCode} name={toPlace} />{toCode && <span>{placeLabel(toPlace)}</span>}</div>
         </div>
         <div className="tk-grid">

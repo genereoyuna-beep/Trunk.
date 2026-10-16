@@ -63,10 +63,14 @@ function routeOf(t) {
   const stops = [], segs = [];
   let prev = null, n = 0;
   const keyOf = (ll) => ll[0].toFixed(2) + "," + ll[1].toFixed(2);
+  // 近くの点をまとめる距離は、旅行全体の広さで変える（世界をまたぐなら約80km、国内の旅なら約10km）
+  const lls = sorted.flatMap(x => x.type === "transit" ? [geoFor(x.fromCity, t.geo), geoFor(x.toCity, t.geo)] : [geoFor(x.city, t.geo)]).filter(Boolean);
+  const span = lls.length ? Math.max(Math.max(...lls.map(l => l[0])) - Math.min(...lls.map(l => l[0])), Math.max(...lls.map(l => l[1])) - Math.min(...lls.map(l => l[1]))) : 0;
+  const near = span > 25 ? [0.7, 0.9] : span > 6 ? [0.3, 0.4] : [0.09, 0.11];
   const stopAt = (ll, label, extra) => {
     const k = keyOf(ll);
     // 同じ場所、または近く（空港と市内など、約80km以内）の点は1つにまとめる
-    let s = stops.find(x => x.k === k) || stops.find(x => (!extra || !x.stays.length) && Math.abs(x.ll[0] - ll[0]) < 0.7 && Math.abs(x.ll[1] - ll[1]) < 0.9);
+    let s = stops.find(x => x.k === k) || stops.find(x => (!extra || !x.stays.length) && Math.abs(x.ll[0] - ll[0]) < near[0] && Math.abs(x.ll[1] - ll[1]) < near[1]);
     if (!s) { s = { k, ll, label, nums: [], stays: [] }; stops.push(s); }
     else if (extra && !s.stays.length) { s.ll = ll; s.k = k; s.label = label; } // 滞在先の位置と名前を優先
     if (extra) { s.nums.push(++n); s.stays.push(extra); }

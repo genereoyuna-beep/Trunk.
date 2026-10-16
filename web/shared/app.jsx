@@ -51,7 +51,10 @@ function SuggestIn({ value, onChange, options, ...p }) {
   return <><input type="text" list={id} value={value ?? ""} onChange={e => onChange(e.target.value)} autoComplete="off" {...p} /><datalist id={id}>{opts.map(o => <option key={o} value={o} />)}</datalist></>;
 }
 // 場所の入力：Trunk. では、旅行の中の場所（都市・空港など）と Google の候補を一緒に出す。ないとき（アーティファクト版）は今までどおり
+// Google の候補で選んだ場所の位置（緯度・経度）を、地図のために旅行へ保存する
+const GeoCtx = React.createContext(null);
 function PlaceIn({ value, onChange, onPick, kind, options, placeholder }) {
+  const saveGeo = React.useContext(GeoCtx);
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const tm = useRef(null), seq = useRef(0);
@@ -68,7 +71,11 @@ function PlaceIn({ value, onChange, onPick, kind, options, placeholder }) {
   };
   const pick = async (it) => {
     setOpen(false); setItems([]);
-    try { const r = await it.pick(); onPick ? onPick(r, it) : onChange(r.name || it.main); } catch (e) { onChange(it.main); }
+    try {
+      const r = await it.pick();
+      onPick ? onPick(r, it) : onChange(r.name || it.main);
+      if (saveGeo && r.lat != null && r.lng != null) saveGeo([r.name, it.main, r.address], [Math.round(r.lat * 1e4) / 1e4, Math.round(r.lng * 1e4) / 1e4]);
+    } catch (e) { onChange(it.main); }
   };
   const show = open && (local.length > 0 || items.length > 0);
   return (
@@ -1630,6 +1637,7 @@ function App() {
   const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", settings: "共有と設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", shiori: "旅のしおり", suggest: "予定の提案", consult: "AIに相談", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
 
   return (
+    <GeoCtx.Provider value={(names, ll) => update(tr => ({ ...tr, geo: { ...(tr.geo || {}), ...Object.fromEntries(names.filter(Boolean).map(n => [n, ll])) } }))}>
     <SuggestCtx.Provider value={sugg}>
     <div className="app">
       <header className={"topbar" + (scrolled ? " scrolled" : "")}>
@@ -1719,6 +1727,7 @@ function App() {
       {notice && <div className="noticebar" role="alert"><span>{notice}</span><button className="btn" onClick={() => setNotice("")}>閉じる</button></div>}
     </div>
     </SuggestCtx.Provider>
+    </GeoCtx.Provider>
   );
 }
 

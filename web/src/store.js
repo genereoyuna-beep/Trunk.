@@ -12,14 +12,14 @@ const Store = {
   // pass：パスで準備している旅行、joined：招待されて参加した旅行。どちらも無料の枠には数えない
   emit() { const list = [...this.cache].map(([id, data]) => ({ id, data, pass: !!(this.meta.get(id) || {}).pass, joined: this.isJoined(id) })); this.listeners.forEach(f => f(list)); },
   async load() {
-    const { data, error } = await SB.from("trips").select("id,data,pass_id,version,owner_id,updated_at").order("updated_at", { ascending: false });
+    const { data, error } = await SB.from("trips").select("id,data,pass_id,version,owner_id,started_on,planned_end,postponed,updated_at").order("updated_at", { ascending: false });
     if (error) throw error;
     const me = this.userId(), cache = new Map(), meta = new Map();
     data.forEach(r => {
       // 保存中の旅行は、手元の内容と版番号をそのまま使う（保存が終われば揃う）
       if (this.inFlight.has(r.id) && this.cache.has(r.id)) { cache.set(r.id, this.cache.get(r.id)); meta.set(r.id, this.meta.get(r.id)); return; }
       cache.set(r.id, r.data);
-      meta.set(r.id, { version: r.version, pass: !!r.pass_id, joined: r.owner_id !== me });
+      meta.set(r.id, { version: r.version, pass: !!r.pass_id, passId: r.pass_id, joined: r.owner_id !== me, startedOn: r.started_on, plannedEnd: r.planned_end, postponed: r.postponed });
     });
     this.cache = cache; this.meta = meta;
     await this.loadPasses().catch(() => {});
@@ -106,6 +106,30 @@ const Store = {
     const valid3m = data.filter(p => p.kind === "3m" && p.valid_until && Date.parse(p.valid_until) > now).map(p => p.valid_until).sort();
     this.passState = { unusedTrip: data.filter(p => p.kind === "trip" && !p.used_at).length, until: valid3m.length ? valid3m[valid3m.length - 1] : null, list: data };
     passWatch.emit();
+  },
+  // パスの出発期限（購入から1年、日本時間の日付）
+  passDeadline(p) { const d = new Date(Date.parse(p.created_at) + 9 * 3600000); d.setUTCFullYear(d.getUTCFullYear() + 1); return d.toISOString().slice(0, 10); },
+  // 保存する前に、保存先の決まり（trips_guard）と同じ考え方で、パスが外れる・新しい旅行として数える変更かを調べる
+  checkChange(id, next) {
+    const m = this.meta.get(id), prev = this.cache.get(id);
+    if (!m || !prev || m.joined) return null;
+    const today = todayISO(), r = tripRange(next), o = tripRange(prev);
+    const startedOn = m.startedOn || (o && o.start <= today ? o.start : null);
+    const plannedEnd = m.plannedEnd || (o ? o.end : null);
+    const fmt = (iso) => { const [y, mo, d] = iso.split("-"); return y + "年" + Number(mo) + "月" + Number(d) + "日"; };
+    if (startedOn && (!r || r.start > today || (plannedEnd && r.end > addDays(plannedEnd, 30)))) {
+      if (!m.postponed && r && r.start > today && today <= addDays(startedOn, 7)) return { kind: "postpone" };
+      return { kind: "renew", msg: "始まった旅行の日程を先に動かすと、新しい旅行として数えます。" + (m.pass ? "付いているパスは、ここで使い終わりになります。" : "") + "無料の枠かパスが必要です。延期（出発から7日以内）は1回まで同じ旅行のまま扱えますが、この旅行はもう使ったか、7日を過ぎています。" };
+    }
+    if (m.passId) {
+      const p = (this.passState.list || []).find(x => x.id === m.passId);
+      if (p) {
+        const dl = this.passDeadline(p), now = Date.now();
+        if ((r && r.start > dl) || (!r && (today > dl || (p.kind === "3m" && Date.parse(p.valid_until) <= now))))
+          return { kind: "deadline", msg: "このパスは " + fmt(dl) + " までに出発する旅行に使えます。" + (r ? "出発日がそれより後になるため" : "日付が未定のため") + "、この旅行はパスの対象から外れ、無料の枠かパスが必要になります。" };
+      }
+    }
+    return null;
   },
   canExceed() { const p = this.passState; return p.unusedTrip > 0 || (p.until && Date.parse(p.until) > Date.now()); },
   async buy(kind) {

@@ -1291,7 +1291,15 @@ function App() {
   }, [tripId, draft && draft.phrases]);
   const inbox = inboxAll.filter(x => x && x.status === "pending" && x.extracted).sort((a, b) => (a.receivedAt || "").localeCompare(b.receivedAt || ""));
 
-  const save = (id, data) => {
+  // パスが外れる・新しい旅行として数える変更は、保存の前に確かめる（Trunk. の Store.checkChange）
+  const [confirmBox, setConfirmBox] = useState(null);
+  const save = (id, data, sure) => {
+    const w = !sure && Store.checkChange ? Store.checkChange(id, data) : null;
+    if (w && w.kind !== "postpone") { setConfirmBox({ id, data, msg: w.msg }); return Promise.resolve(); }
+    if (w && w.kind === "postpone") {
+      toast("延期として保存しました（出発後の延期は1つの旅行で1回までです）");
+      const m = Store.meta && Store.meta.get(id); if (m) { m.postponed = true; m.startedOn = null; m.plannedEnd = null; }
+    }
     const batch = opsRef.current[id] || [];
     const json = JSON.stringify(data);
     lastSaved.current[id] = json;
@@ -1597,6 +1605,20 @@ function App() {
         </Sheet>
       )}
       {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
+      {confirmBox && (
+        <div className="noticebar" role="alertdialog" aria-label="保存の確認">
+          <span>{confirmBox.msg}</span>
+          <div className="row" style={{ gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <button className="btn" onClick={() => {
+              // 元に戻す：保存先にある内容に戻し、まだ保存していない変更も捨てる
+              const id = confirmBox.id, prev = Store.cache.get(id);
+              setConfirmBox(null); opsRef.current[id] = [];
+              if (prev && idRef.current === id) { lastSaved.current[id] = JSON.stringify(prev); const d = upgradeTrip(prev); draftRef.current = d; setDraft(d); }
+            }}>元に戻す</button>
+            <button className="btn primary" onClick={() => { const c = confirmBox; setConfirmBox(null); save(c.id, c.data, true); }}>この内容で保存</button>
+          </div>
+        </div>
+      )}
       {notice && <div className="noticebar" role="alert"><span>{notice}</span><button className="btn" onClick={() => setNotice("")}>閉じる</button></div>}
     </div>
     </SuggestCtx.Provider>

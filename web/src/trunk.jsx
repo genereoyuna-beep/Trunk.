@@ -35,6 +35,7 @@ function planSummary(ps) {
   if (ps.unusedTrip > 0) items.push("まだ使っていない旅行パス " + ps.unusedTrip + "枚");
   return items;
 }
+const fmtYmd = (iso) => { const [y, m, d] = iso.split("-"); return y + "年" + Number(m) + "月" + Number(d) + "日"; };
 function TrunkPlanLine() {
   const ps = passWatch.use();
   const items = planSummary(ps);
@@ -54,6 +55,7 @@ function TrunkPlanSection() {
           {used > 0 ? "　これまでに使った旅行パス：" + used + "枚" : ""}
         </span>
         {ps.until && Date.parse(ps.until) > Date.now() && <span className="xs muted">期限が切れても、作った旅行はそのまま使えます。自動更新はありません。</span>}
+        {(ps.list || []).filter(p => Store.passDeadline(p) >= todayISO()).map(p => <span key={p.id} className="xs muted">{p.kind === "3m" ? "3か月パス" : "旅行パス"}（{fmtDay(p.created_at)}購入）：{fmtYmd(Store.passDeadline(p))}までに出発する旅行に使えます</span>)}
       </div>
     </section>
   );

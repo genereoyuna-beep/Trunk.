@@ -4,7 +4,7 @@ declare
   u uuid := '00000000-0000-0000-0000-00000000d1a1';
   a uuid := gen_random_uuid(); b uuid := gen_random_uuid(); c uuid := gen_random_uuid(); d uuid := gen_random_uuid();
   p3 uuid; pid uuid; pp boolean; so date; res text := '';
-  stay_at int;
+  stay_txt text;
 begin
   insert into auth.users (id, aud, role, email) values (u, 'authenticated', 'authenticated', 'pass-deadline-test@example.invalid');
   insert into public.passes (user_id, kind, valid_until) values (u, '3m', now() + interval '3 months') returning id into p3;
@@ -17,11 +17,13 @@ begin
   select pass_id into pid from public.trips where id = b;
   res := res || case when pid = p3 then '1 ok; ' else '1 NG(パスが付かない); ' end;
 
-  -- 2. 1年より先に出発する旅行には、3か月パスが使えない
+  -- 2. 1年より先に出発する旅行には、3か月パスが付かない（空いている無料の枠で作られる）。もう1つは止まる
+  insert into public.trips (id, name, data) values (c, 'C', jsonb_build_object('itinerary', jsonb_build_array(jsonb_build_object('type', 'stay', 'startDate', (current_date + 400)::text, 'nights', 2))));
+  select pass_id into pid from public.trips where id = c;
   begin
-    insert into public.trips (id, name, data) values (c, 'C', jsonb_build_object('itinerary', jsonb_build_array(jsonb_build_object('type', 'stay', 'startDate', (current_date + 400)::text, 'nights', 2))));
-    res := res || '2 NG(作れてしまった); ';
-  exception when others then res := res || case when sqlerrm = 'trip_limit' then '2 ok; ' else '2 NG(' || sqlerrm || '); ' end;
+    insert into public.trips (id, name, data) values (gen_random_uuid(), 'E', jsonb_build_object('itinerary', jsonb_build_array(jsonb_build_object('type', 'stay', 'startDate', (current_date + 410)::text, 'nights', 2))));
+    res := res || '2 NG(2つ目も作れてしまった); ';
+  exception when others then res := res || case when sqlerrm = 'trip_limit' and pid is null then '2 ok; ' else '2 NG(' || sqlerrm || ', pass=' || coalesce(pid::text, 'なし') || '); ' end;
   end;
 
   -- 3. パスの旅行を1年より先にずらすと、パスから外れる（無料の枠が埋まっているので止まる）
@@ -47,8 +49,17 @@ begin
   res := res || case when pid = p3 then '5 ok; ' else '5 NG(外れた); ' end;
 
   -- 6. 出発して2日目の延期（1回目）は、同じ旅行のまま
-  delete from public.trips where id in (a, b);
-  insert into public.trips (id, name, data) values (d, 'D', jsonb_build_object('itinerary', jsonb_build_array(jsonb_build_object('type', 'stay', 'startDate', (current_date - 2)::text, 'nights', 4))));
+  delete from public.trips where id in (a, b, c);
+  -- 調べるため：消したあとに残っている旅行
+  perform set_config('role', 'none', true);
+  select string_agg(name || '(pass=' || coalesce(pass_id::text, 'なし') || ',end=' || coalesce(end_date::text, '未定') || ')', ',') into stay_txt from public.trips where owner_id = u;
+  res := res || '[消したあと残り:' || coalesce(stay_txt, 'なし') || '] ';
+  perform set_config('role', 'authenticated', true);
+  begin
+    insert into public.trips (id, name, data) values (d, 'D', jsonb_build_object('itinerary', jsonb_build_array(jsonb_build_object('type', 'stay', 'startDate', (current_date - 2)::text, 'nights', 4))));
+  exception when others then
+    raise exception 'RESULT: % 6 NG(D を作れない: %)', res, sqlerrm;
+  end;
   update public.trips set data = jsonb_build_object('itinerary', jsonb_build_array(jsonb_build_object('type', 'stay', 'startDate', (current_date + 30)::text, 'nights', 4))) where id = d;
   select postponed into pp from public.trips where id = d;
   res := res || case when pp then '6 ok; ' else '6 NG(延期として扱われない); ' end;

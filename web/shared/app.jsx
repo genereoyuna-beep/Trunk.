@@ -262,7 +262,7 @@ function LocalEditor({ t, id, update, close }) {
 }
 
 // ================= ホーム =================
-function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go, openDay, openPhrases, openEmergency, openShiori }) {
+function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go, openDay, openPhrases, openEmergency, openShiori, openSettings }) {
   const r = tripRange(t), today = todayISO();
   const days = r ? dayDiff(today, r.start) : null;
   const sorted = sortItinerary(t.itinerary || []);
@@ -299,7 +299,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
         )}
         {r && r.days <= 10 && (
           <section className="card flush divide">
-            <div style={{ padding: "12px 14px" }}><h3>日程</h3></div>
+            <div className="row" style={{ padding: "12px 14px", justifyContent: "space-between", alignItems: "center" }}><h3>日程</h3>{openSettings && <button className="btn small" onClick={openSettings}>日程を変える</button>}</div>
             {Array.from({ length: r.days }, (_, i) => addDays(r.start, i)).map((d, i) => {
               const { ev, head } = dayEvents(t, d);
               const first = ev.find(e => e.time);
@@ -1172,6 +1172,28 @@ function ShareSection({ t, onRequest, busy }) {
     </section>
   );
 }
+// 日程をまとめてずらす（延期・前倒し）
+function ShiftDates({ t, update }) {
+  const r = tripRange(t);
+  const [to, setTo] = useState("");
+  const [done, setDone] = useState("");
+  if (!r) return null;
+  const diff = isISO(to) ? dayDiff(r.start, to) : 0;
+  return (
+    <section className="stack" style={{ gap: 8 }}>
+      <div className="formsec">日程をまとめてずらす</div>
+      <div className="small muted">今の日程：{r.start.replace(/-/g, ".")}（{wdOf(r.start)}）〜 {r.end.replace(/-/g, ".")}（{wdOf(r.end)}）・{r.days}日間</div>
+      <div className="row" style={{ gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <Field label="新しい出発日"><DateIn value={to} onChange={v => { setTo(v); setDone(""); }} /></Field>
+        <button className="btn primary" disabled={!diff} onClick={() => { update(tr => shiftTripData(tr, diff)); setDone(`${diff > 0 ? diff + "日後ろ" : -diff + "日前"}にずらしました`); setTo(""); }}>
+          {diff ? `${diff > 0 ? diff + "日後ろ" : -diff + "日前"}にずらす` : "ずらす"}
+        </button>
+      </div>
+      {diff !== 0 && <div className="xs muted">新しい日程：{addDays(r.start, diff).replace(/-/g, ".")} 〜 {addDays(r.end, diff).replace(/-/g, ".")}。宿・移動・予定の日付がまとめて動きます（支出の記録の日付は動きません）。</div>}
+      {done && <div className="small muted">{done}</div>}
+    </section>
+  );
+}
 function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onRequest, busy, joined }) {
   return (
     <>
@@ -1183,6 +1205,7 @@ function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onReque
       {FEATURES.claudeShare ? <ShareSection t={t} onRequest={onRequest} busy={busy} /> : typeof TrunkShareSection === "function" ? <TrunkShareSection t={t} tripId={tripId} /> : null}
       {typeof TrunkPlanSection === "function" && <><div className="formsec" /><TrunkPlanSection /></>}
       {typeof TrunkFeedbackSection === "function" && <><div className="formsec" /><TrunkFeedbackSection /></>}
+      <ShiftDates t={t} update={update} />
       <div className="formsec" />
       <button className="btn block" onClick={onCopy}>コピーして新しい旅行を作る</button>
       <div className="small muted">旅程・持ち物・予算の枠を引き継ぎます。実際の支出と共有リンクは引き継ぎません。</div>
@@ -1551,7 +1574,7 @@ function App() {
         {tab === "home" && typeof TrunkPassBanner === "function" && <TrunkPassBanner onTrips={() => setSheet({ kind: "trips" })} />}
         {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
-        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
+        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "settings" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => addLocal()} mail={FEATURES.mail ? mail : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={t} stats={stats} update={update} />}

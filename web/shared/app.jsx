@@ -1194,24 +1194,35 @@ function ShiftDates({ t, update }) {
     </section>
   );
 }
-function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onRequest, busy, joined }) {
+// 「共有と設定」：旅行／共有／プラン／その他 の段に分ける（プラン・その他は Trunk. だけ）
+function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onRequest, busy, joined, section }) {
+  const hasPlan = typeof TrunkPlanSection === "function";
+  const hasMore = typeof TrunkFeedbackSection === "function" || FEATURES.account;
+  const tabs = [["trip", "旅行"], ["share", "共有"], ...(hasPlan ? [["plan", "プラン"]] : []), ...(hasMore ? [["more", "その他"]] : [])];
+  const [tab, setTab] = useState(tabs.some(x => x[0] === section) ? section : "trip");
   return (
     <>
-      <div className="fgrid">
-        <Field label="旅行の名前" wide><TextIn value={t.name} onChange={v => update(tr => ({ ...tr, name: v }))} /></Field>
-        {FEATURES.mail && <Field label="Gmailのラベル" wide><TextIn value={t.gmailLabel} onChange={v => update(tr => ({ ...tr, gmailLabel: v }))} placeholder="空ならキーワードで広く探す" /></Field>}
+      <div className="seg" role="tablist" aria-label="設定の種類">
+        {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>)}
       </div>
-      {FEATURES.mail && <div className="note">Gmailで予約メールにこのラベルを付けておくと、「予約・手配」の「Gmailから探す」でそのメールだけを読み取ります。読めるのは個人のGmailで、Claudeデスクトップアプリで開いたときだけです。</div>}
-      {FEATURES.claudeShare ? <ShareSection t={t} onRequest={onRequest} busy={busy} /> : typeof TrunkShareSection === "function" ? <TrunkShareSection t={t} tripId={tripId} /> : null}
-      {typeof TrunkPlanSection === "function" && <><div className="formsec" /><TrunkPlanSection /></>}
-      {typeof TrunkFeedbackSection === "function" && <><div className="formsec" /><TrunkFeedbackSection /></>}
-      <ShiftDates t={t} update={update} />
-      <div className="formsec" />
-      <button className="btn block" onClick={onCopy}>コピーして新しい旅行を作る</button>
-      <div className="small muted">旅程・持ち物・予算の枠を引き継ぎます。実際の支出と共有リンクは引き継ぎません。</div>
-      <div className="formsec" />
-      {joined ? <DeleteButton label="この旅行から抜ける" onDelete={onDelete} /> : canDelete ? <DeleteButton label="この旅行を削除" onDelete={onDelete} /> : <div className="small muted">旅行が1つだけのときは削除できません。</div>}
-      {FEATURES.account && <><div className="formsec" /><button className="btn block" onClick={() => Store.signOut()}>ログアウト</button></>}
+      {tab === "trip" && <>
+        <div className="fgrid">
+          <Field label="旅行の名前" wide><TextIn value={t.name} onChange={v => update(tr => ({ ...tr, name: v }))} /></Field>
+          {FEATURES.mail && <Field label="Gmailのラベル" wide><TextIn value={t.gmailLabel} onChange={v => update(tr => ({ ...tr, gmailLabel: v }))} placeholder="空ならキーワードで広く探す" /></Field>}
+        </div>
+        {FEATURES.mail && <div className="note">Gmailで予約メールにこのラベルを付けておくと、「予約・手配」の「Gmailから探す」でそのメールだけを読み取ります。読めるのは個人のGmailで、Claudeデスクトップアプリで開いたときだけです。</div>}
+        <ShiftDates t={t} update={update} />
+        <div className="formsec">コピー・削除</div>
+        <button className="btn block" onClick={onCopy}>コピーして新しい旅行を作る</button>
+        <div className="small muted">旅程・持ち物・予算の枠を引き継ぎます。実際の支出と共有リンクは引き継ぎません。</div>
+        {joined ? <DeleteButton label="この旅行から抜ける" onDelete={onDelete} /> : canDelete ? <DeleteButton label="この旅行を削除" onDelete={onDelete} /> : <div className="small muted">旅行が1つだけのときは削除できません。</div>}
+      </>}
+      {tab === "share" && (FEATURES.claudeShare ? <ShareSection t={t} onRequest={onRequest} busy={busy} /> : typeof TrunkShareSection === "function" ? <TrunkShareSection t={t} tripId={tripId} /> : null)}
+      {tab === "plan" && hasPlan && <TrunkPlanSection />}
+      {tab === "more" && <>
+        {typeof TrunkFeedbackSection === "function" && <TrunkFeedbackSection />}
+        {FEATURES.account && <><div className="formsec">アカウント</div><button className="btn block" onClick={() => Store.signOut()}>ログアウト</button></>}
+      </>}
     </>
   );
 }
@@ -1572,9 +1583,9 @@ function App() {
       </nav>
       <main className="main">
         {tab === "home" && typeof TrunkPassBanner === "function" && <TrunkPassBanner onTrips={() => setSheet({ kind: "trips" })} />}
-        {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings" })} />}
+        {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings", section: "share" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
-        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "settings" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
+        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "settings", section: "trip" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => addLocal()} mail={FEATURES.mail ? mail : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={t} stats={stats} update={update} />}
@@ -1617,7 +1628,7 @@ function App() {
             </div>
           )}
           {sheet.kind === "trips" && <TripsSheet limited={atLimit} trips={trips} currentId={tripId} onPick={pickTrip} onCreate={createTrip} onSettings={() => setSheet({ kind: "settings" })} />}
-          {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onCopy={copyTrip} onDelete={deleteTrip} joined={!!(Store.isJoined && Store.isJoined(tripId))} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
+          {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onCopy={copyTrip} onDelete={deleteTrip} joined={!!(Store.isJoined && Store.isJoined(tripId))} section={sheet.section} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
           {sheet.kind === "import" && (
             <>
               <p>「{sheet.data.name || "読み込んだ旅行"}」のデータ（滞在 {staysOf(sheet.data).length}件・移動 {transitsOf(sheet.data).length}件）を読み込みます。</p>

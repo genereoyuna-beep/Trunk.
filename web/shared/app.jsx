@@ -50,33 +50,42 @@ function SuggestIn({ value, onChange, options, ...p }) {
   const opts = uniq(options || []).filter(o => o !== value).slice(0, 80);
   return <><input type="text" list={id} value={value ?? ""} onChange={e => onChange(e.target.value)} autoComplete="off" {...p} /><datalist id={id}>{opts.map(o => <option key={o} value={o} />)}</datalist></>;
 }
-// 場所の入力：Trunk. では Google の候補を出す（Places）。ないとき（アーティファクト版）は今までどおり
+// 場所の入力：Trunk. では、旅行の中の場所（都市・空港など）と Google の候補を一緒に出す。ないとき（アーティファクト版）は今までどおり
 function PlaceIn({ value, onChange, onPick, kind, options, placeholder }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const tm = useRef(null), seq = useRef(0);
   if (typeof Places === "undefined") return options ? <SuggestIn value={value} onChange={onChange} options={options} placeholder={placeholder} /> : <TextIn value={value} onChange={onChange} placeholder={placeholder} />;
+  const q = String(value || "").trim().toLowerCase();
+  const local = uniq((options || []).filter(Boolean)).filter(o => o !== value && (!q || o.toLowerCase().includes(q))).slice(0, q ? 4 : 8);
   const type = (v) => {
-    onChange(v);
+    onChange(v); setOpen(true);
     clearTimeout(tm.current);
     const n = ++seq.current;
-    tm.current = setTimeout(() => { Places.suggest(v, kind).then(x => { if (n === seq.current) { setItems(x); setOpen(x.length > 0); } }).catch(() => setItems([])); }, 350);
+    if (String(v).trim().length < 2) { setItems([]); return; }
+    tm.current = setTimeout(() => { Places.suggest(v, kind).then(x => { if (n === seq.current) setItems(x); }).catch(() => setItems([])); }, 350);
   };
   const pick = async (it) => {
     setOpen(false); setItems([]);
     try { const r = await it.pick(); onPick ? onPick(r, it) : onChange(r.name || it.main); } catch (e) { onChange(it.main); }
   };
+  const show = open && (local.length > 0 || items.length > 0);
   return (
     <div style={{ position: "relative" }}>
-      <input type="text" value={value ?? ""} placeholder={placeholder} autoComplete="off" onChange={e => type(e.target.value)} onFocus={() => items.length && setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 200)} />
-      {open && (
-        <div className="card flush divide" role="listbox" style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", zIndex: 30, boxShadow: "0 8px 24px rgba(21,32,43,.14)", maxHeight: 280, overflow: "auto" }}>
+      <input type="text" value={value ?? ""} placeholder={placeholder} autoComplete="off" onChange={e => type(e.target.value)} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 200)} />
+      {show && (
+        <div className="card flush divide" role="listbox" style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", zIndex: 30, boxShadow: "0 8px 24px rgba(21,32,43,.14)", maxHeight: 300, overflow: "auto", minWidth: 220 }}>
+          {local.map(o => (
+            <button key={"l" + o} type="button" role="option" className="bookrow" style={{ gridTemplateColumns: "minmax(0,1fr)", width: "100%", textAlign: "left" }} onMouseDown={e => { e.preventDefault(); setOpen(false); onChange(o); }}>
+              <span className="t1">{o}</span>
+            </button>
+          ))}
           {items.map((it, i) => (
-            <button key={i} type="button" role="option" className="bookrow" style={{ gridTemplateColumns: "minmax(0,1fr)", width: "100%", textAlign: "left" }} onMouseDown={e => { e.preventDefault(); pick(it); }}>
+            <button key={"g" + i} type="button" role="option" className="bookrow" style={{ gridTemplateColumns: "minmax(0,1fr)", width: "100%", textAlign: "left" }} onMouseDown={e => { e.preventDefault(); pick(it); }}>
               <span style={{ minWidth: 0 }}><span className="t1">{it.main}</span>{it.sub && <span className="t2">{it.sub}</span>}</span>
             </button>
           ))}
-          <div className="xs muted" style={{ padding: "4px 12px", textAlign: "right" }}>Google の候補</div>
+          {items.length > 0 && <div className="xs muted" style={{ padding: "4px 12px", textAlign: "right" }}>Google の候補</div>}
         </div>
       )}
     </div>
@@ -210,8 +219,8 @@ function TransitEditor({ t, id, update, close }) {
   return (
     <>
       <div className="fgrid">
-        <Field label="出発地"><SuggestIn value={x.fromCity} onChange={v => set({ fromCity: v })} options={[...placeOpts, ...sg.addresses]} /></Field>
-        <Field label="到着地"><SuggestIn value={x.toCity} onChange={v => set({ toCity: v })} options={[near[1], near[0], ...AIRPORTS, ...sg.cities, ...sg.addresses]} /></Field>
+        <Field label="出発地"><PlaceIn value={x.fromCity} onChange={v => set({ fromCity: v })} onPick={(r, it) => set({ fromCity: r.name || it.main })} options={[...placeOpts, ...sg.addresses]} /></Field>
+        <Field label="到着地"><PlaceIn value={x.toCity} onChange={v => set({ toCity: v })} onPick={(r, it) => set({ toCity: r.name || it.main })} options={[near[1], near[0], ...AIRPORTS, ...sg.cities, ...sg.addresses]} /></Field>
         <Field label="手段"><select value={x.mode || "未定"} onChange={e => set({ mode: e.target.value })}>{MODES.map(m => <option key={m}>{m}</option>)}</select></Field>
         <Field label="内容（任意）"><TextIn value={x.desc} onChange={v => set({ desc: v })} placeholder="例：空港リムジンバス" /></Field>
         {!short && <Field label="会社・便名"><SuggestIn value={x.airline} onChange={v => set({ airline: v })} options={[...(CARRIERS[mode] || Object.values(CARRIERS).flat()), ...sg.usedCarriers]} placeholder="例：Eurostar 9132" /></Field>}
@@ -233,7 +242,7 @@ function TransitEditor({ t, id, update, close }) {
           );
         }) : <div className="field"><span>時差</span><button className="btn small" style={{ justifySelf: "start" }} onClick={() => setShowTZ(true)}>なし（{fmtTZ(effTZ(x, "depart"))}）・直す</button></div>}
         {!short && <Field label="クラス・席"><SuggestIn value={x.cls} onChange={v => set({ cls: v })} options={CLASSES[mode] || CLASSES["飛行機"]} /></Field>}
-        {!short && <Field label="経由"><TextIn value={x.transitStops} onChange={v => set({ transitStops: v })} /></Field>}
+        {!short && <Field label="経由"><PlaceIn value={x.transitStops} onChange={v => set({ transitStops: v })} onPick={(r, it) => set({ transitStops: r.name || it.main })} /></Field>}
         <Field label="金額（円）"><NumIn value={x.price} onChange={v => set({ price: v })} /></Field>
         <Field label="人数（金額は何人分か）"><select value={x.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
         <div className="field"><span>所要時間</span><div className="mono" style={{ padding: "9px 0" }}>{dur || "—"}</div></div>

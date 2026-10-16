@@ -35,7 +35,7 @@ function TrunkPassBanner({ onTrips }) {
   useEffect(() => {
     if (!paid || paid === "cancel") return;
     // Stripe からの知らせが少し遅れることがあるので、何回か読み直す
-    let n = 0; const iv = setInterval(() => { n++; Store.loadPasses(); if (n >= 5) clearInterval(iv); }, 2000);
+    Store.loadPasses(); let n = 0; const iv = setInterval(() => { n++; Store.loadPasses(); if (n >= 20) clearInterval(iv); }, 3000);
     return () => clearInterval(iv);
   }, [paid]);
   const close = () => { try { sessionStorage.removeItem("trunk-paid"); } catch (e) {} setPaid(""); };

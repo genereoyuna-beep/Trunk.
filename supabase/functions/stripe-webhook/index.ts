@@ -21,7 +21,8 @@ Deno.serve(async (req) => {
 
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     const s = await stripe!.checkout.sessions.retrieve((event.data.object as Stripe.Checkout.Session).id, { expand: ["discounts.promotion_code"] });
-    if (s.payment_status !== "paid") return new Response("not paid", { status: 200 });
+    // 全額オフのコードで0円になったときは "no_payment_required" になる。これもパスを付ける
+    if (s.payment_status !== "paid" && s.payment_status !== "no_payment_required") return new Response("not paid", { status: 200 });
     const userId = s.metadata?.user_id, kind = s.metadata?.kind;
     if (!userId || (kind !== "trip" && kind !== "3m")) return new Response("ignored", { status: 200 });
     const promo = (s.discounts ?? []).map((d) => typeof d.promotion_code === "object" && d.promotion_code ? d.promotion_code.code : null).find(Boolean) ?? null;

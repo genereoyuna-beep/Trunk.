@@ -571,7 +571,7 @@ function DayTabs({ days, sel, setSel, today }) {
 const firstDay = (r) => { const today = todayISO(); return r ? (today >= r.start && today <= r.end ? today : r.start) : null; };
 function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
   const r = tripRange(t);
-  const [sel, setSel] = useState(() => firstDay(r));
+  const [sel, setSel] = useState(() => (window.__demo && window.__demo.day) || firstDay(r));
   useEffect(() => { if (r && (!sel || sel < r.start || sel > r.end)) setSel(firstDay(r)); }, [r && r.start, r && r.end]);
   if (!r) return <p className="empty card">日付の入った予定がまだありません。右上の「追加」から滞在を入れてください。</p>;
   const today = todayISO();
@@ -1288,9 +1288,11 @@ function App() {
   const [tripId, setTripId] = useState(null);
   const [draft, setDraft] = useState(null);
   const [tab, setTabState] = useState(() => { const h = (location.hash || "").slice(1); return TABS.includes(h) ? h : "home"; });
-  const [planView, setPlanView] = useState("list");
-  const [bookFilter, setBookFilter] = useState({ state: "open", type: "all" });
-  const [sheet, setSheet] = useState(null);
+  // window.__demo：紹介用の画面を撮るときだけ、最初に開く画面を決める（ふだんは空）
+  const DEMO = window.__demo || {};
+  const [planView, setPlanView] = useState(DEMO.view || "list");
+  const [bookFilter, setBookFilter] = useState({ state: DEMO.book || "open", type: "all" });
+  const [sheet, setSheet] = useState(DEMO.sheet ? { kind: DEMO.sheet } : null);
   const [menu, setMenu] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [notice, setNotice] = useState("");

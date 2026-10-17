@@ -228,8 +228,21 @@ function dayPoints(t, iso) {
   }));
   return pts;
 }
+// 日ごとの地図の背景（Google Maps Static API）。cx：経度、cy：mercY の値、k：1度あたりの画素
+function staticMapUrl(cx, cy, k, width, height) {
+  if (typeof MAPS_KEY === "undefined" || !MAPS_KEY) return null;
+  const z = Math.max(1, Math.min(18, Math.floor(Math.log2(k * 360 / 256))));
+  const lat = (2 * Math.atan(Math.exp(cy * Math.PI / 180)) - Math.PI / 2) * 180 / Math.PI;
+  const w = Math.min(640, Math.round(width)), h = Math.min(640, Math.round(height));
+  const style = ["feature:poi|visibility:off", "feature:transit|visibility:off", "feature:administrative|element:labels|visibility:off", "feature:road|element:labels|visibility:off",
+    "feature:road|element:geometry|color:0xffffff", "feature:road.highway|element:geometry|color:0xe2e5e0", "feature:landscape|color:0xf3f4f1", "feature:water|color:0xd6e2ec",
+    "element:labels.text.fill|color:0x8a929a", "element:labels.text.stroke|color:0xf3f4f1"]
+    .map(v => "&style=" + encodeURIComponent(v)).join("");
+  return { k: 256 * Math.pow(2, z) / 360 * (width / w), url: `https://maps.googleapis.com/maps/api/staticmap?center=${lat.toFixed(6)},${cx.toFixed(6)}&zoom=${z}&size=${w}x${h}&scale=2&language=ja&region=JP${style}&key=${MAPS_KEY}` };
+}
 function DayMap({ t, iso, width = 640, height = 300, print }) {
   const raw = useMemo(() => dayPoints(t, iso), [t, iso]);
+  const [bgOk, setBgOk] = useState(true);
   // 国をまたぐような広い日は、近く（約25km以内）の続いた点を1つにまとめる（空港・駅・宿が重なって読めなくならないように）
   const rawSpan = raw.length ? Math.max(Math.max(...raw.map(p => p.ll[1])) - Math.min(...raw.map(p => p.ll[1])), Math.max(...raw.map(p => p.ll[0])) - Math.min(...raw.map(p => p.ll[0]))) : 0;
   const pts = [];
@@ -246,10 +259,14 @@ function DayMap({ t, iso, width = 640, height = 300, print }) {
   if (y1 - y0 < minSpan) { const c = (y0 + y1) / 2; y0 = c - minSpan / 2; y1 = c + minSpan / 2; }
   const padX = (x1 - x0) * 0.18, padY = (y1 - y0) * 0.25;
   x0 -= padX; x1 += padX; y0 -= padY; y1 += padY;
-  const k = Math.min(width / (x1 - x0), height / (y1 - y0));
+  let k = Math.min(width / (x1 - x0), height / (y1 - y0));
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  // Google の地図画像を背景に敷く（キーがある版だけ）。ズームは整数なので、収まるところまで少し引いて縮尺を合わせる
+  const bg = staticMapUrl(cx, cy, k, width, height);
+  if (bg && bgOk) k = bg.k;
   const P = (lat, lng) => [width / 2 + (lng - cx) * k, height / 2 - (mercY(lat) - cy) * k];
   const wide = (x1 - x0) > 1.2;
+  const useBg = bg && bgOk;
   const land = wide ? worldPolys().filter(p => p.box[2] >= x0 - 1 && p.box[0] <= x1 + 1).map(p => {
     let d = "";
     for (let i = 0; i < p.pts.length; i += 2) { const [x, y] = P(p.pts[i + 1], p.pts[i]); d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1); }
@@ -262,8 +279,9 @@ function DayMap({ t, iso, width = 640, height = 300, print }) {
   return (
     <div className={print ? "sh-daymap" : "card"} style={print ? undefined : { padding: 8 }}>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ display: "block", background: wide ? "#E3ECF5" : "#F3F4F1", borderRadius: 10 }} role="img" aria-label={`${md(iso)}の地図`}>
-        {!wide && Array.from({ length: 9 }, (_, i) => <line key={"g" + i} x1={(i + 1) * width / 10} y1="0" x2={(i + 1) * width / 10} y2={height} stroke="#E4E6E1" strokeWidth="1" />)}
-        {land.map((d, i) => <path key={i} d={d} fill="#FFFFFF" stroke="#DADDD6" strokeWidth=".6" />)}
+        {useBg && <image href={bg.url} x="0" y="0" width={width} height={height} preserveAspectRatio="none" onError={() => setBgOk(false)} />}
+        {!useBg && !wide && Array.from({ length: 9 }, (_, i) => <line key={"g" + i} x1={(i + 1) * width / 10} y1="0" x2={(i + 1) * width / 10} y2={height} stroke="#E4E6E1" strokeWidth="1" />)}
+        {!useBg && land.map((d, i) => <path key={i} d={d} fill="#FFFFFF" stroke="#DADDD6" strokeWidth=".6" />)}
         {xy.slice(1).map((q, i) => <line key={"s" + i} x1={xy[i][0]} y1={xy[i][1]} x2={q[0]} y2={q[1]} stroke="#1D4ED8" strokeWidth="2" strokeDasharray="5 4" />)}
         {xy.map(([x, y], i) => (
           <g key={"p" + i}>

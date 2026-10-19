@@ -196,7 +196,14 @@ const Store = {
     const { error } = await SB.from("feedback").insert({ body, where_from: whereFrom });
     if (error) throw error;
   },
-  // 予約メールの取り込みは Trunk. ではまだ使わない
+  // 予約メールの転送取り込み（パスを持っている人だけ。Gmail を直接読む取り込みは Trunk. では使わない）
+  async canMailImport() { const { data } = await SB.rpc("can_mail_import"); return !!data; },
+  async myInboundAddress() { const { data, error } = await SB.rpc("my_inbound_address"); if (error) throw error; return `${data}@in.trunk-travelplanner.com`; },
+  async listInbound() {
+    const { data, error } = await SB.from("inbound_items").select("id, received_at, from_addr, subject, parsed, kind, status, error").in("status", ["parsed", "failed"]).order("received_at", { ascending: false }).limit(50);
+    if (error) throw error; return data || [];
+  },
+  async setInboundStatus(id, status) { const { error } = await SB.from("inbound_items").update({ status }).eq("id", id); if (error) throw error; },
   watchInbox(tripId, cb) { cb([]); return () => {}; },
   async inboxIds() { return new Set(); },
   async setInbox() {}, async updateInbox() {},

@@ -236,6 +236,64 @@ function TrunkShareSection({ t, tripId }) {
 }
 
 // 機能の要望。名前やメールアドレスは聞かない
+// ---- 予約メールの転送取り込み（パスを持っている人だけ） ----
+function TrunkMailCard({ t, update, toast }) {
+  const [state, setState] = useState({ ready: false, paid: false, address: "", items: [], err: "" });
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    try {
+      const paid = await Store.canMailImport();
+      if (!paid) { setState({ ready: true, paid: false, address: "", items: [], err: "" }); return; }
+      const [address, items] = await Promise.all([Store.myInboundAddress(), Store.listInbound()]);
+      setState({ ready: true, paid: true, address, items, err: "" });
+    } catch (e) { setState(s => ({ ...s, ready: true, err: "読み込めませんでした。少し待ってからもう一度お試しください。" })); }
+  };
+  useEffect(() => { load(); const id = setInterval(load, 60000); return () => clearInterval(id); }, []);
+  const decide = async (id, status) => { try { await Store.setInboundStatus(id, status); } catch (e) {} load(); };
+  const apply = (item, p) => { update(p.apply); decide(item.gmailId, "applied"); toast && toast("旅程に反映しました"); };
+  const copy = async () => { try { await navigator.clipboard.writeText(state.address); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {} };
+  if (!state.ready) return null;
+  if (!state.paid) return (
+    <section className="card stack" style={{ gap: 6 }}>
+      <h3>予約メールから取り込む</h3>
+      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを転送すると、宿や移動を読み取って旅程に反映できます。旅行パス・3か月パスを使っているときに使えます。</p>
+    </section>
+  );
+  const confirms = state.items.filter(i => i.kind === "gmail_confirm");
+  const bookings = state.items.filter(i => i.kind !== "gmail_confirm");
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <div className="row between"><h3>予約メールから取り込む</h3><button className="btn small ghost" disabled={busy} onClick={async () => { setBusy(true); await load(); setBusy(false); }}>更新</button></div>
+      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを、下のあなた専用のアドレスに転送してください。1〜2分で読み取って、ここに並びます。</p>
+      <div className="row" style={{ flexWrap: "nowrap" }}>
+        <input className="input mono" readOnly value={state.address} aria-label="転送用のアドレス" onFocus={e => e.target.select()} />
+        <button className="btn small" onClick={copy}>{copied ? "コピーしました" : "コピー"}</button>
+      </div>
+      <details className="small"><summary>Gmail で自動的に転送するには</summary>
+        <ol style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+          <li>Gmail（パソコン）の 設定 →「すべての設定を表示」→「メール転送と POP/IMAP」→「転送先アドレスを追加」に、上のアドレスを入れる</li>
+          <li>しばらくすると、ここに Gmail の確認コードが出るので、Gmail の画面に入れて確定する</li>
+          <li>「フィルタ」で、予約サイトから届くメールだけを、このアドレスに転送するようにする</li>
+        </ol>
+      </details>
+      {confirms.map(c => (
+        <div key={c.id} className="note">Gmail の転送の確認コード：<b className="mono" style={{ userSelect: "all" }}>{(c.parsed && c.parsed.code) || "（本文から読み取れませんでした）"}</b>
+          <div className="row" style={{ marginTop: 6 }}><button className="btn small" onClick={() => decide(c.id, "dismissed")}>確認した</button></div></div>
+      ))}
+      {state.err && <div className="err">{state.err}</div>}
+      {bookings.length === 0 && <p className="xs muted" style={{ margin: 0 }}>取り込み待ちのメールはありません。</p>}
+      {bookings.map(it => it.status === "failed" ? (
+        <div key={it.id} className="inboxitem"><b>{it.subject || "（件名なし）"}</b><div className="xs muted">読み取れませんでした。手で入力してください。</div>
+          <div className="row"><button className="btn small" onClick={() => decide(it.id, "dismissed")}>閉じる</button></div></div>
+      ) : (
+        <InboxItem key={it.id} t={t} onApply={apply} onDecide={decide}
+          item={{ gmailId: it.id, subject: it.subject, from: it.from_addr, receivedAt: it.received_at, extracted: normalizeBooking(it.parsed) || { ...BOOKING_DEFAULTS, summary: it.subject } }} />
+      ))}
+    </section>
+  );
+}
+
 function FeedbackForm({ whereFrom, placeholder, onDone }) {
   const [body, setBody] = useState("");
   const [st, setSt] = useState("");

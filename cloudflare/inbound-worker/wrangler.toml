@@ -1,0 +1,8 @@
+# 予約メールの転送取り込み：in.trunk-travelplanner.com 宛てのメールを受けて、Supabase の inbound-email に渡す
+name = "trunk-inbound"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+INBOUND_URL = "https://nlstbgnflnchjpnqnelr.supabase.co/functions/v1/inbound-email"
+# INBOUND_SECRET は `npx wrangler secret put INBOUND_SECRET` で入れる（Supabase の INBOUND_SECRET と同じ値）

@@ -32,3 +32,5 @@ FEATURES.esimSearch = (cities) => {
 };
 // Google でログイン（Google Identity Services）。ログイン画面に supabase.co ではなく、このサイトの名前が出るようにする
 const GOOGLE_CLIENT_ID = "910425972252-2l37io82lfbb5ja2rrossr783sh634v8.apps.googleusercontent.com";
+// 予約メールの転送取り込み（パスを持っている人だけ）。サーバー側（Cloudflare・Supabase・AI のキー）の準備ができたら true にする
+FEATURES.mailImport = false;

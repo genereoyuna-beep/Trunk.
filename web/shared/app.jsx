@@ -106,6 +106,8 @@ function Toggle({ checked, onChange, children }) {
   return <label className="toggle"><input type="checkbox" checked={!!checked} onChange={e => onChange(e.target.checked)} />{children}</label>;
 }
 // 状態：未予約／予約済み（＋キャンセル条件）／支払い済み
+// ヨーロッパの中か（Omio のリンクを出すかどうか）
+const inEurope = (ll) => !!ll && ll[0] > 34 && ll[0] < 72 && ll[1] > -25 && ll[1] < 45;
 // 紹介料が入るリンク（Trunk. 版だけ）。「PR」と、料金が変わらないことを必ず添える
 function AffLink({ href, label }) {
   return (
@@ -272,6 +274,7 @@ function TransitEditor({ t, id, update, close }) {
       <div className="formsec">予約</div>
       <Toggle checked={needs || booked} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
       {(needs || booked) && <BookingStatus status={x.status} paid={x.paymentStatus} onStatus={v => set({ status: v })} onPaid={v => set({ paymentStatus: v })} />}
+      {typeof FEATURES !== "undefined" && typeof FEATURES.transportSearch === "function" && needs && !booked && x.mode !== "飛行機" && inEurope(geoFor(x.fromCity, t.geo)) && inEurope(geoFor(x.toCity, t.geo)) && <AffLink href={FEATURES.transportSearch()} label="Omioで鉄道・バスを探す" />}
       <Field label="メモ"><textarea value={x.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
       <div className="formsec" />
       <DeleteButton label="この移動を削除" onDelete={remove} />

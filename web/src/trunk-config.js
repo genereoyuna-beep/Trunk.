@@ -17,3 +17,5 @@ FEATURES.hotelSearch = (city) => {
 };
 // 「体験・チケットを探す」リンク（A8.net 経由のアゴダ 遊び・体験。この広告は飛び先を選べないので、決まったリンク）
 FEATURES.activitySearch = () => "https://px.a8.net/svt/ejp?a8mat=4BEK9E+BQ4COI+4X1W+TS3OI";
+// 「鉄道・バスを探す」リンク（A8.net 経由の Omio。ヨーロッパ内の移動だけに出す。飛び先は選べない）
+FEATURES.transportSearch = () => "https://px.a8.net/svt/ejp?a8mat=4BEK9E+DIF60I+4JTS+5YRHE";

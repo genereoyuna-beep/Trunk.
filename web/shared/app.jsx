@@ -106,6 +106,18 @@ function Toggle({ checked, onChange, children }) {
   return <label className="toggle"><input type="checkbox" checked={!!checked} onChange={e => onChange(e.target.checked)} />{children}</label>;
 }
 // 状態：未予約／予約済み（＋キャンセル条件）／支払い済み
+// 紹介料が入るリンク（Trunk. 版だけ）。「PR」と、料金が変わらないことを必ず添える
+function AffLink({ href, label }) {
+  return (
+    <div style={{ margin: "8px 0" }}>
+      <div className="row" style={{ alignItems: "center" }}>
+        <a className="btn small" href={href} target="_blank" rel="noopener sponsored"><Icon n="ext" s={14} />{label}</a>
+        <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "0 4px" }}>PR</span>
+      </div>
+      <div className="xs muted" style={{ marginTop: 4 }}>このリンクから予約しても、料金は変わりません</div>
+    </div>
+  );
+}
 function BookingStatus({ status, paid, onStatus, onPaid, openLabel }) {
   const booked = isBooked(status);
   return (
@@ -175,13 +187,7 @@ function StayEditor({ t, id, update, close }) {
         <>
           <div className="formsec">宿</div>
           <BookingStatus status={h.status || "候補"} paid={h.paymentStatus} openLabel="未手配" onStatus={v => setHotel({ status: v })} onPaid={v => setHotel({ paymentStatus: v })} />
-          {typeof FEATURES !== "undefined" && typeof FEATURES.hotelSearch === "function" && !isBooked(h.status) && s.city && (
-            <div className="row" style={{ alignItems: "center" }}>
-              <a className="btn small" href={FEATURES.hotelSearch(splitCity(s.city).main)} target="_blank" rel="noopener sponsored"><Icon n="ext" s={14} />アゴダで{splitCity(s.city).main}の宿を探す</a>
-              <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "0 4px" }}>PR</span>
-              <span className="xs muted">このリンクから予約しても、料金は変わりません</span>
-            </div>
-          )}
+          {typeof FEATURES !== "undefined" && typeof FEATURES.hotelSearch === "function" && !isBooked(h.status) && s.city && <AffLink href={FEATURES.hotelSearch(splitCity(s.city).main)} label={`アゴダで${splitCity(s.city).main}の宿を探す`} />}
           <div className="fgrid">
             <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}) })} placeholder="候補の宿もここに" /></Field>
             <Field label="総額（円）"><NumIn value={h.total} onChange={v => setHotel({ total: v, perNight: Math.round(v / n) })} /></Field>
@@ -310,6 +316,7 @@ function LocalEditor({ t, id, update, close }) {
       </div>
       <Toggle checked={l.needsBooking} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
       <BookingStatus status={l.status || "候補"} paid={l.paymentStatus} onStatus={v => set({ status: v })} onPaid={v => set({ paymentStatus: v })} />
+      {typeof FEATURES !== "undefined" && typeof FEATURES.activitySearch === "function" && l.needsBooking && !isBooked(l.status) && ["観光", "ツアー", "入場券", "その他体験"].includes(l.category) && <AffLink href={FEATURES.activitySearch()} label="アゴダで体験・チケットを探す" />}
       <Field label="メモ"><textarea value={l.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
       <div className="formsec" />
       <DeleteButton label="この予定を削除" onDelete={remove} />

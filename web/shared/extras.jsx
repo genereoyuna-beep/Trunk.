@@ -216,7 +216,7 @@ function EmergencyView({ t, update, canEdit }) {
               {c.note && <div className="xs muted">{c.note}</div>}
             </div>
           ))}
-          {!(t.emergencyCountries || []).length && <p className="empty">{canEdit ? "「Claudeに調べてもらう」で、警察・救急の番号と日本大使館の連絡先をまとめます。" : "まだありません。"}</p>}
+          {!(t.emergencyCountries || []).length && <p className="empty">{canEdit && FEATURES.ai ? "「Claudeに調べてもらう」で、警察・救急の番号と日本大使館の連絡先をまとめます。" : <>警察・救急の番号と日本大使館の連絡先は、外務省の<a href="https://www.anzen.mofa.go.jp/" target="_blank" rel="noopener noreferrer">海外安全ホームページ</a>で確かめられます。</>}</p>}
           {(t.emergencyCountries || []).length > 0 && <div className="xs muted">番号はClaudeの知識にもとづく目安です。外務省の海外安全ホームページ等で確認してください。</div>}
         </section>
       )}

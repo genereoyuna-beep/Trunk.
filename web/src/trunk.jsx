@@ -286,6 +286,23 @@ function TrunkAfterTrip({ t, tripId }) {
   );
 }
 
+// アプリ内のブラウザ（Threads・Instagram・LINE・Facebook など）では、Google がログインを止める。外のブラウザで開いてもらう
+const IN_APP = /Barcelona|Instagram|FBAN|FBAV|Line\/|LINE\/|Twitter|TikTok|musical_ly|KAKAOTALK/i.test(navigator.userAgent || "");
+if (/Line\//i.test(navigator.userAgent || "") && !/openExternalBrowser=1/.test(location.search)) {
+  // LINE はこの印をつけると外のブラウザで開き直してくれる
+  const u = new URL(location.href); u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString());
+}
+function InAppNotice() {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => { try { await navigator.clipboard.writeText(location.href.replace(/[?&]openExternalBrowser=1/, "")); setCopied(true); } catch (e) {} };
+  return (
+    <div className="note" style={{ textAlign: "left" }}>
+      <b>アプリの中のブラウザでは、Google でログインできません。</b><br />
+      右上のメニュー（… や ⋯）から「ブラウザで開く」を選ぶか、このページのアドレスをコピーして Safari・Chrome で開いてください。
+      <div style={{ marginTop: 8 }}><button className="btn small" onClick={copy}>{copied ? "コピーしました" : "アドレスをコピー"}</button></div>
+    </div>
+  );
+}
 function LoginView({ err, joining }) {
   const [busy, setBusy] = useState(false);
   const [gErr, setGErr] = useState("");
@@ -331,6 +348,7 @@ function LoginView({ err, joining }) {
       <div className="stack" style={{ gap: 18, textAlign: "center" }}>
         <div style={{ fontFamily: "var(--f-display)", fontWeight: 900, fontSize: 34 }}>Trunk<span style={{ color: "var(--blue)" }}>.</span></div>
         <p className="muted">{joining ? <>旅行に招待されています。<br />Google アカウントでログインすると、参加して一緒に編集できます。</> : <>旅の段取りを、一日ずつ。<br />旅行を保存するには、Google アカウントでログインしてください。</>}</p>
+        {IN_APP && <InAppNotice />}
         <div ref={btnRef} style={{ display: gsiOk && !busy ? "flex" : "none", justifyContent: "center", minHeight: 44 }} />
         {!gsiOk && <button className="btn primary block" disabled={busy} onClick={login}>{busy ? "Google に移動しています…" : "Google でログイン"}</button>}
         {gsiOk && busy && <p className="small muted">ログインしています…</p>}

@@ -953,7 +953,8 @@ function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
   staysOf(t).forEach(s => { if (s.noHotel) return; const h = hotelOf(t, s); items.push({ type: "stay", date: s.startDate, icon: "bed", title: stayTitle(s, "宿"), sub: `${md(s.startDate)}〜${md(stayEnd(s))} ・ ${nightsOf(s)}泊${h && h.name ? " ・ " + h.name : ""}`, st: stayState(t, s), price: h ? h.total : 0, people: h ? peopleOf(h) : 1, edit: { kind: "stay", id: s.id } }); });
   transitsOf(t).forEach(x => items.push({ type: "transit", date: x.departDate, icon: modeIcon(x.mode), title: moveTitle(x), sub: `${md(x.departDate)}${x.departTime ? " " + x.departTime : ""} ・ ${x.mode || "未定"}${x.airline ? " ・ " + x.airline : ""}`, st: transitState(x), price: x.price, people: peopleOf(x), edit: { kind: "transit", id: x.id } }));
   (t.localTransport || []).forEach(l => items.push({ type: "local", date: l.date, icon: "ticket", title: l.desc || l.category, sub: `${md(l.date)}${l.startTime ? " " + l.startTime : ""} ・ ${l.category}`, st: localState(l), price: l.price, people: peopleOf(l), edit: { kind: "local", id: l.id } }));
-  items.sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
+  const tk = (x) => x.type === "transit" ? (transitsOf(t).find(r => r.id === (x.edit && x.edit.id)) || {}).departTime || "" : x.type === "local" ? ((t.localTransport || []).find(r => r.id === (x.edit && x.edit.id)) || {}).startTime || "" : "";
+  items.sort((a, b) => (a.date || "9").localeCompare(b.date || "9") || tk(a).localeCompare(tk(b)));
   const byState = (k) => items.filter(i => k === "all" ? true : k === "open" ? i.st.tone === "open" : i.st.tone === k);
   const shown = byState(filter.state).filter(i => filter.type === "all" || i.type === filter.type);
   return (
@@ -996,6 +997,9 @@ function MoneyView({ t, stats, update }) {
   const mine = allView ? null : my;
   const rows = (t.budget || []).map(b => ({ ...b, actualV: budgetActual(b, stats, mine) }));
   const totalT = rows.reduce((a, r) => a + (Number(r.target) || 0), 0), totalA = rows.reduce((a, r) => a + r.actualV, 0);
+  // 予算を入れた項目だけで比べる（一部の項目だけ予算を入れたときに「超過」と誤って出ないように）
+  const partial = rows.some(r => !(Number(r.target) > 0)) && totalT > 0;
+  const totalAT = rows.reduce((a, r) => a + (Number(r.target) > 0 ? r.actualV : 0), 0);
   const setB = (id, patch) => update(tr => ({ ...tr, budget: tr.budget.map(b => b.id === id ? { ...b, ...patch } : b) }));
   const costs = Object.fromEntries(participants.map(p => [p, (pb[p] && pb[p].total) || 0]));
   const effPayer = payer && participants.includes(payer) ? payer : participants.reduce((a, b) => (costs[a] || 0) >= (costs[b] || 0) ? a : b, participants[0]);
@@ -1038,9 +1042,9 @@ function MoneyView({ t, stats, update }) {
               </div>
             </div>); })}
           <div className="brow2 total"><div className="brow2-g">
-            <div><span>予算の合計</span><b className="mono">{yen(totalT)}</b></div>
-            <div><span>見込みの合計</span><b className="mono">{yen(totalA)}</b></div>
-            <div><span>差額</span><b className={"mono" + (totalT && totalT - totalA < 0 ? " over" : "")}>{totalT ? (totalT - totalA < 0 ? `${yen(totalA - totalT)} 超過` : `残り ${yen(totalT - totalA)}`) : "—"}</b></div>
+            <div><span>{partial ? "予算を入れた項目の予算" : "予算の合計"}</span><b className="mono">{yen(totalT)}</b></div>
+            <div><span>{partial ? "その項目の見込み" : "見込みの合計"}</span><b className="mono">{yen(partial ? totalAT : totalA)}</b></div>
+            <div><span>差額</span><b className={"mono" + (totalT && totalT - (partial ? totalAT : totalA) < 0 ? " over" : "")}>{totalT ? (totalT - (partial ? totalAT : totalA) < 0 ? `${yen((partial ? totalAT : totalA) - totalT)} 超過` : `残り ${yen(totalT - (partial ? totalAT : totalA))}`) : "—"}</b></div>
           </div></div>
           <button className="btn small" style={{ marginTop: 10 }} onClick={() => update(tr => ({ ...tr, budget: [...(tr.budget || []), { id: uid(), category: "", target: 0, auto: false, actual: 0 }] }))}><Icon n="plus" s={14} />項目を追加</button>
         </section>
@@ -1213,7 +1217,7 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
       {typeof TrunkPlanLine === "function" && <TrunkPlanLine />}
       {limited && !form && <div className="note">{FREE_LIMIT_MSG}</div>}
       {limited && !form && typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
-      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "" })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
+      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "", people: 1, names: [] })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
       {form && (
         <section className="card stack" style={{ gap: 10 }}>
           <h3>新しい旅行</h3>
@@ -1223,6 +1227,8 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
             <Field label="泊数"><select value={form.nights} onChange={e => setForm({ ...form, nights: Number(e.target.value) })}>{Array.from({ length: 31 }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り" : `${i}泊`}</option>)}</select></Field>
             {FEATURES.mail && <Field label="Gmailのラベル（任意）"><TextIn value={form.label} onChange={v => setForm({ ...form, label: v })} placeholder="例：2027 TAIWAN" /></Field>}
             <Field label="出発地"><TextIn value={form.home} onChange={v => setForm({ ...form, home: v })} /></Field>
+            <Field label="人数（あとで変えられます）"><select value={form.people || 1} onChange={e => setForm({ ...form, people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
+            {(form.people || 1) > 1 && <Field label="名前（任意・割り勘や持ち物に使います）" wide><div className="stack" style={{ gap: 6 }}>{Array.from({ length: form.people }, (_, i) => <TextIn key={i} value={(form.names || [])[i] || ""} onChange={v => { const n = [...(form.names || [])]; n[i] = v; setForm({ ...form, names: n }); }} placeholder={i === 0 ? "自分" : `同行者${i}`} />)}</div></Field>}
             {FEATURES.ai && <Field label="どんな旅行？（書くとClaudeが日程の下書きを作ります・任意）" wide><textarea value={form.idea} onChange={e => setForm({ ...form, idea: e.target.value })} placeholder="例：台北。夜市と温泉が好き。九份にも行きたい。のんびりめ" /></Field>}
           </div>
           {form.idea.trim() && !form.start && <div className="xs" style={{ color: "var(--orange)" }}>下書きを作るには出発日を入れてください</div>}
@@ -1465,6 +1471,12 @@ function App() {
     flushNow();
     const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36);
     let data = { ...emptyTrip(form.name.trim(), form.start || "", form.nights), gmailLabel: form.label.trim() };
+    // 人数と名前：2人以上なら参加者を作る（名前がなければ「自分」「同行者1」…）。最初の人が自分
+    if ((form.people || 1) > 1) {
+      const names = Array.from({ length: form.people }, (_, i) => String((form.names || [])[i] || "").trim() || (i === 0 ? "自分" : `同行者${i}`));
+      const uniq = names.map((n, i) => names.indexOf(n) === i ? n : `${n}${i + 1}`);
+      data = { ...data, participants: uniq, myName: uniq[0] };
+    }
     let drafted = false;
     if (form.idea && form.idea.trim() && form.start) {
       const sample = await useCap("sample");

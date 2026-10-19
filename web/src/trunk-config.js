@@ -19,3 +19,14 @@ FEATURES.hotelSearch = (city) => {
 FEATURES.activitySearch = (kw) => "https://px.a8.net/svt/ejp?a8mat=4B650I+6KD3XU+52F8+BW0YB&a8ejpredirect=" + encodeURIComponent("https://www.kkday.com/ja/product/productlist?keyword=" + encodeURIComponent(kw));
 // 「鉄道・バスを探す」リンク（A8.net 経由の Omio。ヨーロッパ内の移動だけに出す。飛び先は選べない）
 FEATURES.transportSearch = () => "https://px.a8.net/svt/ejp?a8mat=4BEK9E+DIF60I+4JTS+5YRHE";
+// 「eSIM を探す」リンク（Travelpayouts 経由の Airalo）。行き先の国のページを開く。ヨーロッパの複数の国ならヨーロッパ用
+// 国は AGODA_CITY の末尾（kr・fr など）から決める。国内だけの旅行や、表にない都市だけなら出さない
+const AIRALO_COUNTRY = { kr: "south-korea", tw: "taiwan", hk: "hong-kong", cn: "china", th: "thailand", sg: "singapore", my: "malaysia", vn: "vietnam", ph: "philippines", id: "indonesia", gu: "guam", us: "united-states", au: "australia", fr: "france", gb: "united-kingdom", it: "italy", es: "spain", de: "germany", at: "austria", cz: "czech-republic", hu: "hungary", nl: "netherlands", ch: "switzerland" };
+const AIRALO_EU = ["fr", "gb", "it", "es", "de", "at", "cz", "hu", "nl", "ch"];
+FEATURES.esimSearch = (cities) => {
+  const codes = [...new Set((cities || []).map(c => { const k = Object.keys(AGODA_CITY).find(k => c === k || String(c).startsWith(k)); return k ? AGODA_CITY[k].split("-").pop() : ""; }).filter(c => c && c !== "jp"))];
+  if (!codes.length) return null;
+  const slug = codes.length === 1 ? AIRALO_COUNTRY[codes[0]] : codes.every(c => AIRALO_EU.includes(c)) ? "europe" : "";
+  const dest = slug ? `https://www.airalo.com/ja/${slug}-esim` : "https://www.airalo.com/ja";
+  return "https://tp.media/r?campaign_id=541&marker=792061&p=8310&trs=587487&u=" + encodeURIComponent(dest);
+};

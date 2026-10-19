@@ -1170,6 +1170,16 @@ function PackView({ t, update }) {
           </section>
         );
       })}
+      {typeof FEATURES !== "undefined" && typeof FEATURES.esimSearch === "function" && (() => {
+        const u = FEATURES.esimSearch(staysOf(t).map(s => splitCity(s.city).main));
+        return u && (
+          <section className="card">
+            <h3>海外での通信</h3>
+            <p className="xs muted" style={{ margin: "4px 0 0" }}>現地でスマホを使うなら、eSIM を出発前に入れておくと着いてすぐつながります。</p>
+            <AffLink href={u} label="AiraloでeSIMを探す" />
+          </section>
+        );
+      })()}
       <div className="row" style={{ flexWrap: "nowrap" }}>
         <input className="input" aria-label="新しいカテゴリ" placeholder="カテゴリを追加（例：お土産）" value={newCat} onChange={e => setNewCat(e.target.value)} />
         <button className="btn" onClick={() => { const c = newCat.trim(); if (!c || packing[c]) return; update(tr => ({ ...tr, packing: { ...tr.packing, [c]: [] } })); setNewCat(""); }}>追加</button>

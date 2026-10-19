@@ -179,6 +179,7 @@ function StayEditor({ t, id, update, close }) {
             <div className="row" style={{ alignItems: "center" }}>
               <a className="btn small" href={FEATURES.hotelSearch(splitCity(s.city).main)} target="_blank" rel="noopener sponsored"><Icon n="ext" s={14} />アゴダで{splitCity(s.city).main}の宿を探す</a>
               <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "0 4px" }}>PR</span>
+              <span className="xs muted">このリンクから予約しても、料金は変わりません</span>
             </div>
           )}
           <div className="fgrid">

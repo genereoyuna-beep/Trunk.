@@ -10,6 +10,9 @@ const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<!-- Google アナリティクス。招待リンクなどの「?」以降は送らない -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-7ZYC3Z9MQL"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-7ZYC3Z9MQL",{page_location:location.origin+location.pathname});</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Trunk.</title>
 

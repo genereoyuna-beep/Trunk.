@@ -175,6 +175,12 @@ function StayEditor({ t, id, update, close }) {
         <>
           <div className="formsec">宿</div>
           <BookingStatus status={h.status || "候補"} paid={h.paymentStatus} openLabel="未手配" onStatus={v => setHotel({ status: v })} onPaid={v => setHotel({ paymentStatus: v })} />
+          {typeof FEATURES !== "undefined" && typeof FEATURES.hotelSearch === "function" && !isBooked(h.status) && s.city && (
+            <div className="row" style={{ alignItems: "center" }}>
+              <a className="btn small" href={FEATURES.hotelSearch(splitCity(s.city).main)} target="_blank" rel="noopener sponsored"><Icon n="ext" s={14} />アゴダで{splitCity(s.city).main}の宿を探す</a>
+              <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "0 4px" }}>PR</span>
+            </div>
+          )}
           <div className="fgrid">
             <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}) })} placeholder="候補の宿もここに" /></Field>
             <Field label="総額（円）"><NumIn value={h.total} onChange={v => setHotel({ total: v, perNight: Math.round(v / n) })} /></Field>

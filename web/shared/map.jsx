@@ -297,6 +297,23 @@ function DayMapBody({ t, iso, raw, width, height, print }) {
     return d + "Z";
   }) : [];
   const xy = pts.map(p => P(p.ll[0], p.ll[1]));
+  // 重なる点は少しずらして並べ、実際の位置へ細い線を引く。名前は右・左・下・上のうち、ほかと重ならない所に置く
+  const R = 11, dot = xy.map(q => [...q]);
+  dot.forEach((q, i) => {
+    for (let tries = 0; tries < 8 && dot.slice(0, i).some(o => Math.hypot(o[0] - q[0], o[1] - q[1]) < R * 2 + 2); tries++) {
+      const a = (tries * 45 - 45) * Math.PI / 180; q[0] = xy[i][0] + Math.cos(a) * (R * 2 + 4) * (1 + Math.floor(tries / 8)); q[1] = xy[i][1] + Math.sin(a) * (R * 2 + 4);
+    }
+  });
+  const boxes = dot.map(([x, y]) => [x - R, y - R, x + R, y + R]);
+  const hit = (b) => boxes.some(o => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]) || b[0] < 0 || b[2] > width || b[1] < 0 || b[3] > height;
+  const lab = dot.map(([x, y], i) => {
+    const text = pts[i].label.slice(0, 16), w = [...text].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? 12 : 7), 0), h = 14;
+    const cands = [[x + R + 4, y + 4, "start", [x + R + 2, y - h / 2, x + R + 6 + w, y + h / 2]], [x - R - 4, y + 4, "end", [x - R - 6 - w, y - h / 2, x - R - 2, y + h / 2]],
+      [x, y + R + 14, "middle", [x - w / 2, y + R + 2, x + w / 2, y + R + 2 + h]], [x, y - R - 6, "middle", [x - w / 2, y - R - 4 - h, x + w / 2, y - R - 4]]];
+    const c = cands.find(c => !hit(c[3])) || cands[0];
+    boxes.push(c[3]);
+    return { text, x: c[0], y: c[1], anchor: c[2] };
+  });
   // 縮尺の目安（km）
   const kmPerPx = (111.32 * Math.cos(((y0 + y1) / 2) * Math.PI / 180)) / k;
   const scaleKm = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500].find(v => v / kmPerPx > width * 0.12) || 500;
@@ -307,13 +324,14 @@ function DayMapBody({ t, iso, raw, width, height, print }) {
         {!useBg && !wide && Array.from({ length: 9 }, (_, i) => <line key={"g" + i} x1={(i + 1) * width / 10} y1="0" x2={(i + 1) * width / 10} y2={height} stroke="#E4E6E1" strokeWidth="1" />)}
         {!useBg && land.map((d, i) => <path key={i} d={d} fill="#FFFFFF" stroke="#DADDD6" strokeWidth=".6" />)}
         {xy.slice(1).map((q, i) => <line key={"s" + i} x1={xy[i][0]} y1={xy[i][1]} x2={q[0]} y2={q[1]} stroke="#1D4ED8" strokeWidth="2" strokeDasharray="5 4" />)}
-        {xy.map(([x, y], i) => (
+        {dot.map(([x, y], i) => (x !== xy[i][0] || y !== xy[i][1]) && <g key={"m" + i}><line x1={xy[i][0]} y1={xy[i][1]} x2={x} y2={y} stroke="#15202B" strokeWidth="1" /><circle cx={xy[i][0]} cy={xy[i][1]} r="2.5" fill="#15202B" /></g>)}
+        {dot.map(([x, y], i) => (
           <g key={"p" + i}>
-            <circle cx={x} cy={y} r="11" fill="#15202B" />
+            <circle cx={x} cy={y} r={R} fill="#15202B" stroke="#fff" strokeWidth="1.5" />
             <text x={x} y={y + 4} textAnchor="middle" fontSize={pts[i].to ? 9 : 11} fontWeight="700" fill="#fff" fontFamily="Chivo Mono, monospace">{pts[i].to ? `${pts[i].no}-${pts[i].to}` : pts[i].no}</text>
-            <text x={x + 15} y={y + 4} fontSize="12" fill="#15202B" fontFamily="Noto Sans JP, sans-serif" stroke="#F3F4F1" strokeWidth="3" paintOrder="stroke">{pts[i].label.slice(0, 16)}</text>
           </g>
         ))}
+        {lab.map((l, i) => <text key={"l" + i} x={l.x} y={l.y} textAnchor={l.anchor} fontSize="12" fill="#15202B" fontFamily="Noto Sans JP, sans-serif" stroke="#F3F4F1" strokeWidth="3" paintOrder="stroke">{l.text}</text>)}
         <g transform={`translate(${width - 12 - scaleKm / kmPerPx}, ${height - 14})`}>
           <line x1="0" y1="0" x2={scaleKm / kmPerPx} y2="0" stroke="#5A6470" strokeWidth="2" />
           <text x={scaleKm / kmPerPx / 2} y="-5" textAnchor="middle" fontSize="10" fill="#5A6470" fontFamily="Chivo Mono, monospace">{scaleKm} km</text>

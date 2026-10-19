@@ -1211,7 +1211,7 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
         {sorted.map(x => { const r = tripRange(x.data); return (
           <button key={x.id} className="triprow" aria-current={x.id === currentId} onClick={() => onPick(x.id)}>
             <span style={{ minWidth: 0 }}><span className="t1" style={{ fontFamily: "var(--f-display)", fontWeight: 700 }}>{x.data.name}</span><span className="t2 mono">{r ? `${r.start.replace(/-/g, ".")} 〜 ${md(r.end)} ・ ${r.days}日間` : "日程未定"}</span></span>
-            <span className="row" style={{ gap: 6, flex: "none" }}>{x.joined && <span className="pill tone-none">参加</span>}{x.pass && <span className="pill tone-booked">パス</span>}<span className="pill tone-none">{tripStatusText(x.data)}</span></span>
+            <span className="row" style={{ gap: 6, flex: "none" }}>{x.joined && <span className="pill tone-none">参加</span>}{x.pass && !x.joined && <span className="pill tone-booked">パス</span>}<span className="pill tone-none">{tripStatusText(x.data)}</span></span>
           </button>); })}
       </div>
       {typeof TrunkPlanLine === "function" && <TrunkPlanLine />}

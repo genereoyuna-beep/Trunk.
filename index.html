@@ -148,6 +148,20 @@ section{padding:72px 0}
 .feat-copy ul{list-style:none;margin-top:18px;display:grid;gap:10px}
 .feat-copy li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:14px}
 .feat-copy li::before{content:"";width:14px;height:14px;margin-top:5px;border-radius:4px;border:1.5px solid var(--blue);background:linear-gradient(var(--blue),var(--blue)) center/6px 6px no-repeat}
+.mi-badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--orange-soft);color:var(--orange-ink);margin-bottom:6px}
+.mi-mail{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;padding:12px;border-radius:14px;background:var(--sunk);font-size:12.5px}
+.mi-mail .ic{width:34px;height:34px;border-radius:10px;background:var(--surface);display:grid;place-items:center;color:var(--blue)}
+.mi-mail b{display:block;font-weight:500}.mi-mail small{color:var(--muted);font-size:11px;word-break:break-all}
+.mi-arrow{display:flex;align-items:center;gap:10px;margin:12px 4px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;color:var(--blue)}
+.mi-arrow::before,.mi-arrow::after{content:"";flex:1;border-top:1.5px dashed var(--blue);opacity:.5}
+.mi-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.mi-card .h{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:700;margin-bottom:8px}
+.mi-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;padding:6px 0;border-top:1px solid var(--sunk);font-size:12px}
+.mi-row span{color:var(--muted)}
+.mi-btns{display:flex;gap:8px;margin-top:10px}.mi-btns span{font-size:12px;padding:6px 12px;border-radius:9px;border:1px solid var(--line)}.mi-btns span.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.mi-steps{counter-reset:mi;list-style:none;margin-top:18px;display:grid;gap:10px}
+.mi-steps li{counter-increment:mi;display:grid;grid-template-columns:26px minmax(0,1fr);gap:8px;font-size:14px}
+.mi-steps li::before{content:counter(mi);width:22px;height:22px;border-radius:11px;background:var(--blue);color:#fff;font-family:var(--f-mono);font-size:11px;display:grid;place-items:center;margin-top:2px}
 .panel{background:var(--surface);border-radius:20px;padding:18px;border:1px solid var(--line);box-shadow:0 24px 50px -36px rgba(21,32,43,.5)}
 .dark .panel{border-color:#2A3743}
 
@@ -408,7 +422,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <a class="btn ghost" href="#features">機能を見る</a>
       </div>
       <a class="promo-badge" href="#pricing" data-promo><b>半額</b>公開記念キャンペーン 12/1〜1/31</a>
-      <div class="facts"><span>Googleアカウントで保存</span><span>同行者はログイン不要</span><span>スマホでもPCでも</span></div>
+      <div class="facts"><span>Googleアカウントで保存</span><span>同行者はログイン不要</span><span>スマホでもPCでも</span><span>予約メールは転送で取り込み</span></div>
     </div>
 
     <div class="stage" aria-hidden="true">
@@ -507,6 +521,33 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <div class="ev"><span class="t">15:00</span><i class="dot"></i><div>明洞のホテルにチェックイン<span class="pill booked">予約済み</span></div><span class="yen"></span></div>
         <div class="ev"><span class="t">18:30</span><i class="dot"></i><div>サムギョプサルで夕食<small>3人で予約</small></div><span class="yen">₩45,000</span></div>
         <div class="tz"><b>UTC+9</b>ソウルは日本と同じ時刻です</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAIL IMPORT -->
+<section class="band" id="mail" data-sec="予約メールの取り込み">
+  <div class="wrap feat">
+    <div class="feat-copy rv">
+      <div class="mi-badge">旅行パス・3か月パスの機能</div>
+      <div class="eyebrow">Mail import</div>
+      <h3>予約メールは、<br>転送するだけ。</h3>
+      <p>宿や航空券の予約確認メールを、あなた専用のアドレスに転送してください。AI がホテル名・日付・時刻・予約番号・金額・キャンセル期限を読み取り、旅程に反映できる形で並べます。</p>
+      <ol class="mi-steps"><li>アプリに出る、あなた専用の転送先アドレスをコピー</li><li>予約サイトから届いたメールを、そのアドレスへ転送</li><li>1〜2分で読み取り。内容を確かめて「反映する」を押す</li></ol>
+      <ul><li>Booking.com・アゴダ・Trip.com・航空会社など、予約サイトを選びません</li><li>Gmail のフィルタで、予約メールだけを自動で転送することもできます</li><li>旅程と日付がずれていたら注意が出るので、取り違えを防げます</li><li>メールの本文は3日で消し、読み取った結果だけを残します</li></ul>
+    </div>
+    <div class="panel rv" aria-hidden="true">
+      <div class="mi-mail"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div><div><b>Fwd: ご予約が確定しました</b><small>宛先 xxxxxxxxxx@in.trunk-travelplanner.com</small></div></div>
+      <div class="mi-arrow">AI が読み取り</div>
+      <div class="mi-card">
+        <div class="h"><span class="pill booked">予約</span>ソウル 明洞のホテル 12/4〜12/6</div>
+        <div class="mi-row"><span>宿泊先</span>明洞のホテル</div>
+        <div class="mi-row"><span>チェックイン</span>12/4 15:00</div>
+        <div class="mi-row"><span>予約番号</span><span class="mono" style="color:inherit">HTL-2048-7731</span></div>
+        <div class="mi-row"><span>総額</span>¥36,000（支払い済み）</div>
+        <div class="mi-row"><span>キャンセル期限</span>12/1 23:59 まで無料</div>
+        <div class="mi-btns"><span class="on">反映する</span><span>反映しない</span></div>
       </div>
     </div>
   </div>
@@ -734,8 +775,8 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
   <div class="wrap">
     <div class="sec-head rv">
       <div class="eyebrow">Pricing</div>
-      <h2>機能はぜんぶ無料。<br>旅行が重なったときだけ。</h2>
-      <p>準備中の旅行が1つなら、ずっと無料。旅程づくりの機能はすべて使えます。<br>旅行の準備が重なったときだけ、パスを1回買ってください。月額の支払いはありません。</p>
+      <h2>旅程づくりは無料。<br>パスで、もっとラクに。</h2>
+      <p>準備中の旅行が1つなら、ずっと無料。旅程づくりの機能はすべて使えます。<br>旅行の準備が重なったときや、予約メールを転送で取り込みたいときに、パスを1回買ってください。月額の支払いはありません。</p>
     </div>
     <div class="plans">
       <div class="plan rv">
@@ -808,7 +849,8 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <details><summary>アカウント登録は必要ですか？</summary><p>旅行を保存するには Google アカウントでのログインが必要です。新しくパスワードを作る必要はありません。</p></details>
       <details><summary>同行者もログインが必要ですか？</summary><p>見るだけなら、いりません。「共有リンク」を開くだけで、旅程・しおり・地図を見られます。一緒に編集する場合は、「招待リンク」を開いて Google アカウントでログインしてもらいます。どちらもアプリのインストールは不要です。</p></details>
       <details><summary>同行者と一緒に編集できますか？</summary><p>はい、無料でできます。「共有と設定」から招待リンクを送ると、相手は Google でログインして参加し、一緒に旅程を直せます。持ち物リストは人ごとに分かれます。参加した旅行は相手の無料の枠に数えません。見るだけの人には、ログイン不要の共有リンクを送れます。</p></details>
-      <details><summary>AI は使えますか？</summary><p>「AIに相談」から、あなたの ChatGPT・Claude・Gemini を、旅程をまとめた相談文つきで開けます。返ってきた答えを貼り付けると、予定や持ち物の候補として取り込めます。Trunk. が AI に直接データを送ることはなく、パスポートなどの個人情報は相談文に入りません。</p></details>
+      <details><summary>AI は使えますか？</summary><p>「AIに相談」から、あなたの ChatGPT・Claude・Gemini を、旅程をまとめた相談文つきで開けます。返ってきた答えを貼り付けると、予定や持ち物の候補として取り込めます。この機能では Trunk. が AI に直接データを送ることはなく、パスポートなどの個人情報は相談文に入りません。</p></details>
+      <details><summary>予約メールの取り込みはどう使いますか？</summary><p>旅行パス・3か月パスを使っているときに、アプリの「予約・手配」にあなた専用の転送先アドレスが出ます。予約確認メールをそこへ転送すると、AI（Anthropic の Claude）が宿や移動の内容を読み取り、確認してから旅程に反映できます。メールの本文は3日で消し、AI の学習には使われません。</p></details>
       <details><summary>スマホで使えますか？</summary><p>はい。ブラウザで動くので、iPhone・Android・パソコンのどれでも使えます。<a href="#homescreen">ホーム画面に追加</a>すると、アプリのようにアイコンから開けます。電波のない場所に備えるなら、しおりをPDFで保存しておくと安心です。</p></details>
       <details><summary>旅行パスはいつから買えますか？</summary><p>2026年12月1日から販売します。それまでは無料版でお使いください。</p></details>
       <details><summary>旅行パスは誰が買えばいいですか？</summary><p>2つ目の旅行を作る人です。招待されて参加した旅行は数えないので、同行者が買う必要はありません。</p></details>

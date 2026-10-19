@@ -109,13 +109,17 @@ function Toggle({ checked, onChange, children }) {
 // ヨーロッパの中か（Omio のリンクを出すかどうか）
 const inEurope = (ll) => !!ll && ll[0] > 34 && ll[0] < 72 && ll[1] > -25 && ll[1] < 45;
 // 紹介料が入るリンク（Trunk. 版だけ）。「PR」と、料金が変わらないことを必ず添える
-function AffLink({ href, label }) {
+// copy があるときは、押したときにその文字（行き先など）をコピーする（リンク先に行き先を渡せない広告のため）
+function AffLink({ href, label, copy }) {
+  const [copied, setCopied] = useState(false);
+  const onClick = () => { if (!copy) return; try { navigator.clipboard.writeText(copy).then(() => setCopied(true), () => {}); } catch (e) {} };
   return (
     <div style={{ margin: "8px 0" }}>
       <div className="row" style={{ alignItems: "center" }}>
-        <a className="btn small" href={href} target="_blank" rel="noopener sponsored"><Icon n="ext" s={14} />{label}</a>
+        <a className="btn small" href={href} target="_blank" rel="noopener sponsored" onClick={onClick}><Icon n="ext" s={14} />{label}</a>
         <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "0 4px" }}>PR</span>
       </div>
+      {copy && <div className="xs muted" style={{ marginTop: 4 }}>{copied ? `「${copy}」をコピーしました。検索欄に貼り付けてください` : `押すと「${copy}」をコピーします`}</div>}
       <div className="xs muted" style={{ marginTop: 4 }}>このリンクから予約しても、料金は変わりません</div>
     </div>
   );
@@ -274,7 +278,7 @@ function TransitEditor({ t, id, update, close }) {
       <div className="formsec">予約</div>
       <Toggle checked={needs || booked} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
       {(needs || booked) && <BookingStatus status={x.status} paid={x.paymentStatus} onStatus={v => set({ status: v })} onPaid={v => set({ paymentStatus: v })} />}
-      {typeof FEATURES !== "undefined" && typeof FEATURES.transportSearch === "function" && needs && !booked && x.mode !== "飛行機" && inEurope(geoFor(x.fromCity, t.geo)) && inEurope(geoFor(x.toCity, t.geo)) && <AffLink href={FEATURES.transportSearch()} label="Omioで鉄道・バスを探す" />}
+      {typeof FEATURES !== "undefined" && typeof FEATURES.transportSearch === "function" && needs && !booked && x.mode !== "飛行機" && inEurope(geoFor(x.fromCity, t.geo)) && inEurope(geoFor(x.toCity, t.geo)) && <AffLink href={FEATURES.transportSearch()} label="Omioで鉄道・バスを探す" copy={[splitCity(x.fromCity).main, splitCity(x.toCity).main].join(" → ") + (x.departDate ? " " + md(x.departDate) : "")} />}
       <Field label="メモ"><textarea value={x.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
       <div className="formsec" />
       <DeleteButton label="この移動を削除" onDelete={remove} />
@@ -319,7 +323,7 @@ function LocalEditor({ t, id, update, close }) {
       </div>
       <Toggle checked={l.needsBooking} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
       <BookingStatus status={l.status || "候補"} paid={l.paymentStatus} onStatus={v => set({ status: v })} onPaid={v => set({ paymentStatus: v })} />
-      {typeof FEATURES !== "undefined" && typeof FEATURES.activitySearch === "function" && l.needsBooking && !isBooked(l.status) && ["観光", "ツアー", "入場券", "その他体験"].includes(l.category) && <AffLink href={FEATURES.activitySearch()} label="アゴダで体験・チケットを探す" />}
+      {typeof FEATURES !== "undefined" && typeof FEATURES.activitySearch === "function" && l.needsBooking && !isBooked(l.status) && ["観光", "ツアー", "入場券", "その他体験"].includes(l.category) && (() => { const kw = String(l.address || l.desc || "").replace(/[（(].*?[）)]/g, "").trim(); return kw && <AffLink href={FEATURES.activitySearch(kw)} label={`KKdayで「${kw.slice(0, 16)}」を探す`} />; })()}
       <Field label="メモ"><textarea value={l.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
       <div className="formsec" />
       <DeleteButton label="この予定を削除" onDelete={remove} />

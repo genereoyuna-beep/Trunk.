@@ -15,7 +15,7 @@ FEATURES.hotelSearch = (city) => {
   const dest = key ? `https://www.agoda.com/ja-jp/city/${AGODA_CITY[key]}.html` : "https://www.agoda.com/ja-jp/";
   return "https://px.a8.net/svt/ejp?a8mat=4B650I+6CMH2Q+4X1W+BW0YB&a8ejpredirect=" + encodeURIComponent(dest);
 };
-// 「体験・チケットを探す」リンク（A8.net 経由のアゴダ 遊び・体験。この広告は飛び先を選べないので、決まったリンク）
-FEATURES.activitySearch = () => "https://px.a8.net/svt/ejp?a8mat=4BEK9E+BQ4COI+4X1W+TS3OI";
+// 「体験・チケットを探す」リンク（A8.net 経由の KKday。場所の名前で KKday の検索結果を開く）
+FEATURES.activitySearch = (kw) => "https://px.a8.net/svt/ejp?a8mat=4B650I+6KD3XU+52F8+BW0YB&a8ejpredirect=" + encodeURIComponent("https://www.kkday.com/ja/product/productlist?keyword=" + encodeURIComponent(kw));
 // 「鉄道・バスを探す」リンク（A8.net 経由の Omio。ヨーロッパ内の移動だけに出す。飛び先は選べない）
 FEATURES.transportSearch = () => "https://px.a8.net/svt/ejp?a8mat=4BEK9E+DIF60I+4JTS+5YRHE";

@@ -382,7 +382,22 @@ function Root() {
       // ログインから戻ってきたときの ?code= を消す
       if (q.has("code") || q.has("error") || q.has("join") || q.has("paid") || q.has("passtest")) history.replaceState(null, "", location.pathname + location.hash);
     })();
-    const { data } = SB.auth.onAuthStateChange((_e, session) => { Store.session = session; if (alive) setSt(s => ({ ...s, ready: true, session })); });
+    const { data } = SB.auth.onAuthStateChange((_e, session) => {
+      Store.session = session;
+      // Google のボタンでログインしたときはページが読み直されないので、ここで招待を受ける
+      const pending = (() => { try { return sessionStorage.getItem("trunk-join"); } catch (e) { return null; } })();
+      if (session && pending) {
+        try { sessionStorage.removeItem("trunk-join"); } catch (e) {}
+        setTimeout(async () => {
+          let joinErr = "";
+          try { rememberTrip(await Store.acceptInvite(pending)); }
+          catch (e) { joinErr = e.code === "members_full" ? "この旅行は参加できる人数（10人）に達しています。" : "招待リンクが使えませんでした。期限が切れたか、止められています。作った人に新しいリンクをもらってください。"; }
+          if (alive) setSt(s => ({ ...s, ready: true, session, joinErr, joining: false }));
+        }, 0);
+        return;
+      }
+      if (alive) setSt(s => ({ ...s, ready: true, session }));
+    });
     return () => { alive = false; data.subscription.unsubscribe(); };
   }, []);
   if (!st.ready) return <div className="empty" style={{ paddingTop: 80 }}>読み込み中…</div>;

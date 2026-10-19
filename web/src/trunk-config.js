@@ -15,8 +15,8 @@ FEATURES.hotelSearch = (city) => {
   const dest = key ? `https://www.agoda.com/ja-jp/city/${AGODA_CITY[key]}.html` : "https://www.agoda.com/ja-jp/";
   return "https://px.a8.net/svt/ejp?a8mat=4B650I+6CMH2Q+4X1W+BW0YB&a8ejpredirect=" + encodeURIComponent(dest);
 };
-// 「体験・チケットを探す」リンク（A8.net 経由の KKday。場所の名前で KKday の検索結果を開く）
-FEATURES.activitySearch = (kw) => "https://px.a8.net/svt/ejp?a8mat=4B650I+6KD3XU+52F8+BW0YB&a8ejpredirect=" + encodeURIComponent("https://www.kkday.com/ja/product/productlist?keyword=" + encodeURIComponent(kw));
+// 「体験・チケットを探す」リンク（Travelpayouts 経由の Klook。場所の名前で Klook の検索結果を開く）
+FEATURES.activitySearch = (kw) => "https://tp.media/r?campaign_id=137&marker=792061&p=4110&trs=587487&u=" + encodeURIComponent("https://www.klook.com/ja/search/result/?query=" + encodeURIComponent(kw));
 // 「鉄道・バスを探す」リンク（A8.net 経由の Omio。ヨーロッパ内の移動だけに出す。飛び先は選べない）
 FEATURES.transportSearch = () => "https://px.a8.net/svt/ejp?a8mat=4BEK9E+DIF60I+4JTS+5YRHE";
 // 「eSIM を探す」リンク（Travelpayouts 経由の Airalo）。行き先の国のページを開く。ヨーロッパの複数の国ならヨーロッパ用

@@ -323,7 +323,7 @@ function LocalEditor({ t, id, update, close }) {
       </div>
       <Toggle checked={l.needsBooking} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
       <BookingStatus status={l.status || "候補"} paid={l.paymentStatus} onStatus={v => set({ status: v })} onPaid={v => set({ paymentStatus: v })} />
-      {typeof FEATURES !== "undefined" && typeof FEATURES.activitySearch === "function" && l.needsBooking && !isBooked(l.status) && ["観光", "ツアー", "入場券", "その他体験"].includes(l.category) && (() => { const kw = String(l.address || l.desc || "").replace(/[（(].*?[）)]/g, "").trim(); return kw && <AffLink href={FEATURES.activitySearch(kw)} label={`KKdayで「${kw.slice(0, 16)}」を探す`} />; })()}
+      {typeof FEATURES !== "undefined" && typeof FEATURES.activitySearch === "function" && l.needsBooking && !isBooked(l.status) && ["観光", "ツアー", "入場券", "その他体験"].includes(l.category) && (() => { const kw = String(l.address || l.desc || "").replace(/[（(].*?[）)]/g, "").trim(); return kw && <AffLink href={FEATURES.activitySearch(kw)} label={`Klookで「${kw.slice(0, 16)}」を探す`} />; })()}
       <Field label="メモ"><textarea value={l.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
       <div className="formsec" />
       <DeleteButton label="この予定を削除" onDelete={remove} />

@@ -1,7 +1,7 @@
 -- 予約メールの取り込み：使える人・使えない人と、アドレスの発行を確かめる（実行しても何も残らない）
 do $$
 declare
-  u uuid := '00000000-0000-0000-0000-00000000ma11';
+  u uuid := '00000000-0000-0000-0000-00000000aa11';
   tok text; tok2 text; res text := ''; ok boolean;
 begin
   insert into auth.users (id, aud, role, email) values (u, 'authenticated', 'authenticated', 'mail-import-test@example.invalid');

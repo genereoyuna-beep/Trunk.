@@ -11,8 +11,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <!-- Google アナリティクス。招待リンクなどの「?」以降は送らない -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-7ZYC3Z9MQL"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-7ZYC3Z9MQL",{page_location:location.origin+location.pathname});</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-7ZYC3Z9MQL",{page_location:location.origin+location.pathname});addEventListener("load",function(){setTimeout(function(){var s=document.createElement("script");s.async=1;s.src="https://www.googletagmanager.com/gtag/js?id=G-7ZYC3Z9MQL";document.head.appendChild(s)},1500)});</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Trunk.</title>
 <meta name="description" content="手配もれが見える旅行プランナー。しおりPDFとリンク共有つき。">
@@ -35,7 +34,7 @@ const html = `<!DOCTYPE html>
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap"></noscript>
 <style>
 ${S('shared/style.css')}
 </style>

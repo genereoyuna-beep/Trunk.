@@ -334,7 +334,7 @@ function LoginView({ err, joining }) {
         <div ref={btnRef} style={{ display: gsiOk && !busy ? "flex" : "none", justifyContent: "center", minHeight: 44 }} />
         {!gsiOk && <button className="btn primary block" disabled={busy} onClick={login}>{busy ? "Google に移動しています…" : "Google でログイン"}</button>}
         {gsiOk && busy && <p className="small muted">ログインしています…</p>}
-        {gsiOk && !busy && <button className="link xs muted" style={{ background: "none", border: "none", textDecoration: "underline", cursor: "pointer" }} onClick={login}>別の方法でログイン</button>}
+        {gsiOk && !busy && gErr && <button className="link xs muted" style={{ background: "none", border: "none", textDecoration: "underline", cursor: "pointer" }} onClick={login}>別の方法でログイン</button>}
         {(err || gErr) && <div className="err">{err || gErr}</div>}
         <p className="xs muted">ログインすると <a href="/privacy.html">プライバシーポリシー</a> に同意したものとみなします。</p>
       </div>

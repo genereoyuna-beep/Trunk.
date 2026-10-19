@@ -288,18 +288,54 @@ function TrunkAfterTrip({ t, tripId }) {
 
 function LoginView({ err, joining }) {
   const [busy, setBusy] = useState(false);
+  const [gErr, setGErr] = useState("");
+  const [gsiOk, setGsiOk] = useState(false);
+  const btnRef = useRef(null);
+  // 予備：今までの方法（Supabase 経由。画面に supabase.co が出る）
   const login = async () => {
     setBusy(true);
     const { error } = await SB.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
     if (error) setBusy(false);
   };
+  // Google のボタン（このサイトの名前で表示される）。ID トークンを Supabase に渡してログインする
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        await new Promise((ok, ng) => {
+          if (window.google && google.accounts && google.accounts.id) return ok();
+          const sc = document.createElement("script");
+          sc.src = "https://accounts.google.com/gsi/client"; sc.async = true; sc.onload = ok; sc.onerror = ng;
+          document.head.appendChild(sc);
+        });
+        const raw = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+        const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw))), b => b.toString(16).padStart(2, "0")).join("");
+        if (!alive || !btnRef.current) return;
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID, nonce: hash, ux_mode: "popup", use_fedcm_for_button: true,
+          callback: async (res) => {
+            setBusy(true); setGErr("");
+            const { error } = await SB.auth.signInWithIdToken({ provider: "google", token: res.credential, nonce: raw });
+            if (error) { setBusy(false); setGErr("ログインできませんでした。下の「別の方法でログイン」をお試しください。"); }
+          },
+        });
+        btnRef.current.innerHTML = "";
+        google.accounts.id.renderButton(btnRef.current, { theme: "filled_black", size: "large", shape: "pill", text: "signin_with", width: Math.min(360, btnRef.current.offsetWidth || 320), locale: "ja" });
+        setGsiOk(true);
+      } catch (e) { /* 読み込めないときは予備のボタンだけ */ }
+    })();
+    return () => { alive = false; };
+  }, []);
   return (
     <div className="main" style={{ maxWidth: 440, margin: "0 auto", paddingTop: 72 }}>
       <div className="stack" style={{ gap: 18, textAlign: "center" }}>
         <div style={{ fontFamily: "var(--f-display)", fontWeight: 900, fontSize: 34 }}>Trunk<span style={{ color: "var(--blue)" }}>.</span></div>
         <p className="muted">{joining ? <>旅行に招待されています。<br />Google アカウントでログインすると、参加して一緒に編集できます。</> : <>旅の段取りを、一日ずつ。<br />旅行を保存するには、Google アカウントでログインしてください。</>}</p>
-        <button className="btn primary block" disabled={busy} onClick={login}>{busy ? "Google に移動しています…" : "Google でログイン"}</button>
-        {err && <div className="err">{err}</div>}
+        <div ref={btnRef} style={{ display: gsiOk && !busy ? "flex" : "none", justifyContent: "center", minHeight: 44 }} />
+        {!gsiOk && <button className="btn primary block" disabled={busy} onClick={login}>{busy ? "Google に移動しています…" : "Google でログイン"}</button>}
+        {gsiOk && busy && <p className="small muted">ログインしています…</p>}
+        {gsiOk && !busy && <button className="link xs muted" style={{ background: "none", border: "none", textDecoration: "underline", cursor: "pointer" }} onClick={login}>別の方法でログイン</button>}
+        {(err || gErr) && <div className="err">{err || gErr}</div>}
         <p className="xs muted">ログインすると <a href="/privacy.html">プライバシーポリシー</a> に同意したものとみなします。</p>
       </div>
     </div>

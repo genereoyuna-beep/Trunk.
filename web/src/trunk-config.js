@@ -30,3 +30,5 @@ FEATURES.esimSearch = (cities) => {
   const dest = slug ? `https://www.airalo.com/ja/${slug}-esim` : "https://www.airalo.com/ja";
   return "https://tp.media/r?campaign_id=541&marker=792061&p=8310&trs=587487&u=" + encodeURIComponent(dest);
 };
+// Google でログイン（Google Identity Services）。ログイン画面に supabase.co ではなく、このサイトの名前が出るようにする
+const GOOGLE_CLIENT_ID = "910425972252-2l37io82lfbb5ja2rrossr783sh634v8.apps.googleusercontent.com";

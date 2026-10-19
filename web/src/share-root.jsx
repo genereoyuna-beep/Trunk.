@@ -28,7 +28,6 @@ function TrunkShareRoot() {
   return (
     <>
       <ShareApp payload={st.payload} onSend={send} />
-      <p className="xs muted" style={{ textAlign: "center", padding: "0 16px 32px" }}><a href="/">Trunk.</a> で作った旅程です</p>
     </>
   );
 }

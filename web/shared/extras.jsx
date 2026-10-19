@@ -57,6 +57,19 @@ function EntryChecks({ t, update }) {
   );
 }
 
+// ---- 主な国の緊急番号（AI を使わない版でも出す。大使館は外務省のページで確かめてもらう） ----
+const EU112 = { general: "112", note: "EU などで共通の緊急番号です（警察・救急・消防）" };
+const EMERGENCY_NUM = {
+  "台湾": { police: "110", ambulance: "119", fire: "119" }, "韓国": { police: "112", ambulance: "119", fire: "119" },
+  "香港": { general: "999" }, "マカオ": { general: "999" }, "中国": { police: "110", ambulance: "120", fire: "119" },
+  "タイ": { police: "191", ambulance: "1669", fire: "199", note: "観光警察 1155（英語可）" }, "シンガポール": { police: "999", ambulance: "995", fire: "995" },
+  "マレーシア": { general: "999" }, "ベトナム": { police: "113", ambulance: "115", fire: "114" }, "フィリピン": { general: "911" },
+  "インドネシア": { general: "112", police: "110", ambulance: "118" }, "インド": { general: "112" }, "UAE": { police: "999", ambulance: "998", fire: "997" },
+  "カタール": { general: "999" }, "トルコ": { general: "112" }, "アメリカ（ハワイ）": { general: "911" }, "グアム": { general: "911" }, "サイパン": { general: "911" },
+  "アメリカ": { general: "911" }, "カナダ": { general: "911" }, "オーストラリア": { general: "000" }, "イギリス": { general: "999", note: "112 でもつながります" },
+  ...Object.fromEntries(["アイルランド", "ポルトガル", "フランス", "ベルギー", "オランダ", "ルクセンブルク", "ドイツ", "スイス", "オーストリア", "チェコ", "スロバキア", "ハンガリー", "ポーランド", "デンマーク", "スウェーデン", "ノルウェー", "フィンランド", "エストニア", "ラトビア", "リトアニア", "スペイン", "イタリア", "クロアチア", "スロベニア", "ギリシャ", "マルタ"].map(c => [c, EU112])),
+};
+
 // ---- 通貨 ----
 function CurrencyCard({ t, update }) {
   const curs = tripCurrencies(t);
@@ -64,6 +77,9 @@ function CurrencyCard({ t, update }) {
   const [amt, setAmt] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const autoTried = useRef(false);
+  useEffect(() => { if (autoTried.current || FEATURES.ai || !curs.length || !curs.some(c => !hasRate(t, c))) return; autoTried.current = true; fetchRatesRef.current && fetchRatesRef.current(true); });
+  const fetchRatesRef = useRef(null);
   if (!curs.length) return null;
   const rate = Number((t.rates || {})[cur]) || 0;
   const guess = async () => {
@@ -76,9 +92,22 @@ function CurrencyCard({ t, update }) {
     } catch (e) { setMsg(askErr(e)); }
     setBusy(false);
   };
+  // 最新のレート（ExchangeRate-API・無料・キー不要）。AI を使わない版では、こちらで目安を入れる
+  const fetchRates = fetchRatesRef.current = async (silent) => {
+    setBusy(true); if (!silent) setMsg("");
+    try {
+      const d = await (await fetch("https://open.er-api.com/v6/latest/JPY")).json();
+      const r = {}; curs.forEach(k => { const v = Number(d && d.rates && d.rates[k]); if (v > 0) r[k] = Math.round(10000 / v) / 10000; });
+      if (Object.keys(r).length) {
+        update(tr => ({ ...tr, rates: { ...(tr.rates || {}), ...r }, ratesAsOf: todayISO() }));
+        setMsg("今日の目安のレートを入れました。両替やカードのレートとは少し違うので、必要なら直してください");
+      }
+    } catch (e) { if (!silent) setMsg("レートを取得できませんでした。手で入れてください"); }
+    setBusy(false);
+  };
   return (
     <section className="card stack" style={{ gap: 10 }}>
-      <div className="row between"><h3>通貨の換算</h3>{FEATURES.ai && <button className="btn small" disabled={busy} onClick={guess}>{busy ? "調べています…" : "Claudeで目安のレートを入れる"}</button>}</div>
+      <div className="row between"><h3>通貨の換算</h3>{!FEATURES.ai && <button className="btn small" disabled={busy} onClick={() => fetchRates(false)}>{busy ? "取得しています…" : "最新のレートにする"}</button>}{FEATURES.ai && <button className="btn small" disabled={busy} onClick={guess}>{busy ? "調べています…" : "Claudeで目安のレートを入れる"}</button>}</div>
       <div className="row" style={{ flexWrap: "nowrap" }}>
         <input className="input mono" type="number" inputMode="decimal" aria-label="金額" placeholder="金額" value={amt} onChange={e => setAmt(e.target.value)} />
         <select className="input" style={{ width: "auto" }} aria-label="通貨" value={cur} onChange={e => setCur(e.target.value)}>{curs.map(c => <option key={c} value={c}>{c}</option>)}</select>
@@ -216,6 +245,12 @@ function EmergencyView({ t, update, canEdit }) {
               {c.note && <div className="xs muted">{c.note}</div>}
             </div>
           ))}
+          {!(t.emergencyCountries || []).length && countries.map(c => { const n = EMERGENCY_NUM[c.country]; return n && (
+            <div key={c.country} className="inboxitem" style={{ gap: 4 }}>
+              <b>{c.country}</b>
+              <div className="small">{[["緊急", n.general], ["警察", n.police], ["救急", n.ambulance], ["消防", n.fire]].filter(x => x[1]).map(([k, v], i) => <span key={k}>{i ? " ・ " : ""}{k} <a className="mono" href={`tel:${v}`}>{v}</a></span>)}</div>
+              {n.note && <div className="xs muted">{n.note}</div>}
+            </div>); })}
           {!(t.emergencyCountries || []).length && <p className="empty">{canEdit && FEATURES.ai ? "「Claudeに調べてもらう」で、警察・救急の番号と日本大使館の連絡先をまとめます。" : <>警察・救急の番号と日本大使館の連絡先は、外務省の<a href="https://www.anzen.mofa.go.jp/" target="_blank" rel="noopener noreferrer">海外安全ホームページ</a>で確かめられます。</>}</p>}
           {(t.emergencyCountries || []).length > 0 && <div className="xs muted">番号はClaudeの知識にもとづく目安です。外務省の海外安全ホームページ等で確認してください。</div>}
         </section>

@@ -323,7 +323,7 @@ function LocalEditor({ t, id, update, close }) {
       </div>
       <Toggle checked={l.needsBooking} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
       <BookingStatus status={l.status || "候補"} paid={l.paymentStatus} onStatus={v => set({ status: v })} onPaid={v => set({ paymentStatus: v })} />
-      {typeof FEATURES !== "undefined" && typeof FEATURES.activitySearch === "function" && l.needsBooking && !isBooked(l.status) && ["観光", "ツアー", "入場券", "その他体験"].includes(l.category) && (() => { const kw = String(l.address || l.desc || "").replace(/[（(].*?[）)]/g, "").trim(); return kw && <AffLink href={FEATURES.activitySearch(kw)} label={`Klookで「${kw.slice(0, 16)}」を探す`} />; })()}
+      {typeof FEATURES !== "undefined" && typeof FEATURES.activitySearch === "function" && !isBooked(l.status) && (["ツアー", "入場券", "その他体験"].includes(l.category) || (l.category === "観光" && l.needsBooking)) && (() => { const kw = String(l.address || l.desc || "").replace(/[（(].*?[）)]/g, "").trim(); return kw && <AffLink href={FEATURES.activitySearch(kw)} label={`Klookで「${kw.slice(0, 16)}」を探す`} />; })()}
       <Field label="メモ"><textarea value={l.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
       <div className="formsec" />
       <DeleteButton label="この予定を削除" onDelete={remove} />
@@ -1036,7 +1036,7 @@ function MoneyView({ t, stats, update }) {
                 <button className="iconbtn" aria-label={`${r.category}を削除`} onClick={() => update(tr => ({ ...tr, budget: tr.budget.filter(b => b.id !== r.id) }))}><Icon n="x" s={16} /></button>
               </div>
               <div className="brow2-g">
-                <label><span>予算</span><NumIn value={r.target} onChange={v => setB(r.id, { target: v })} className="input" aria-label={`${r.category}の予算`} /></label>
+                <label><span>予算</span><NumIn value={Number(r.target) ? r.target : ""} onChange={v => setB(r.id, { target: v })} className="input" aria-label={`${r.category}の予算`} /></label>
                 <label><span>{r.auto ? "見込み（自動）" : "実費"}</span>{r.auto ? <b className="mono">{yen(r.actualV)}</b> : <NumIn value={r.actual} onChange={v => setB(r.id, { actual: v })} className="input" aria-label={`${r.category}の実費`} />}</label>
                 <div><span>差額</span><b className={"mono" + (tg && diff < 0 ? " over" : "")}>{tg ? (diff < 0 ? `${yen(-diff)} 超過` : `残り ${yen(diff)}`) : "—"}</b></div>
               </div>

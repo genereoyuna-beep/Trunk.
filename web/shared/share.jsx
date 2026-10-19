@@ -148,6 +148,13 @@ function ShareApp({ payload: given, onSend }) {
           {view === "phrases" && <PhraseView t={t} onSave={noop} canGenerate={false} />}
           {!r && view !== "home" && <p className="empty card">まだ日程がありません。</p>}
           <RequestBox t={t} onSend={onSend} />
+          {typeof FEATURES !== "undefined" && FEATURES.appName === "Trunk." && (
+            <section className="card" style={{ textAlign: "center", padding: "18px 16px" }}>
+              <div style={{ fontFamily: "var(--f-display)", fontWeight: 900, fontSize: 20 }}>Trunk<span style={{ color: "var(--blue)" }}>.</span></div>
+              <p className="small muted" style={{ margin: "6px 0 12px" }}>この旅程は Trunk. で作られています。<br />宿と移動の手配状況、1日の流れ、しおりまでひとつに。</p>
+              <a className="btn primary" href="https://trunk-travelplanner.com/?utm_source=share" target="_blank" rel="noopener">自分の旅行も作る（無料）</a>
+            </section>
+          )}
           <p className="xs muted" style={{ textAlign: "center" }}>最終更新 {payload.updatedAt ? new Date(payload.updatedAt).toLocaleString("ja-JP") : "—"}</p>
         </div>
       </main>

@@ -108,7 +108,7 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 <p>Trunk.（以下「本サービス」）は、旅行の日程・手配・予算・持ち物などをまとめて管理するためのWebアプリです。本ポリシーでは、本サービスが取得する情報と、その取り扱いについて説明します。</p>
 
 <h2 id="s01" data-no="01" data-sec="取得する情報"><span class="no">01</span>取得する情報</h2>
-<div class="tbl"><div class="r"><div class="k">Googleアカウントの情報</div><div class="v">ログインしたときに Google から提供される、メールアドレス・表示名・プロフィール画像のURL</div></div><div class="r"><div class="k">旅行のデータ</div><div class="v">入力された日程、宿・移動・予定、予算と支出、持ち物、参加者の名前、メモ、フレーズ集、緊急時の情報（パスポートや保険などを入力した場合）など</div></div><div class="r"><div class="k">共有ページからのリクエスト</div><div class="v">共有ページを見た人が送ったお名前（任意）とリクエストの内容</div></div><div class="r"><div class="k">機能の要望</div><div class="v">アプリから送られた要望の内容。送った人のアカウントと結びつけて保存しますが、名前やメールアドレスは送信内容に含めません</div></div><div class="r"><div class="k">お問い合わせ</div><div class="v">お問い合わせフォームに入力された返信先メールアドレス・お名前・内容</div></div><div class="r"><div class="k">端末内の保存</div><div class="v">ログイン状態の維持や、最後に開いた旅行などを、お使いのブラウザに保存します（後述）</div></div></div>
+<div class="tbl"><div class="r"><div class="k">Googleアカウントの情報</div><div class="v">ログインしたときに Google から提供される、メールアドレス・表示名・プロフィール画像のURL</div></div><div class="r"><div class="k">旅行のデータ</div><div class="v">入力された日程、宿・移動・予定、予算と支出、持ち物、参加者の名前、メモ、フレーズ集、緊急時の情報（パスポートや保険などを入力した場合）など</div></div><div class="r"><div class="k">共有ページからのリクエスト</div><div class="v">共有ページを見た人が送ったお名前（任意）とリクエストの内容</div></div><div class="r"><div class="k">機能の要望</div><div class="v">アプリから送られた要望の内容。送った人のアカウントと結びつけて保存しますが、名前やメールアドレスは送信内容に含めません</div></div><div class="r"><div class="k">転送された予約メール</div><div class="v">「予約メールから取り込む」（パスの機能）を使う場合に、あなた専用のアドレスへ転送されたメールの差出人・件名・本文（後述）</div></div><div class="r"><div class="k">お問い合わせ</div><div class="v">お問い合わせフォームに入力された返信先メールアドレス・お名前・内容</div></div><div class="r"><div class="k">端末内の保存</div><div class="v">ログイン状態の維持や、最後に開いた旅行などを、お使いのブラウザに保存します（後述）</div></div></div>
 
 <h2 id="s02" data-no="02" data-sec="利用目的"><span class="no">02</span>利用目的</h2>
 <ul>
@@ -132,32 +132,37 @@ footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px so
 <h2 id="s05" data-no="05" data-sec="AIに相談"><span class="no">05</span>AIに相談</h2>
 <p>「AIに相談」は、旅程をまとめた相談文を作り、あなたが選んだAIサービス（ChatGPT・Claude・Gemini）を開く機能です。本サービスがAIサービスにデータを直接送ることはありません。相談文は、あなたがボタンを押したときに、開いたページのアドレスやコピーした文章として、そのAIサービスに渡ります。相談文には、パスポートや保険などの緊急時の情報は入れません。AIサービスでの取り扱いには、各社のプライバシーポリシーが適用されます。</p>
 
-<h2 id="s06" data-no="06" data-sec="利用している外部サービス"><span class="no">06</span>利用している外部サービス</h2>
+<h2 id="s06" data-no="06" data-sec="予約メールの取り込み"><span class="no">06</span>予約メールの取り込み</h2>
+<p>パスの機能「予約メールから取り込む」では、あなた専用の転送用アドレスに届いたメールを、Anthropic の AI（Claude）に送って、宿や移動などの予約の内容を読み取ります。読み取った内容は、あなたが「反映」を押すまで旅程には入りません。メールの本文は3日たつと消し、読み取った結果だけを残します。Anthropic は、API で送られたデータを AI の学習に使いません。転送用アドレスはあなただけに表示され、転送を止めればメールは届かなくなります。</p>
+
+<h2 id="s07" data-no="07" data-sec="利用している外部サービス"><span class="no">07</span>利用している外部サービス</h2>
 <ul>
 <li><b>Supabase</b>：データの保存、ログイン</li>
 <li><b>Google</b>：ログイン、フォント、お問い合わせフォーム</li>
 <li><b>Google Maps Platform</b>：場所の候補と地図の表示</li>
 <li><b>Google アナリティクス</b>：利用状況の把握（Cookie を使います。<a href="https://policies.google.com/technologies/partner-sites?hl=ja" target="_blank" rel="noopener">詳しく</a>・<a href="https://tools.google.com/dlpage/gaoptout?hl=ja" target="_blank" rel="noopener">止める</a>）</li>
 <li><b>A8.net・Travelpayouts</b>：「PR」と表示した予約サイトへのリンク。予約されると紹介料が入りますが、利用者の料金は変わりません</li>
+<li><b>Cloudflare</b>：転送された予約メールの受け取り</li>
+<li><b>Anthropic</b>：転送された予約メールの読み取り（パスの機能を使う場合だけ）</li>
 <li><b>Stripe</b>：パスの支払い（カード番号は本サービスに届きません）</li>
 <li><b>ExchangeRate-API</b>：外貨の目安のレートの取得（通貨の種類だけを送ります）</li>
 <li><b>GitHub Pages・cdnjs・jsDelivr</b>：サイトとプログラムの配信</li>
 </ul>
 <p>各サービスでの取り扱いには、各社のプライバシーポリシーが適用されます。</p>
 
-<h2 id="s07" data-no="07" data-sec="第三者への提供"><span class="no">07</span>第三者への提供</h2>
+<h2 id="s08" data-no="08" data-sec="第三者への提供"><span class="no">08</span>第三者への提供</h2>
 <p>法令に基づく場合を除き、本人の同意なく、取得した情報を第三者に提供しません。</p>
 
-<h2 id="s08" data-no="08" data-sec="端末内の保存（Cookie・ローカルストレージ）"><span class="no">08</span>端末内の保存（Cookie・ローカルストレージ）</h2>
+<h2 id="s09" data-no="09" data-sec="端末内の保存（Cookie・ローカルストレージ）"><span class="no">09</span>端末内の保存（Cookie・ローカルストレージ）</h2>
 <p>ログイン状態の維持、最後に開いた旅行、一度だけ表示するお知らせを閉じたかどうかなどを、お使いのブラウザのローカルストレージに保存します。これらは本サービスの動作のためだけに使い、広告などには使いません。また、Google アナリティクスが Cookie を使います。</p>
 
-<h2 id="s09" data-no="09" data-sec="データの削除"><span class="no">09</span>データの削除</h2>
+<h2 id="s10" data-no="10" data-sec="データの削除"><span class="no">10</span>データの削除</h2>
 <p>旅行は、アプリの「共有と設定」からいつでも削除できます。削除した旅行は元に戻せません。アカウントとすべてのデータの削除を希望される場合は、<a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせフォーム</a>からご連絡ください。</p>
 
-<h2 id="s10" data-no="10" data-sec="改定"><span class="no">10</span>改定</h2>
+<h2 id="s11" data-no="11" data-sec="改定"><span class="no">11</span>改定</h2>
 <p>本ポリシーは、必要に応じて改定することがあります。大切な変更がある場合は、本サイトでお知らせします。</p>
 
-<h2 id="s11" data-no="11" data-sec="お問い合わせ"><span class="no">11</span>お問い合わせ</h2>
+<h2 id="s12" data-no="12" data-sec="お問い合わせ"><span class="no">12</span>お問い合わせ</h2>
 <p>本ポリシーに関するお問い合わせは、<a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせフォーム</a>からお願いします。</p>
 </main>
 <footer>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<!-- Google アナリティクス（利用状況の把握。プライバシーポリシー参照） -->
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-7ZYC3Z9MQL");addEventListener("load",function(){setTimeout(function(){var s=document.createElement("script");s.async=1;s.src="https://www.googletagmanager.com/gtag/js?id=G-7ZYC3Z9MQL";document.head.appendChild(s)},1500)});</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>旅行の割り勘のやり方と、精算をかんたんにするコツ | Trunk.</title>
+<meta name="description" content="旅行の割り勘のやり方。立て替えの記録、1人あたりの計算、参加していない日の扱い、外貨の換算、精算の回数を減らすコツ。">
+<link rel="icon" href="/icon.png">
+<meta property="og:title" content="旅行の割り勘のやり方と、精算をかんたんにするコツ">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://trunk-travelplanner.com/articles/warikan.html">
+<link rel="canonical" href="https://trunk-travelplanner.com/articles/warikan.html">
+<meta property="og:image" content="https://trunk-travelplanner.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="/icons/trunk-180.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap"></noscript>
+<style>
+:root{
+  --ground:#F3F4F1; --surface:#FFFFFF; --sunk:#ECEEE9; --sunk2:#E4E6E1; --line:#DADDD6;
+  --ink:#15202B; --ink2:#3D4650; --muted:#5A6470; --faint:#8A929A;
+  --blue:#1D4ED8; --blue-soft:#E3ECFD;
+  --orange:#B45309; --orange-ink:#8A3B06; --orange-bar:#E8892B; --orange-soft:#FDEBD3;
+  --f-display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-mono:"Chivo Mono","Noto Sans JP","Hiragino Sans",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.8;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--blue)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;line-height:1.35;text-wrap:balance}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+@media(min-width:720px){.wrap{padding:0 28px}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;border:1.5px solid var(--ink)}
+.btn.primary{background:var(--ink);color:#F3F4F1}
+.btn.ghost{background:transparent;color:var(--ink)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+
+header{position:sticky;top:0;z-index:20;background:rgba(243,244,241,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hd{display:flex;align-items:center;gap:20px;height:62px}
+.logo{font-family:var(--f-display);font-weight:900;font-size:22px;text-decoration:none;color:var(--ink)}
+.logo span{color:var(--blue)}
+.hd nav{display:none;gap:22px;margin-left:12px}
+.hd nav a{font-size:13.5px;color:var(--ink2);text-decoration:none}
+.hd nav a[aria-current="page"]{color:var(--ink);font-weight:700}
+.hd .btn{margin-left:auto;min-height:40px;font-size:13.5px}
+@media(min-width:820px){.hd nav{display:flex}}
+
+.intro{padding:44px 0 28px}
+.intro h1{font-size:clamp(30px,6.4vw,46px);font-weight:900;margin:10px 0 12px}
+.intro p{color:var(--ink2);max-width:40em}
+.quick{display:grid;gap:10px;margin-top:24px}
+@media(min-width:720px){.quick{grid-template-columns:repeat(3,1fr)}}
+.quick a{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none;color:var(--ink)}
+.quick a:hover{border-color:var(--ink)}
+.quick b{display:block;font-family:var(--f-display);font-size:16px}
+.quick span{font-size:12.5px;color:var(--muted)}
+
+.layout{display:grid;gap:32px;padding-bottom:80px}
+@media(min-width:980px){.layout{grid-template-columns:230px minmax(0,1fr);gap:48px}}
+.toc{display:none}
+@media(min-width:980px){.toc{display:block;position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}}
+.toc ol{list-style:none;display:grid;gap:2px}
+.toc a{display:grid;grid-template-columns:26px minmax(0,1fr);gap:4px;padding:6px 10px;border-radius:8px;font-size:13px;color:var(--ink2);text-decoration:none;line-height:1.5}
+.toc a:hover{background:var(--surface)}
+.toc a.on{background:var(--surface);color:var(--ink);font-weight:700}
+.toc a span{font-family:var(--f-mono);font-size:11px;color:var(--faint);padding-top:2px}
+.toc .grp{font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;color:var(--faint);padding:14px 10px 4px}
+.mtoc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin-bottom:8px}
+.mtoc summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none;display:flex;justify-content:space-between}
+.mtoc summary::after{content:"+";font-family:var(--f-mono);color:var(--muted)}
+.mtoc[open] summary::after{content:"−"}
+.mtoc ol{list-style:none;padding-bottom:12px;columns:2;column-gap:16px}
+.mtoc a{display:block;font-size:13px;padding:4px 0;color:var(--ink2);text-decoration:none}
+.mtoc{display:none}
+
+article{min-width:0;max-width:760px}
+.chap{padding:36px 0 8px;border-top:1px solid var(--line)}
+.chap:first-child{border-top:0;padding-top:0}
+.chap-h{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.chap-h .no{font-family:var(--f-mono);font-size:13px;color:var(--blue);font-weight:600;letter-spacing:.08em}
+.chap h2{font-size:clamp(22px,4.6vw,28px);font-weight:900}
+.chap > p{color:var(--ink2);margin-bottom:14px}
+.chap h3{font-size:17px;margin:22px 0 8px}
+.steps{list-style:none;counter-reset:s;display:grid;gap:10px;margin:12px 0 16px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.steps li::before{content:counter(s);width:26px;height:26px;border-radius:13px;background:var(--ink);color:#F3F4F1;font-family:var(--f-mono);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.steps li b{font-weight:700}
+.ui{display:inline-flex;align-items:center;font-size:12.5px;font-weight:500;padding:1px 9px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);white-space:nowrap;line-height:1.7;margin:0 2px}
+.ui.dark{background:var(--ink);border-color:var(--ink);color:#F3F4F1}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;padding:1px 9px;border-radius:999px;white-space:nowrap;margin:0 2px}
+.pill::before{content:"";width:6px;height:6px;border-radius:3px;background:currentColor}
+.open{background:var(--orange-soft);color:var(--orange-ink)}
+.booked{background:var(--blue-soft);color:var(--blue)}
+.paid{background:var(--ink);color:#F3F4F1}
+.none{background:var(--sunk2);color:var(--ink2)}
+.tip,.note,.pass{border-radius:12px;padding:12px 16px;font-size:14px;margin:12px 0 16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
+.tip{background:var(--blue-soft)}
+.tip::before{content:"POINT";font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;color:var(--blue);font-weight:600;padding-top:4px}
+.note{background:var(--orange-soft)}
+.note::before{content:"注意";font-size:11px;color:var(--orange-ink);font-weight:700;padding-top:2px}
+.pass{background:var(--surface);border:1.5px dashed var(--ink)}
+.pass::before{content:"TRIP PASS";font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;font-weight:600;padding-top:4px}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:14px;background:var(--surface);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--sunk);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;background:var(--sunk);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+
+/* mocks */
+.mock{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0 18px}
+.tabs5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;border-top:1px solid var(--line);padding-top:10px;margin-top:4px;text-align:center;font-size:11px;color:var(--muted)}
+.tabs5 div{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;border-radius:8px}
+.tabs5 div.on{color:var(--ink);font-weight:700;background:var(--sunk)}
+.tabs5 svg{width:20px;height:20px}
+.legend5{display:grid;gap:6px;margin-top:12px;font-size:13px}
+@media(min-width:620px){.legend5{grid-template-columns:repeat(5,1fr)}}
+.legend5 div{background:var(--sunk);border-radius:10px;padding:8px 10px}
+.legend5 b{display:block;font-size:13px}
+.legend5 span{font-size:11.5px;color:var(--muted)}
+.form{display:grid;gap:8px}
+.field{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:center;font-size:13px}
+.field label{color:var(--muted);font-size:12px}
+.field .in{border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:var(--ground);font-size:13px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.field .in.mono{font-size:12.5px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg span{font-size:12px;padding:3px 10px;border-radius:8px;border:1px solid var(--line);background:var(--ground)}
+.seg span.on{background:var(--ink);border-color:var(--ink);color:#F3F4F1}
+.ev{display:grid;grid-template-columns:44px 12px minmax(0,1fr) auto;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;line-height:1.5;align-items:start}
+.ev:last-child{border-bottom:0}
+.ev .t{font-family:var(--f-mono);font-weight:600;font-size:12.5px}
+.ev .dot{width:10px;height:10px;border-radius:5px;border:2px solid var(--ink);margin-top:5px}
+.ev .dot.mv{border-color:var(--blue);background:var(--blue)}
+.ev small{display:block;color:var(--muted);font-size:11.5px}
+.ev .yen{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.todo{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:10px;background:var(--orange-soft);color:var(--orange-ink);font-size:13px;margin-top:6px}
+.todo b{font-family:var(--f-mono);margin-left:auto}
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sum div{background:var(--sunk);border-radius:10px;padding:8px 10px}
+.sum small{display:block;font-size:11px;color:var(--muted)}
+.sum b{font-family:var(--f-mono);font-size:17px}
+.check{display:grid;gap:4px;font-size:13.5px}
+.check div{display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid var(--sunk)}
+.check i{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--ink);flex:none}
+.check i.on{background:var(--ink);box-shadow:inset 0 0 0 3px var(--surface)}
+.check s{color:var(--faint)}
+.linkbox{display:flex;gap:8px;align-items:center;padding:9px 12px;border-radius:10px;background:var(--sunk);font-family:var(--f-mono);font-size:12px;color:var(--ink2);overflow:hidden;white-space:nowrap}
+.linkbox span{overflow:hidden;text-overflow:ellipsis}
+
+.help{margin-top:40px;background:var(--ink);color:#F3F4F1;border-radius:20px;padding:26px 22px}
+.help h2{font-size:22px;margin-bottom:8px}
+.help p{color:#C9D0D7;font-size:14px}
+.help .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.help .btn.primary{background:#F3F4F1;color:var(--ink);border-color:#F3F4F1}
+.help .btn.ghost{color:#F3F4F1;border-color:#5A6470}
+
+footer{padding:32px 0 44px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
+.ft{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between}
+.ft nav{display:flex;flex-wrap:wrap;gap:8px 18px}
+.ft a{text-decoration:none;color:inherit}
+.ft a:hover{color:var(--ink)}
+
+/* スマホ用：今いる章と目次（パソコンでは出さない） */
+.cbar{position:sticky;z-index:15;display:flex;gap:8px;align-items:center;background:rgba(243,244,241,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:8px 16px}
+.cbar button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:0 12px;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer}
+.cbar .cur{flex:1;min-width:0}
+.cbar .cur span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbar .cur i{font-style:normal;font-family:var(--f-mono);color:var(--muted);font-size:11px;flex:none}
+.cbar .up{flex:none;width:44px;justify-content:center;padding:0}
+@media(min-width:980px){.cbar{display:none}}
+.csheet{position:fixed;inset:0;z-index:60;background:rgba(21,32,43,.38);display:none}
+.csheet.on{display:block}
+.csheet .in{position:absolute;left:0;right:0;bottom:0;max-height:78vh;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.csheet .hd2{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.csheet .hd2 button{border:none;background:none;font:inherit;font-size:14px;color:var(--muted);padding:8px;cursor:pointer}
+.csheet a{display:flex;gap:12px;align-items:baseline;padding:12px 4px;border-bottom:1px solid var(--sunk);text-decoration:none;color:var(--ink);font-size:15px}
+.csheet a b{font-family:var(--f-mono);font-weight:500;color:var(--faint);font-size:12px;width:22px;flex:none}
+.csheet a.on{color:var(--blue);font-weight:700}
+.csheet a.on b{color:var(--blue)}
+
+.art-fig{margin:14px 0 18px;display:flex;gap:12px;flex-wrap:wrap}
+.art-fig img{width:100%;max-width:360px;height:auto;border-radius:14px;border:1px solid var(--line);background:#fff}
+.art-cta{margin:28px 0 8px;padding:20px 18px;border-radius:18px;background:var(--ink);color:#F3F4F1;text-align:center}
+.art-cta p{margin:6px 0 14px;color:#C9CFD6}
+.art-cta .btn{background:#fff;color:var(--ink)}
+.art-meta{font-size:13px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <a class="logo" href="/" aria-label="Trunk. トップ">Trunk<span>.</span></a>
+    <nav aria-label="サイト">
+      <a href="/#features">機能</a>
+      <a href="/guide.html">使い方</a>
+      <a href="/#pricing">料金</a>
+      <a href="/#faq">よくある質問</a>
+    </nav>
+    <a class="btn primary" href="/app/">無料ではじめる</a>
+  </div>
+</header>
+<div class="cbar" id="cbar"><button class="cur" id="ccur" aria-haspopup="dialog"><span>目次</span><i>目次 ▾</i></button><button class="up" aria-label="いちばん上へ" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button></div>
+<div class="csheet" id="csheet" role="dialog" aria-label="目次"><div class="in"><div class="hd2"><span class="eyebrow">目次</span><button id="cclose">閉じる</button></div><nav id="clist"></nav></div></div>
+
+
+<main class="wrap">
+  <div class="intro">
+    <div class="eyebrow">How to</div>
+    <h1>旅行の割り勘のやり方</h1>
+    <p>友だちとの旅行で、帰ってから「結局いくら払えばいい？」となりがちなのが割り勘です。あとでもめないための、やり方とコツをまとめました。</p>
+    <div class="art-meta">更新：2026年10月19日 ・ Trunk.</div>
+  </div>
+  <div class="layout">
+    <nav class="toc" aria-label="目次" id="toc">
+      <ol>
+        <li><a href="#record"><span>01</span>払ったらすぐ記録する</a></li>
+        <li><a href="#days"><span>02</span>参加していない日がある場合</a></li>
+        <li><a href="#currency"><span>03</span>外貨で払ったとき</a></li>
+        <li><a href="#settle"><span>04</span>精算の回数を減らす</a></li>
+        <li><a href="#trunk"><span>05</span>Trunk. で割り勘する</a></li>
+      </ol>
+    </nav>
+    <article>
+      <section class="chap" data-no="01" data-sec="払ったらすぐ記録する" id="record">
+        <div class="chap-h"><span class="no">01</span><h2>払ったらすぐ記録する</h2></div>
+        <ul>
+          <li><b>誰が・何に・いくら払ったか</b>を、その場で記録します。帰ってからだと思い出せません。</li>
+          <li>誰の分か（全員か、一部の人か）も一緒に。お酒を飲む人だけ、のような場合もあります。</li>
+        </ul>
+      </section>
+      <section class="chap" data-no="02" data-sec="参加していない日がある場合" id="days">
+        <div class="chap-h"><span class="no">02</span><h2>参加していない日がある場合</h2></div>
+        <p>途中から合流する人や、先に帰る人がいるときは、<b>その人がいない日の宿代・移動費は、残りの人で割る</b>のが自然です。日ごとに誰がいたかを決めておくと、計算がぶれません。</p>
+      </section>
+      <section class="chap" data-no="03" data-sec="外貨で払ったとき" id="currency">
+        <div class="chap-h"><span class="no">03</span><h2>外貨で払ったとき</h2></div>
+        <ul>
+          <li>外貨のまま記録しておき、最後に<b>同じレートで円に直す</b>と公平です。</li>
+          <li>カードの請求額と少し違っても、細かい差は気にしないと決めておくと楽です。</li>
+        </ul>
+      </section>
+      <section class="chap" data-no="04" data-sec="精算の回数を減らす" id="settle">
+        <div class="chap-h"><span class="no">04</span><h2>精算の回数を減らす</h2></div>
+        <p>全員が全員に払うと、精算の回数が増えます。<b>立て替えた人にまとめて払う形</b>に整理すると、回数が少なくてすみます。</p>
+      </section>
+      <section class="chap" data-no="05" data-sec="Trunk. で割り勘する" id="trunk">
+        <div class="chap-h"><span class="no">05</span><h2>Trunk. で割り勘する</h2></div>
+        <p>Trunk. では、旅行を作るときに参加者の名前を入れておくと、支出を記録するだけで、1人あたりの負担と「誰が誰にいくら払うか」が自動で出ます。日ごとの参加状況や、外貨の換算にも対応しています。</p>
+      </section>
+      <div class="art-cta">
+        <div style="font-family:var(--f-display);font-weight:900;font-size:22px">Trunk<span style="color:#608CFF">.</span></div>
+        <p>割り勘の計算も、旅程と一緒に。</p>
+        <a class="btn" href="/app/?utm_source=article_warikan">無料ではじめる</a>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap ft">
+    <a class="logo" href="/" style="font-size:18px">Trunk<span>.</span></a>
+    <nav aria-label="フッター">
+      <a href="/guide.html">使い方ガイド</a>
+      <a href="/articles/">読みもの</a>
+      <a href="/privacy.html">プライバシーポリシー</a>
+      <a href="/tokushoho.html">特定商取引法に基づく表記</a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせ</a>
+    </nav>
+    <span>© 2026 Trunk.</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('.toc a'));
+  if(!('IntersectionObserver' in window)||!links.length)return;
+  var map={};links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a});
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove('on')});var a=map[e.target.id];if(a)a.classList.add('on')}})},{rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('.chap').forEach(function(s){io.observe(s)});
+})();
+</script>
+<script>
+// スマホ用の目次：data-sec を付けた見出しから作り、読んでいる章を帯に出す
+(function(){
+  var secs=[].slice.call(document.querySelectorAll('[data-sec]'));if(!secs.length)return;
+  var bar=document.getElementById('cbar'),cur=document.getElementById('ccur'),sheet=document.getElementById('csheet'),list=document.getElementById('clist');
+  var hd=document.querySelector('header');
+  function place(){var h=hd?hd.getBoundingClientRect().height:0;bar.style.top=h+'px';document.documentElement.style.scrollPaddingTop=(h+bar.getBoundingClientRect().height+12)+'px'}
+  place();window.addEventListener('resize',place);
+  var links=secs.map(function(s,i){var a=document.createElement('a');a.href='#'+s.id;var no=s.getAttribute('data-no')||String(i+1).padStart(2,'0');a.innerHTML='<b>'+no+'</b><span></span>';a.lastChild.textContent=s.getAttribute('data-sec');a.addEventListener('click',function(){sheet.classList.remove('on')});list.appendChild(a);return a});
+  function set(i){links.forEach(function(a,k){a.classList.toggle('on',k===i)});cur.firstChild.textContent=i<0?'目次':secs[i].getAttribute('data-sec')}
+  function onScroll(){var y=(bar.getBoundingClientRect().bottom||0)+40,i=-1;secs.forEach(function(s,k){if(s.getBoundingClientRect().top<=y)i=k});set(i)}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  cur.addEventListener('click',function(){sheet.classList.add('on');var on=list.querySelector('.on');if(on)on.scrollIntoView({block:'center'})});
+  document.getElementById('cclose').addEventListener('click',function(){sheet.classList.remove('on')});
+  sheet.addEventListener('click',function(e){if(e.target===sheet)sheet.classList.remove('on')});
+})();
+</script>
+</body>
+</html>

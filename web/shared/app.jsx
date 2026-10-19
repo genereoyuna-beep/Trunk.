@@ -424,11 +424,20 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
           <div className="card flush divide">
             {todos.length === 0 && <p className="empty">今やることはありません。</p>}
             {todos.map((td, i) => (
-              <button key={i} className="todo" onClick={() => onTodo(td)}>
-                <span className={"ico " + (td.urgent ? "urgent" : td.icon === "mail" ? "blue" : "open")}><Icon n={td.icon} /></span>
-                <span style={{ minWidth: 0 }}><span className="t1">{td.title}</span><span className="t2">{td.sub}</span></span>
-                <span className={"pill " + (td.urgent ? "tone-open" : "tone-none")}>{td.tag}</span>
-              </button>
+              <React.Fragment key={i}>
+                <button className="todo" onClick={() => onTodo(td)}>
+                  <span className={"ico " + (td.urgent ? "urgent" : td.icon === "mail" ? "blue" : "open")}><Icon n={td.icon} /></span>
+                  <span style={{ minWidth: 0 }}><span className="t1">{td.title}</span><span className="t2">{td.sub}</span></span>
+                  <span className={"pill " + (td.urgent ? "tone-open" : "tone-none")}>{td.tag}</span>
+                </button>
+                {td.city && typeof FEATURES !== "undefined" && typeof FEATURES.hotelSearch === "function" && (
+                  <div className="row small" style={{ padding: "0 14px 10px 62px", gap: 8, alignItems: "center", borderTop: "none" }}>
+                    <a href={FEATURES.hotelSearch(td.city)} target="_blank" rel="noopener sponsored">アゴダで{td.city}の宿を探す</a>
+                    <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "0 4px" }}>PR</span>
+                    <span className="xs muted">料金は変わりません</span>
+                  </div>
+                )}
+              </React.Fragment>
             ))}
           </div>
         </section>

@@ -388,7 +388,7 @@ function buildTodos(t, inboxCount) {
   if (flights.length) todos.push({ icon: "plane", title: flights.length === 1 ? "航空券を予約する" : `航空券を予約する（${flights.length}便）`, sub: flights.map(x => `${splitCity(x.fromCity).main}→${splitCity(x.toCity).main}`).join("・"), tag: "未予約", edit: flights.length === 1 ? { kind: "transit", id: flights[0].id } : null, go: { tab: "book", filter: "open" } });
   const stays = staysOf(t).filter(s => isISO(s.startDate));
   const open = stays.filter(s => stayState(t, s).key === "open").sort((a, b) => nightsOf(b) - nightsOf(a));
-  open.slice(0, 2).forEach(s => todos.push({ icon: "bed", title: stayTitle(s, "宿を予約"), sub: `${md(s.startDate)}〜${md(stayEnd(s))} ・ ${nightsOf(s)}泊`, tag: "未手配", edit: { kind: "stay", id: s.id } }));
+  open.slice(0, 2).forEach(s => todos.push({ icon: "bed", title: stayTitle(s, "宿を予約"), sub: `${md(s.startDate)}〜${md(stayEnd(s))} ・ ${nightsOf(s)}泊`, tag: "未手配", edit: { kind: "stay", id: s.id }, city: splitCity(s.city).main }));
   stays.filter(s => stayState(t, s).key === "cand").forEach(s => { const h = hotelOf(t, s); todos.push({ icon: "bed", title: stayTitle(s, "宿を予約"), sub: `${md(s.startDate)}〜${md(stayEnd(s))} ・ 候補あり${Number(h.total) > 0 ? " " + yen(h.total) : ""}`, tag: "候補あり", edit: { kind: "stay", id: s.id } }); });
   const rest = open.slice(2);
   if (rest.length) todos.push({ icon: "bed", title: `ほか${rest.length}都市の宿を予約`, sub: `${rest.map(stayShort).join("・")} ・ 計${rest.reduce((a, s) => a + nightsOf(s), 0)}泊`, tag: "未手配", go: { tab: "book", filter: "open", type: "stay" } });

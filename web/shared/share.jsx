@@ -138,7 +138,7 @@ function ShareApp({ payload: given, onSend }) {
                   </div>
                   <DayTimeline t={t} iso={d} onEdit={noop} />
                 </section>
-              ))}
+              )).concat([<DayMap key="daymap" t={t} iso={dayIso && dayIso >= r.start && dayIso <= r.end ? dayIso : firstDay(r)} />])}
             </div>
           )}
           {view === "list" && <div className="share-ro"><ListView t={t} onEdit={noop} /></div>}

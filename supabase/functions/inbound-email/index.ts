@@ -8,7 +8,7 @@ import { zodOutputFormat } from "npm:@anthropic-ai/sdk@0.135.0/helpers/zod";
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const SECRET = Deno.env.get("INBOUND_SECRET") ?? "";
-const MODEL = Deno.env.get("MAIL_IMPORT_MODEL") ?? "claude-opus-5-5";
+const MODEL = Deno.env.get("MAIL_IMPORT_MODEL") ?? "claude-haiku-5-5";
 const DAILY_LIMIT = 30;       // 1人1日に受け付ける通数
 const BODY_LIMIT = 20000;     // AI に渡す本文の最大文字数
 const KEEP_DAYS = 3;          // 本文を残す日数

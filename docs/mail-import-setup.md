@@ -52,6 +52,6 @@ npx wrangler deploy
 ---
 
 ## 費用の目安
-- AI：メール1通あたり約3円（Claude Opus 5.5）。安くしたいときは Supabase の `MAIL_IMPORT_MODEL` を `claude-haiku-5-5` にすると約0.1円（精度は実際のメールで比べてから）
+- AI：メール1通あたり約0.1円（Claude Haiku 5.5）。読み取りの精度が足りないときは Supabase の `MAIL_IMPORT_MODEL` を `claude-opus-5-5`（約3円）にする
 - Cloudflare：無料
 - 1人1日30通まで受け付ける（使いすぎ防止）

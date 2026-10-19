@@ -234,24 +234,46 @@ function staticMapUrl(cx, cy, k, width, height) {
   const z = Math.max(1, Math.min(18, Math.floor(Math.log2(k * 360 / 256))));
   const lat = (2 * Math.atan(Math.exp(cy * Math.PI / 180)) - Math.PI / 2) * 180 / Math.PI;
   const w = Math.min(640, Math.round(width)), h = Math.min(640, Math.round(height));
-  const style = ["feature:poi|visibility:off", "feature:transit|visibility:off", "feature:administrative|element:labels|visibility:off", "feature:road|element:labels|visibility:off",
+  const style = ["feature:poi|visibility:off", "feature:transit|visibility:off", "feature:administrative|element:labels|visibility:off", "feature:road|element:labels|visibility:off", "feature:administrative|element:geometry.stroke|color:0xc9cdc6",
     "feature:road|element:geometry|color:0xffffff", "feature:road.highway|element:geometry|color:0xe2e5e0", "feature:landscape|color:0xf3f4f1", "feature:water|color:0xd6e2ec",
     "element:labels.text.fill|color:0x8a929a", "element:labels.text.stroke|color:0xf3f4f1"]
     .map(v => "&style=" + encodeURIComponent(v)).join("");
   return { k: 256 * Math.pow(2, z) / 360 * (width / w), url: `https://maps.googleapis.com/maps/api/staticmap?center=${lat.toFixed(6)},${cx.toFixed(6)}&zoom=${z}&size=${w}x${h}&scale=2&language=ja&region=JP${style}&key=${MAPS_KEY}` };
 }
+// 背景の画像は一度だけ取りに行き、data URL にして使い回す（しおりのPDFでも画像が消えないように）
+const STATIC_MAP_CACHE = new Map();
+function useStaticMap(url) {
+  const [res, setRes] = useState(() => url && STATIC_MAP_CACHE.has(url) && !(STATIC_MAP_CACHE.get(url) instanceof Promise) ? STATIC_MAP_CACHE.get(url) : null);
+  useEffect(() => {
+    if (!url) return;
+    let alive = true;
+    let p = STATIC_MAP_CACHE.get(url);
+    if (!p) {
+      p = fetch(url).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+        .then(b => new Promise((ok, ng) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = ng; fr.readAsDataURL(b); }))
+        .catch(() => "");
+      STATIC_MAP_CACHE.set(url, p);
+      p.then(v => STATIC_MAP_CACHE.set(url, v));
+    }
+    Promise.resolve(p).then(v => { if (alive) setRes(v); });
+    return () => { alive = false; };
+  }, [url]);
+  return res; // null：読み込み中、""：使えない、それ以外：data URL
+}
 function DayMap({ t, iso, width = 640, height = 300, print }) {
   const raw = useMemo(() => dayPoints(t, iso), [t, iso]);
-  const [bgOk, setBgOk] = useState(true);
+  if (raw.length < 2) return print ? null : <p className="xs muted" style={{ margin: "4px 2px" }}>この日の地図：場所を2つ以上、Google の候補から選ぶと出ます。</p>;
+  return <DayMapBody t={t} iso={iso} raw={raw} width={width} height={height} print={print} />;
+}
+function DayMapBody({ t, iso, raw, width, height, print }) {
   // 国をまたぐような広い日は、近く（約25km以内）の続いた点を1つにまとめる（空港・駅・宿が重なって読めなくならないように）
   const rawSpan = raw.length ? Math.max(Math.max(...raw.map(p => p.ll[1])) - Math.min(...raw.map(p => p.ll[1])), Math.max(...raw.map(p => p.ll[0])) - Math.min(...raw.map(p => p.ll[0]))) : 0;
   const pts = [];
   raw.forEach((p, i) => {
     const last = pts[pts.length - 1];
-    if (rawSpan > 1.2 && last && Math.abs(last.ll[0] - p.ll[0]) < 0.25 && Math.abs(last.ll[1] - p.ll[1]) < 0.3) { last.to = i + 1; last.label = p.label; }
+    if (rawSpan > 1.2 && last && Math.abs(last.ll[0] - p.ll[0]) < Math.max(0.25, rawSpan * 0.05) && Math.abs(last.ll[1] - p.ll[1]) < Math.max(0.3, rawSpan * 0.05)) { last.to = i + 1; last.label = p.label; }
     else pts.push({ ...p, no: i + 1 });
   });
-  if (raw.length < 2) return print ? null : <p className="xs muted" style={{ margin: "4px 2px" }}>この日の地図：場所を2つ以上、Google の候補から選ぶと出ます。</p>;
   let x0 = Math.min(...pts.map(p => p.ll[1])), x1 = Math.max(...pts.map(p => p.ll[1]));
   let y0 = Math.min(...pts.map(p => mercY(p.ll[0]))), y1 = Math.max(...pts.map(p => mercY(p.ll[0])));
   const minSpan = 0.02;
@@ -263,6 +285,8 @@ function DayMap({ t, iso, width = 640, height = 300, print }) {
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
   // Google の地図画像を背景に敷く（キーがある版だけ）。ズームは整数なので、収まるところまで少し引いて縮尺を合わせる
   const bg = staticMapUrl(cx, cy, k, width, height);
+  const bgData = useStaticMap(bg ? bg.url : null);
+  const bgOk = bgData !== "";
   if (bg && bgOk) k = bg.k;
   const P = (lat, lng) => [width / 2 + (lng - cx) * k, height / 2 - (mercY(lat) - cy) * k];
   const wide = (x1 - x0) > 1.2;
@@ -279,7 +303,7 @@ function DayMap({ t, iso, width = 640, height = 300, print }) {
   return (
     <div className={print ? "sh-daymap" : "card"} style={print ? undefined : { padding: 8 }}>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ display: "block", background: wide ? "#E3ECF5" : "#F3F4F1", borderRadius: 10 }} role="img" aria-label={`${md(iso)}の地図`}>
-        {useBg && <image href={bg.url} x="0" y="0" width={width} height={height} preserveAspectRatio="none" onError={() => setBgOk(false)} />}
+        {useBg && bgData && <image href={bgData} x="0" y="0" width={width} height={height} preserveAspectRatio="none" />}
         {!useBg && !wide && Array.from({ length: 9 }, (_, i) => <line key={"g" + i} x1={(i + 1) * width / 10} y1="0" x2={(i + 1) * width / 10} y2={height} stroke="#E4E6E1" strokeWidth="1" />)}
         {!useBg && land.map((d, i) => <path key={i} d={d} fill="#FFFFFF" stroke="#DADDD6" strokeWidth=".6" />)}
         {xy.slice(1).map((q, i) => <line key={"s" + i} x1={xy[i][0]} y1={xy[i][1]} x2={q[0]} y2={q[1]} stroke="#1D4ED8" strokeWidth="2" strokeDasharray="5 4" />)}

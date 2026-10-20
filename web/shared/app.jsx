@@ -1024,7 +1024,7 @@ function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
 }
 
 // ================= お金 =================
-function MoneyView({ t, stats, update, mode, setMode, tripId }) {
+function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
   const [allView, setAllView] = useState(false);
   const [newName, setNewName] = useState("");
   const participants = t.participants || [];
@@ -1080,8 +1080,8 @@ function MoneyView({ t, stats, update, mode, setMode, tripId }) {
             {participants.map(p => (
               <span key={p} className={"member" + (t.myName === p ? " me" : "")}>
                 {p}
-                <button aria-label={t.myName === p ? "自分の設定を外す" : `${p}を自分にする`} title="自分にする" onClick={() => update(tr => ({ ...tr, myName: tr.myName === p ? "" : p }))}><Icon n="star" s={14} /></button>
-                <button aria-label={`${p}を外す`} onClick={() => update(tr => ({ ...tr, participants: tr.participants.filter(x => x !== p), myName: tr.myName === p ? "" : tr.myName }))}><Icon n="x" s={14} /></button>
+                <button aria-label={t.myName === p ? "自分の設定を外す" : `${p}を自分にする`} title="自分にする" onClick={() => setMe(t.myName === p ? "" : p)}><Icon n="star" s={14} /></button>
+                <button aria-label={`${p}を外す`} onClick={() => update(tr => ({ ...tr, participants: tr.participants.filter(x => x !== p), myName: tr.myName === p ? "" : tr.myName, memberLinks: Object.fromEntries(Object.entries(tr.memberLinks || {}).filter(([, v]) => v !== p)) }))}><Icon n="x" s={14} /></button>
               </span>
             ))}
             {!participants.length && <span className="small muted">まだ参加者がいません</span>}
@@ -1090,7 +1090,12 @@ function MoneyView({ t, stats, update, mode, setMode, tripId }) {
             <input className="input" aria-label="参加者の名前" placeholder="名前を追加" value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === "Enter" && addMember()} />
             <button className="btn" onClick={addMember}>追加</button>
           </div>
-          {typeof TrunkMemberSuggest === "function" && <TrunkMemberSuggest tripId={tripId} participants={participants} onAdd={(n) => update(tr => (tr.participants || []).includes(n) ? tr : ({ ...tr, participants: [...(tr.participants || []), n] }))} />}
+          {typeof TrunkMemberSuggest === "function" && <TrunkMemberSuggest tripId={tripId} participants={participants} links={t.memberLinks || {}} onLink={(uid, n) => update(tr => {
+            const links = { ...(tr.memberLinks || {}) };
+            if (n) links[uid] = n; else delete links[uid];
+            const ps = tr.participants || [];
+            return { ...tr, participants: n && !ps.includes(n) ? [...ps, n] : ps, memberLinks: links };
+          })} />}
           <div className="xs muted">★を押した人が「自分」です。支出を記録するとき、「払った人」の最初の値になります。</div>
         </section>
         <ExpenseSettle t={t} />
@@ -1661,6 +1666,9 @@ function App() {
   const sugg = buildSuggestions([t, ...trips.filter(x => x.id !== tripId).map(x => x.data)]);
   const stats = tripStats(t);
   const todos = buildTodos(t, inbox.length + extInbox);
+  // 精算の「自分」：Trunk. では、ログインしている人ごとに、結びつけた参加者が自分になる（memberLinks）。なければ旅行の myName
+  const meName = typeof trunkMyName === "function" ? trunkMyName(t, tripId) : (t.myName || "");
+  const setMe = (name) => update(tr => typeof trunkSetMe === "function" ? trunkSetMe(tr, name) : ({ ...tr, myName: name }));
   const mine = myShare(t);
   const openDay = (iso) => setSheet({ kind: "day", iso });
   const closeSheet = () => {
@@ -1699,7 +1707,7 @@ function App() {
         {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "shift" })} onExpense={() => { setMoneyMode("expense"); setTab("money"); }} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => setSheet({ kind: "add" })} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
-        {tab === "money" && <MoneyView t={t} stats={stats} update={update} mode={moneyMode} setMode={setMoneyMode} tripId={tripId} />}
+        {tab === "money" && <MoneyView t={meName === t.myName ? t : { ...t, myName: meName }} stats={stats} update={update} mode={moneyMode} setMode={setMoneyMode} tripId={tripId} setMe={setMe} />}
         {tab === "pack" && <PackView t={packT} update={packUpdate} />}
       </main>
       {menu && (

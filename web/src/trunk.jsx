@@ -198,16 +198,52 @@ function TrunkViewShare({ tripId, name }) {
 }
 
 // 一緒に編集する人（招待リンク）
-// 招待から参加した人を、精算の参加者にワンタップで足す（名前は Google の表示名）
-function TrunkMemberSuggest({ tripId, participants, onAdd }) {
+// 精算の「自分」は、ログインしている人ごとに決める（memberLinks：アカウント → 参加者の名前）。
+// 結びつけていなければ、作った人は旅行の myName（前からの設定）、参加した人は未設定
+function trunkMyName(t, tripId) {
+  const uid = Store.userId && Store.userId();
+  const links = t.memberLinks || {};
+  if (uid && links[uid]) return links[uid];
+  if (tripId && Store.isJoined && Store.isJoined(tripId)) return "";
+  // 前からの「自分」が、ほかの人のアカウントに結びついていたら使わない
+  return t.myName && !Object.values(links).includes(t.myName) ? t.myName : "";
+}
+function trunkSetMe(tr, name) {
+  const uid = Store.userId && Store.userId();
+  if (!uid) return { ...tr, myName: name };
+  const links = { ...(tr.memberLinks || {}) };
+  if (name) { Object.keys(links).forEach(k => { if (k !== uid && links[k] === name) delete links[k]; }); links[uid] = name; } else delete links[uid];
+  return { ...tr, memberLinks: links };
+}
+// 一緒に編集している人（Google アカウント）を、精算の参加者と結びつける。「葵」さんが参加者の「あおい」なら、同じ人として扱う
+function TrunkMemberSuggest({ tripId, participants, links, onLink }) {
   const [people, setPeople] = useState([]);
   useEffect(() => { let alive = true; Store.people(tripId).then(p => { if (alive) setPeople(p || []); }).catch(() => {}); return () => { alive = false; }; }, [tripId]);
-  const names = people.map(p => String(p.display_name || "").trim()).filter(n => n && !participants.includes(n));
-  if (!names.length) return null;
+  const me = Store.userId && Store.userId();
+  const taken = new Set(Object.values(links));
+  const open = people.filter(p => !links[p.user_id]);
+  const linked = people.filter(p => links[p.user_id]);
+  if (!people.length) return null;
   return (
-    <div className="stack" style={{ gap: 6 }}>
-      <span className="xs muted">一緒に編集している人を参加者に足す</span>
-      <div className="chips">{names.map(n => <button key={n} className="chip" onClick={() => onAdd(n)}><Icon n="plus" s={12} />{n}</button>)}</div>
+    <div className="stack" style={{ gap: 10 }}>
+      {open.map(p => {
+        const nm = String(p.display_name || "").trim() || "名前なし";
+        const free = participants.filter(x => !taken.has(x));
+        return (
+          <div key={p.user_id} className="stack" style={{ gap: 6, background: "var(--sunk)", borderRadius: 10, padding: "8px 10px" }}>
+            <span className="small">{p.user_id === me ? `あなた（${nm}）は、参加者の誰ですか？` : `${nm}さんは、参加者の誰ですか？`}</span>
+            <div className="chips">
+              {free.map(x => <button key={x} className="chip" onClick={() => onLink(p.user_id, x)}>{x}</button>)}
+              {!participants.includes(nm) && <button className="chip" onClick={() => onLink(p.user_id, nm)}><Icon n="plus" s={12} />{nm}として足す</button>}
+            </div>
+          </div>
+        );
+      })}
+      {linked.length > 0 && (
+        <div className="xs muted">
+          アカウントと結びついている人：{linked.map((p, i) => <span key={p.user_id}>{i ? "、" : ""}{links[p.user_id]}＝{String(p.display_name || "").trim() || "名前なし"}{p.user_id === me ? "（あなた）" : ""} <button className="btn ghost xs" style={{ padding: "0 4px", minHeight: 0 }} onClick={() => onLink(p.user_id, "")}>解除</button></span>)}
+        </div>
+      )}
     </div>
   );
 }

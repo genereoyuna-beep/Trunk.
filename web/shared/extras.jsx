@@ -149,7 +149,7 @@ function ExpenseView({ t, update }) {
   const [editId, setEditId] = useState(null);
   const addBooked = (list) => update(tr => {
     const have = new Set((tr.expenses || []).map(e => e.src).filter(Boolean));
-    const payer = (bPayer && (tr.participants || []).includes(bPayer) ? bPayer : "") || tr.myName || (tr.participants || [])[0] || "";
+    const payer = (bPayer && (tr.participants || []).includes(bPayer) ? bPayer : "") || t.myName || (tr.participants || [])[0] || "";
     const rows = list.filter(c => !have.has(c.src)).map(c => ({ id: uid(), src: c.src, date: c.date || defDate, title: c.title, amount: c.amount, currency: "JPY", payer, split: [...(tr.participants || [])], category: c.category }));
     return { ...tr, expenses: [...(tr.expenses || []), ...rows] };
   });

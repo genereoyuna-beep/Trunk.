@@ -273,17 +273,23 @@ function TrunkMailCard({ t, update, toast }) {
       <details className="small"><summary>Gmail で自動的に転送するには</summary>
         <ol style={{ margin: "6px 0 0", paddingLeft: 18 }}>
           <li>Gmail（パソコン）の 設定 →「すべての設定を表示」→「メール転送と POP/IMAP」→「転送先アドレスを追加」に、上のアドレスを入れる</li>
-          <li>しばらくすると、ここに Gmail の確認コードが出るので、Gmail の画面に入れて確定する</li>
+          <li>1〜2分すると、ここに「Gmail で承認する」が出るので、押して承認する</li>
           <li>「フィルタ」で、予約サイトから届くメールだけを、このアドレスに転送するようにする</li>
         </ol>
       </details>
-      {confirms.map(c => (
-        <div key={c.id} className="note">Gmail の転送の確認コード：<b className="mono" style={{ userSelect: "all" }}>{(c.parsed && c.parsed.code) || ((c.subject || "").match(/[0-9]{6,12}/) || [])[0] || "（読み取れませんでした）"}</b>
-          {!(c.parsed && c.parsed.code) && c.subject && <div className="xs muted">件名：{c.subject}</div>}
-          <div className="row" style={{ marginTop: 6 }}>
-            {c.parsed && /^https:\/\/mail(-settings)?\.google\.com\/mail\//.test(c.parsed.link || "") && <a className="btn small" href={c.parsed.link} target="_blank" rel="noopener">Gmail で確認する</a>}
-            <button className="btn small" onClick={() => decide(c.id, "dismissed")}>確認した</button></div></div>
-      ))}
+      {confirms.map(c => {
+        const code = (c.parsed && c.parsed.code) || "";
+        const link = c.parsed && /^https:\/\/mail(-settings)?\.google\.com\/mail\//.test(c.parsed.link || "") ? c.parsed.link : "";
+        return (
+          <div key={c.id} className="note">
+            <b>Gmail から転送の確認が届きました</b>
+            <div className="small">{link ? "「Gmail で承認する」を押すと、自動転送が使えるようになります。" : code ? <>確認コード：<b className="mono" style={{ userSelect: "all" }}>{code}</b>（Gmail の画面に入れてください）</> : "確認のリンクを読み取れませんでした。転送先をいったん削除して、もう一度追加してください。"}</div>
+            <div className="row" style={{ marginTop: 6 }}>
+              {link && <a className="btn small primary" style={{ textDecoration: "none" }} href={link} target="_blank" rel="noopener" onClick={() => setTimeout(() => decide(c.id, "dismissed"), 1500)}>Gmail で承認する</a>}
+              <button className="btn small ghost" onClick={() => decide(c.id, "dismissed")}>閉じる</button></div>
+          </div>
+        );
+      })}
       {state.err && <div className="err">{state.err}</div>}
       {bookings.length === 0 && <p className="xs muted" style={{ margin: 0 }}>取り込み待ちのメールはありません。</p>}
       {bookings.map(it => it.status === "failed" ? (

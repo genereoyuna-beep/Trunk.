@@ -2,6 +2,7 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 // ================= アイコン =================
 const ICONS = {
+  share: <><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" /><path d="M16 6l-4-4-4 4" /><path d="M12 2v13" /></>,
   home: <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />,
   cal: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
   ticket: <><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v8a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2z" /><path d="M13 6v12" strokeDasharray="2 2" /></>,
@@ -441,12 +442,17 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
             ))}
           </div>
         </section>
-        {r && ((days > 0 && days <= 14) || (days <= 0 && dayDiff(today, r.end) >= 0)) && (
-          <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12, boxShadow: "0 0 0 1.5px var(--blue)" }} onClick={openShiori}>
-            <span className="ico blue"><Icon n="ext" /></span>
-            <span style={{ flex: 1, minWidth: 0 }}><span className="t1">オフライン用にしおりを保存</span><span className="t2" style={{ whiteSpace: "normal" }}>電波がない所でも見られるよう、PDFをスマホに保存しておきましょう</span></span>
-          </button>
-        )}
+        {r && (() => {
+          // 出発の2週間前から旅行中は「オフライン用に保存」を目立たせる。それ以外はふつうの入口
+          const soon = (days > 0 && days <= 14) || (days <= 0 && dayDiff(today, r.end) >= 0);
+          return (
+            <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12, boxShadow: soon ? "0 0 0 1.5px var(--blue)" : undefined }} onClick={openShiori}>
+              <span className="ico blue"><Icon n="ext" /></span>
+              <span style={{ flex: 1, minWidth: 0 }}><span className="t1">{soon ? "オフライン用にしおりを保存" : "旅のしおり"}</span><span className="t2" style={{ whiteSpace: "normal" }}>{soon ? "電波がない所でも見られるよう、PDFをスマホに保存しておきましょう" : "搭乗券のデザインのしおりを、PDFで保存・印刷"}</span></span>
+              {!soon && <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>}
+            </button>
+          );
+        })()}
         {tripCountries(t).length > 0 && (
           <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12 }} onClick={openEmergency}>
             <span className="ico" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}><Icon n="clock" /></span>
@@ -621,7 +627,7 @@ function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
                 <span style={{ display: "block", fontFamily: "var(--f-display)", fontWeight: 700, fontSize: 17 }}>{head}</span>
               </span>
               <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                {onSuggest && <button className="btn small" onClick={() => onSuggest(d)}>提案</button>}
+                {onSuggest && <button className="btn small" onClick={() => onSuggest(d)}>{FEATURES.ai ? "提案" : "AIに相談"}</button>}
                 <button className="btn small" onClick={() => onAddLocal(d)}><Icon n="plus" s={14} />予定</button>
                 {onAddMove && <button className="btn small" onClick={() => onAddMove(d)}><Icon n="plus" s={14} />移動</button>}
               </span>
@@ -984,16 +990,17 @@ function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
   const shown = byState(filter.state).filter(i => filter.type === "all" || i.type === filter.type);
   return (
     <div className="stack">
-      <div className="row between" style={{ marginTop: 4 }}><h1>予約・手配</h1><button className="btn" onClick={onAddLocal}><Icon n="plus" s={16} />予定</button></div>
+      <div className="row between" style={{ marginTop: 4 }}><h1>予約・手配</h1><button className="btn" onClick={onAddLocal}><Icon n="plus" s={16} />追加</button></div>
       {entry}
       {mail}
-      <div className="chips">
-        {[["open", "未手配"], ["booked", "予約済み"], ["paid", "支払い済み"], ["all", "すべて"]].map(([k, l]) => (
+      <div className="chips" aria-label="絞り込み">
+        {[["all", "すべて"], ["open", "未手配"], ["booked", "予約済み"], ["paid", "支払い済み"]].map(([k, l]) => (
           <button key={k} className="chip" aria-pressed={filter.state === k} onClick={() => setFilter({ ...filter, state: k })}>{l} <b>{byState(k).length}</b></button>
         ))}
-      </div>
-      <div className="seg" role="tablist" aria-label="種類">
-        {[["all", "すべて"], ["stay", "宿"], ["transit", "移動"], ["local", "予定"]].map(([k, l]) => <button key={k} role="tab" aria-selected={filter.type === k} onClick={() => setFilter({ ...filter, type: k })}>{l}</button>)}
+        <span className="chipsep" aria-hidden="true" />
+        {[["stay", "宿"], ["transit", "移動"], ["local", "予定"]].map(([k, l]) => (
+          <button key={k} className="chip" aria-pressed={filter.type === k} onClick={() => setFilter({ ...filter, type: filter.type === k ? "all" : k })}>{l}</button>
+        ))}
       </div>
       <div className="card flush divide">
         {shown.length === 0 && <p className="empty">該当するものはありません。</p>}
@@ -1309,17 +1316,14 @@ function ShiftDates({ t, update }) {
     </section>
   );
 }
-// 「共有と設定」：旅行／共有／プラン／その他 の段に分ける（プラン・その他は Trunk. だけ）
+// 設定の画面：この旅行の設定／共有／アカウント（アカウントは Trunk. だけ）
+// section："trip"（この旅行の設定）・"share"（共有）・"account"（プラン・要望・ログアウト）を、それぞれ別の画面として出す
+const hasAccountSheet = () => typeof TrunkPlanSection === "function" || typeof TrunkFeedbackSection === "function" || !!FEATURES.account;
 function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onRequest, busy, joined, section }) {
   const hasPlan = typeof TrunkPlanSection === "function";
-  const hasMore = typeof TrunkFeedbackSection === "function" || FEATURES.account;
-  const tabs = [["trip", "旅行"], ["share", "共有"], ...(hasPlan ? [["plan", "プラン"]] : []), ...(hasMore ? [["more", "その他"]] : [])];
-  const [tab, setTab] = useState(tabs.some(x => x[0] === section) ? section : "trip");
+  const tab = section === "share" || section === "account" ? section : "trip";
   return (
     <>
-      <div className="seg" role="tablist" aria-label="設定の種類">
-        {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>)}
-      </div>
       {tab === "trip" && <>
         <div className="fgrid">
           <Field label="旅行の名前" wide><TextIn value={t.name} onChange={v => update(tr => ({ ...tr, name: v }))} /></Field>
@@ -1333,8 +1337,8 @@ function SettingsSheet({ t, tripId, update, onCopy, onDelete, canDelete, onReque
         {joined ? <DeleteButton label="この旅行から抜ける" onDelete={onDelete} /> : canDelete ? <DeleteButton label="この旅行を削除" onDelete={onDelete} /> : <div className="small muted">旅行が1つだけのときは削除できません。</div>}
       </>}
       {tab === "share" && (FEATURES.claudeShare ? <ShareSection t={t} onRequest={onRequest} busy={busy} /> : typeof TrunkShareSection === "function" ? <TrunkShareSection t={t} tripId={tripId} /> : null)}
-      {tab === "plan" && hasPlan && <TrunkPlanSection />}
-      {tab === "more" && <>
+      {tab === "account" && hasPlan && <TrunkPlanSection />}
+      {tab === "account" && <>
         {typeof TrunkFeedbackSection === "function" && <TrunkFeedbackSection />}
         {FEATURES.account && <><div className="formsec">アカウント</div><button className="btn block" onClick={() => Store.signOut()}>ログアウト</button></>}
       </>}
@@ -1353,9 +1357,10 @@ function App() {
   // window.__demo：紹介用の画面を撮るときだけ、最初に開く画面を決める（ふだんは空）
   const DEMO = window.__demo || {};
   const [planView, setPlanView] = useState(DEMO.view || "list");
-  const [bookFilter, setBookFilter] = useState({ state: DEMO.book || "open", type: "all" });
+  const [bookFilter, setBookFilter] = useState({ state: DEMO.book || "all", type: "all" });
   const [sheet, setSheet] = useState(DEMO.sheet ? { kind: DEMO.sheet } : null);
   const [menu, setMenu] = useState(false);
+  const [menuData, setMenuData] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [notice, setNotice] = useState("");
   const [privEm, setPrivEm] = useState({});
@@ -1710,7 +1715,7 @@ function App() {
   };
   const openCount = staysOf(t).filter(s => isOpenState(stayState(t, s))).length + transitsOf(t).filter(x => isOpenState(transitState(x))).length + (t.localTransport || []).filter(l => isOpenState(localState(l))).length;
   const mail = <MailCard t={t} update={update} inbox={inbox} scan={scan} onScan={scanGmail} onPaste={pasteImport} onApply={applyInbox} onDecide={decide} />;
-  const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", settings: "共有と設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", shiori: "旅のしおり", suggest: "予定の提案", consult: "AIに相談", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
+  const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", settings: sheet.section === "share" ? "共有" : sheet.section === "account" ? "アカウント" : "この旅行の設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", shiori: "旅のしおり", suggest: "予定の提案", consult: "AIに相談", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
 
   return (
     <GeoCtx.Provider value={(names, ll) => update(tr => ({ ...tr, geo: { ...(tr.geo || {}), ...Object.fromEntries(names.filter(Boolean).map(n => [n, ll])) } }))}>
@@ -1719,7 +1724,8 @@ function App() {
       <header className={"topbar" + (scrolled ? " scrolled" : "")}>
         <button className="tripbtn" onClick={() => setSheet({ kind: "trips" })} aria-label={`旅行を切り替える（今は${t.name}）`}><span>{t.name}</span><Icon n="down" s={16} /></button>
         <div className="spacer" />
-        <button className="iconbtn" aria-label="その他のメニュー" aria-expanded={menu} onClick={() => setMenu(!menu)} style={{ position: "relative" }}><Icon n="dots" />{typeof TrunkMenuBadge === "function" && <TrunkMenuBadge tripId={tripId} />}</button>
+        <button className="btn small ghost" onClick={() => setSheet({ kind: "settings", section: "share" })} style={{ position: "relative", gap: 6 }} aria-label="この旅行を共有する"><Icon n="share" s={16} />共有{typeof TrunkMenuBadge === "function" && <TrunkMenuBadge tripId={tripId} />}</button>
+        <button className="iconbtn" aria-label="その他のメニュー" aria-expanded={menu} onClick={() => setMenu(!menu)}><Icon n="dots" /></button>
       </header>
       <nav className="nav" aria-label="メインメニュー">
         {NAV.map(([k, l, ic]) => (
@@ -1734,7 +1740,7 @@ function App() {
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
         {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "settings", section: "trip" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
-        {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => addLocal()} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
+        {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => setSheet({ kind: "add" })} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={t} stats={stats} update={update} />}
         {tab === "pack" && <PackView t={packT} update={packUpdate} />}
       </main>
@@ -1742,16 +1748,23 @@ function App() {
         <>
           <div style={{ position: "fixed", inset: 0, zIndex: 55 }} onClick={() => setMenu(false)} />
           <div className="menu" role="menu">
-            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "settings" }); }}>{FEATURES.claudeShare ? "共有と設定（リクエストの取り込み）" : "共有と設定"}{typeof TrunkMenuBadge === "function" && <TrunkMenuBadge tripId={tripId} inline />}</button>
-            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "trips" }); }}>旅行を切り替える・追加する</button>
-            <hr />
+            <div className="menuhead">旅のツール</div>
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "shiori" }); }}>旅のしおり（PDFで保存）</button>
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "phrases" }); }}>旅のフレーズ集</button>
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "emergency" }); }}>緊急時の情報</button>
-            <button role="menuitem" onClick={exportICS}>カレンダー用に書き出す（.ics）</button>
             <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "consult" }); }}>AIに相談（ChatGPT・Claude など）</button>
-            <button role="menuitem" onClick={exportJSON}>データを書き出す（JSON）</button>
-            <button role="menuitem" onClick={() => { setMenu(false); fileRef.current && fileRef.current.click(); }}>データを読み込む（JSON）</button>
+            <hr />
+            <div className="menuhead">この旅行</div>
+            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "settings", section: "share" }); }}>{FEATURES.claudeShare ? "共有（リクエストの取り込み）" : "共有"}{typeof TrunkMenuBadge === "function" && <TrunkMenuBadge tripId={tripId} inline />}</button>
+            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "settings", section: "trip" }); }}>この旅行の設定（名前・コピー・削除）</button>
+            <button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "trips" }); }}>旅行を切り替える・追加する</button>
+            <button role="menuitem" aria-expanded={menuData} onClick={() => setMenuData(!menuData)}>データの書き出し・読み込み<span style={{ marginLeft: "auto", transform: menuData ? "rotate(180deg)" : "none", display: "inline-flex" }}><Icon n="down" s={14} /></span></button>
+            {menuData && <>
+              <button role="menuitem" className="sub" onClick={exportICS}>カレンダー用に書き出す（.ics）</button>
+              <button role="menuitem" className="sub" onClick={exportJSON}>データを書き出す（JSON）</button>
+              <button role="menuitem" className="sub" onClick={() => { setMenu(false); fileRef.current && fileRef.current.click(); }}>データを読み込む（JSON）</button>
+            </>}
+            {hasAccountSheet() && <><hr /><button role="menuitem" onClick={() => { setMenu(false); setSheet({ kind: "settings", section: "account" }); }}>アカウント（プラン・ご要望・ログアウト）</button></>}
           </div>
         </>
       )}

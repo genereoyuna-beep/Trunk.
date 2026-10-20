@@ -28,7 +28,7 @@ function TrunkBuyPass() {
     </div>
   );
 }
-// 今のプラン（旅行一覧の下に1行、「共有と設定」に詳しく）
+// 今のプラン（旅行一覧の下に1行、「アカウント」に詳しく）
 function planSummary(ps) {
   const items = [];
   if (ps.staff) items.push("運営者パス（期限なし）");
@@ -128,7 +128,7 @@ function TrunkRequestsBanner({ tripId, onOpen }) {
   return (
     <button className="card" onClick={onOpen} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 12, marginBottom: 14, border: "2px solid var(--orange-bar)", cursor: "pointer" }}>
       <span style={{ flex: "none", minWidth: 28, height: 28, borderRadius: 14, background: "var(--orange-bar)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontFamily: "var(--f-mono)" }}>{n}</span>
-      <span style={{ flex: 1 }}><b>共有ページからリクエストが届いています</b><br /><span className="small muted">押すと「共有と設定」で読めます。読んだら「対応した」か「消す」を押してください。</span></span>
+      <span style={{ flex: 1 }}><b>共有ページからリクエストが届いています</b><br /><span className="small muted">押すと「共有」で読めます。読んだら「対応した」か「消す」を押してください。</span></span>
     </button>
   );
 }
@@ -308,11 +308,13 @@ function TrunkMailCard({ t, update, toast, trips, tripId, onPick, onCreate, onEd
   };
   if (!st.ready) return null;
   if (!st.paid) return (
-    <section className="card stack" style={{ gap: 8 }}>
-      <h3>予約メールから取り込む</h3>
-      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを転送するだけで、宿や移動を読み取って旅程に反映できます。旅行パス・3か月パスの機能です。</p>
-      {typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
-    </section>
+    <details className="card small" style={{ padding: "10px 14px" }}>
+      <summary style={{ cursor: "pointer" }}><b>予約メールを転送して取り込む</b><span className="muted">（パスの機能）</span></summary>
+      <div className="stack" style={{ gap: 8, marginTop: 8 }}>
+        <p className="muted" style={{ margin: 0 }}>予約の確認メールを転送するだけで、宿や移動を読み取って旅程に反映できます。旅行パス・3か月パスを使っているときに使えます。</p>
+        {typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
+      </div>
+    </details>
   );
   const confirms = st.items.filter(i => i.kind === "gmail_confirm");
   const { here, elsewhere } = inboundSplit(st.items, trips, tripId);

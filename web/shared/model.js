@@ -740,7 +740,7 @@ function tripDraftPrompt(f) {
 - plans は1日あたり2〜4件、移動の時間と重ならないようにしてください。`;
 }
 // 下書きの JSON を旅行データに組み立てる
-function applyTripDraft(t, d, start) {
+function applyTripDraft(t, d, start, tag = "Claudeの提案") {
   const stays = [], plans = [];
   let cur = start;
   (Array.isArray(d && d.stays) ? d.stays : []).forEach(s => {
@@ -761,7 +761,7 @@ function applyTripDraft(t, d, start) {
     const date = dayISO(p.day);
     plans.push({ id: uid(), linkedStayId: null, category: LOCAL_CATS.includes(p.category) ? p.category : "観光", desc: String(p.title), address: String(p.address || ""), fromAddress: "", toAddress: "",
       date, startTime: /^\d{1,2}:\d{2}$/.test(p.time || "") ? p.time : "", endTime: "", mode: "", price: 0, people: 1, needsBooking: !!p.needs_booking,
-      memo: [p.note, "（Claudeの提案）"].filter(Boolean).join(" "), paymentStatus: "未払い", status: "候補" });
+      memo: [p.note, tag ? `（${tag}）` : ""].filter(Boolean).join(" "), paymentStatus: "未払い", status: "候補" });
   });
   const itinerary = normalizeItinerary([...stays, ...moves]);
   plans.forEach(l => { const s = stays.find(s => l.date >= s.startDate && l.date < stayEnd(s)); l.linkedStayId = s ? s.id : null; });

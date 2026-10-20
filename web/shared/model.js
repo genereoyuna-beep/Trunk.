@@ -326,41 +326,9 @@ function tripStats(t) {
 }
 
 // 人ごとの負担（日ごとの参加者で割る）— 旧版の精算ロジックと同じ
-function personBreakdown(t) {
-  const participants = t.participants || [], dp = t.dayParticipants || {};
-  const members = (iso) => { const m = dp[iso]; return (m && m.length ? m : participants).filter(p => participants.includes(p)); };
-  const data = {};
-  participants.forEach(p => { data[p] = { total: 0, hotel: 0, flight: 0, localTransport: 0, localActivity: 0, items: [] }; });
-  const add = (who, amount, key, label, category, date) => who.forEach(p => { data[p].total += amount; data[p][key] += amount; data[p].items.push({ label, amount, category, date }); });
-  (t.hotels || []).forEach(h => {
-    const s = staysOf(t).find(x => x.id === h.linkedStayId);
-    if (!s || !s.startDate || s.noHotel) return;
-    const n = Math.max(1, nightsOf(s)), per = (Number(h.total) || 0) / n;
-    if (!per) return;
-    for (let i = 0; i < n; i++) {
-      const iso = addDays(s.startDate, i), who = members(iso);
-      if (who.length) add(who, per / who.length, "hotel", `${h.name || splitCity(s.city).main} ${md(iso)}（${who.length}人割）`, "宿", iso);
-    }
-  });
-  transitsOf(t).forEach(x => {
-    if (!(Number(x.price) > 0) || !x.departDate) return;
-    const who = members(x.departDate);
-    if (who.length) add(who, Number(x.price) / who.length, "flight", `${moveTitle(x)} ${md(x.departDate)}（${who.length}人割）`, "交通", x.departDate);
-  });
-  (t.localTransport || []).forEach(l => {
-    if (!(Number(l.price) > 0) || !l.date) return;
-    const who = members(l.date);
-    if (who.length) add(who, Number(l.price) / who.length, l.category === "移動" ? "localTransport" : "localActivity", `${l.desc || l.category} ${md(l.date)}（${who.length}人割）`, "現地", l.date);
-  });
-  Object.values(data).forEach(d => d.items.sort((a, b) => (a.date || "").localeCompare(b.date || "")));
-  return data;
-}
-
-// 1人分の負担。「精算」で自分を選んでいれば日ごとの参加者で割った額、そうでなければ各項目の金額 ÷ 人数
+// 1人分の負担：各項目の金額 ÷ 人数（何人分の金額か）。精算は「支出」に記録したものだけで行う
 const peopleOf = (x) => Math.max(1, Number(x.people ?? x.guests) || 1);
 function myShare(t) {
-  const pb = (t.myName && (t.participants || []).includes(t.myName)) ? personBreakdown(t)[t.myName] : null;
-  if (pb) return { mode: "split", hotel: pb.hotel, flight: pb.flight, localTransport: pb.localTransport, localActivity: pb.localActivity, total: pb.total, paid: null };
   const noHotel = new Set(staysOf(t).filter(s => s.noHotel).map(s => s.id));
   const hs = (t.hotels || []).filter(h => !noHotel.has(h.linkedStayId));
   const sum = (list, key) => list.reduce((a, x) => a + (Number(x[key]) || 0) / peopleOf(x), 0);
@@ -922,6 +890,20 @@ function emergencyPrompt(t) {
 // ================= 支出と精算 =================
 const EXP_CATS = ["食事", "交通", "観光", "買い物", "宿", "その他"];
 // 実際の支払いから、誰が誰にいくら払えばよいか（円換算）
+// 予約済み・支払い済みで金額が入っている宿・移動・予定のうち、まだ「支出」に入れていないもの
+function bookedExpenseCandidates(t) {
+  const done = new Set((t.expenses || []).map(e => e.src).filter(Boolean));
+  const ok = (x, price) => Number(price) > 0 && (isBooked(x.status) || x.paymentStatus === "支払い済み");
+  const out = [];
+  staysOf(t).forEach(s => {
+    const h = hotelOf(t, s);
+    if (!h || s.noHotel || !ok(h, h.total)) return;
+    out.push({ src: "hotel:" + h.id, title: h.name || stayTitle(s, "宿"), date: s.startDate, amount: Number(h.total), category: "宿" });
+  });
+  transitsOf(t).forEach(x => { if (ok(x, x.price)) out.push({ src: "transit:" + x.id, title: moveTitle(x), date: x.departDate, amount: Number(x.price), category: "交通" }); });
+  (t.localTransport || []).forEach(l => { if (ok(l, l.price)) out.push({ src: "local:" + l.id, title: l.desc || l.category, date: l.date, amount: Number(l.price), category: l.category === "移動" ? "交通" : l.category === "食事" ? "食事" : "観光" }); });
+  return out.filter(c => !done.has(c.src)).sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
+}
 function expenseSettlement(t) {
   const people = t.participants || [];
   const bal = Object.fromEntries(people.map(p => [p, 0]));

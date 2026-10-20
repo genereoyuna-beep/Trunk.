@@ -140,6 +140,15 @@ function ExpenseView({ t, update }) {
     update(tr => ({ ...tr, expenses: [...(tr.expenses || []), { id: uid(), ...f, title: f.title.trim(), amount: Number(f.amount) }] }));
     setF({ ...blank(), date: f.date, currency: f.currency, payer: f.payer });
   };
+  // 予約済みの宿・移動・予定を、そのまま支出に入れる（払った人は自分、割り勘は全員。あとで直せる）
+  const cands = bookedExpenseCandidates(t);
+  const [bPayer, setBPayer] = useState("");
+  const addBooked = (list) => update(tr => {
+    const have = new Set((tr.expenses || []).map(e => e.src).filter(Boolean));
+    const payer = (bPayer && (tr.participants || []).includes(bPayer) ? bPayer : "") || tr.myName || (tr.participants || [])[0] || "";
+    const rows = list.filter(c => !have.has(c.src)).map(c => ({ id: uid(), src: c.src, date: c.date || defDate, title: c.title, amount: c.amount, currency: "JPY", payer, split: [...(tr.participants || [])], category: c.category }));
+    return { ...tr, expenses: [...(tr.expenses || []), ...rows] };
+  });
   const byCat = EXP_CATS.map(c => [c, list.filter(e => e.category === c).reduce((a, e) => a + toJPY(t, e.amount, e.currency), 0)]).filter(([, v]) => v > 0);
   return (
     <div className="stack">
@@ -163,6 +172,21 @@ function ExpenseView({ t, update }) {
         <button className="btn primary" disabled={!f.title.trim() || !(Number(f.amount) > 0)} onClick={add}>記録する</button>
         {people.length === 0 && <div className="xs muted">「精算」で参加者を登録すると、払った人と割り勘の相手を選べます。</div>}
       </section>
+      {cands.length > 0 && (
+        <section className="card stack" style={{ gap: 8 }}>
+          <div className="row between"><h3>予約したものを支出に入れる</h3>{cands.length > 1 && <button className="btn small" onClick={() => addBooked(cands)}>まとめて入れる</button>}</div>
+          <div className="xs muted">予約済み・支払い済みで金額が入っているものです。{people.length > 1 ? "参加者全員の割り勘として入ります。" : ""}</div>
+          {people.length > 1 && <label className="row small" style={{ gap: 8 }}>払った人<select className="input" style={{ width: "auto" }} value={bPayer && people.includes(bPayer) ? bPayer : (t.myName || people[0])} onChange={e => setBPayer(e.target.value)}>{people.map(p => <option key={p}>{p}</option>)}</select></label>}
+          <div className="divide">
+            {cands.map(c => (
+              <div key={c.src} className="row between" style={{ flexWrap: "nowrap", padding: "8px 0" }}>
+                <span style={{ minWidth: 0 }}><span className="t1">{c.title}</span><span className="xs muted">{c.date ? md(c.date) + " ・ " : ""}{c.category}</span></span>
+                <span className="row" style={{ flexWrap: "nowrap", gap: 8 }}><span className="mono">{yen(c.amount)}</span><button className="btn small" onClick={() => addBooked([c])}>入れる</button></span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <section className="card stack" style={{ gap: 8 }}>
         <div className="row between"><h3>これまでの支出</h3><span className="mono" style={{ fontSize: 18, fontWeight: 600 }}>{yen(total)}</span></div>
         {byCat.length > 0 && <div className="xs muted">{byCat.map(([c, v]) => `${c} ${yen(v)}`).join(" ・ ")}</div>}

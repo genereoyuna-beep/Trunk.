@@ -403,7 +403,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
         <section>
           <div className="sechead"><h2>お金</h2><span className="small muted">予算（1人分） <b className="mono" style={{ color: "var(--ink)" }}>{yen(t.totalBudget)}</b></span></div>
           <button className="card" style={{ width: "100%", textAlign: "left", border: 0 }} onClick={() => go("money")}>
-            <div className="row between"><span className="small muted">今の見込み（{mine.mode === "split" ? `${t.myName}さんの負担分` : "1人分"}）</span><span className="mono" style={{ fontSize: 22, fontWeight: 600 }}>{yen(mine.total)}</span></div>
+            <div className="row between"><span className="small muted">今の見込み（1人分）</span><span className="mono" style={{ fontSize: 22, fontWeight: 600 }}>{yen(mine.total)}</span></div>
             <div className="bar" style={{ height: 10 }}>
               {[[mine.hotel, "var(--ink)"], [mine.flight, "var(--muted)"], [mine.localTransport + mine.localActivity, "#9AA3AC"]].map(([v, c], i) => v > 0 && <span key={i} style={{ width: `${Math.min(100, v / Math.max(t.totalBudget || 0, mine.total) * 100)}%`, background: c }} />)}
             </div>
@@ -1021,10 +1021,6 @@ function MoneyView({ t, stats, update }) {
   const [mode, setMode] = useState("budget");
   const [allView, setAllView] = useState(false);
   const [newName, setNewName] = useState("");
-  const [open, setOpen] = useState(null);
-  const [presOpen, setPresOpen] = useState(false);
-  const [payer, setPayer] = useState("");
-  const pb = useMemo(() => personBreakdown(t), [t]);
   const participants = t.participants || [];
   const my = useMemo(() => myShare(t), [t]);
   const mine = allView ? null : my;
@@ -1034,18 +1030,7 @@ function MoneyView({ t, stats, update }) {
   const partial = rows.some(r => !(Number(r.target) > 0)) && totalT > 0;
   const totalAT = rows.reduce((a, r) => a + (Number(r.target) > 0 ? r.actualV : 0), 0);
   const setB = (id, patch) => update(tr => ({ ...tr, budget: tr.budget.map(b => b.id === id ? { ...b, ...patch } : b) }));
-  const costs = Object.fromEntries(participants.map(p => [p, (pb[p] && pb[p].total) || 0]));
-  const effPayer = payer && participants.includes(payer) ? payer : participants.reduce((a, b) => (costs[a] || 0) >= (costs[b] || 0) ? a : b, participants[0]);
   const addMember = () => { const n = newName.trim(); if (!n || participants.includes(n)) return; update(tr => ({ ...tr, participants: [...(tr.participants || []), n] })); setNewName(""); };
-  const stays = sortItinerary(staysOf(t)).filter(s => isISO(s.startDate));
-  const daysOf = (s) => Array.from({ length: Math.max(1, nightsOf(s)) }, (_, i) => addDays(s.startDate, i));
-  const membersOn = (iso) => { const m = (t.dayParticipants || {})[iso]; return m && m.length ? m : participants; };
-  const togglePresence = (s, p) => update(tr => {
-    const dp = { ...(tr.dayParticipants || {}) };
-    const all = daysOf(s).every(d => membersOn(d).includes(p));
-    daysOf(s).forEach(d => { const cur = membersOn(d); dp[d] = all ? cur.filter(x => x !== p) : [...new Set([...cur, p])]; });
-    return { ...tr, dayParticipants: dp };
-  });
   return (
     <div className="stack">
       <h1 style={{ marginTop: 4 }}>お金</h1>
@@ -1055,11 +1040,11 @@ function MoneyView({ t, stats, update }) {
         <section className="card stack" style={{ gap: 8 }}>
           <div className="fgrid">
             <Field label="予算（1人分・円）"><NumIn value={t.totalBudget} onChange={v => update(tr => ({ ...tr, totalBudget: v }))} /></Field>
-            <div className="field"><span>{!mine ? "全員分の合計" : mine.mode === "split" ? `${t.myName}さんの負担分` : "1人分の見込み"}</span><div className="mono" style={{ fontSize: 22, fontWeight: 600, padding: "4px 0" }}>{yen(totalA)}</div></div>
+            <div className="field"><span>{!mine ? "全員分の合計" : "1人分の見込み"}</span><div className="mono" style={{ fontSize: 22, fontWeight: 600, padding: "4px 0" }}>{yen(totalA)}</div></div>
           </div>
           <div className="bar" style={{ height: 10 }}><span style={{ width: `${Math.min(100, t.totalBudget ? totalA / t.totalBudget * 100 : 0)}%`, background: t.totalBudget && totalA > t.totalBudget ? "var(--danger)" : "var(--ink)" }} /></div>
           <Toggle checked={allView} onChange={setAllView}>全員分の合計で見る</Toggle>
-          <div className="note">{my.mode === "split" ? `「精算」の参加者と日ごとの参加状況から、${t.myName}さんの負担分を計算しています。` : "宿・移動・現地の金額を、それぞれの「人数（何人分の金額か）」で割って1人分を出しています。人数は各予定の編集画面で変えられます。"}</div>
+          <div className="note">宿・移動・現地の金額を、それぞれの「人数（何人分の金額か）」で割って1人分を出しています。人数は各予定の編集画面で変えられます。誰がいくら払うかは「精算」で計算します。</div>
         </section>
         <section className="card budget2">
           {rows.map(r => { const tg = Number(r.target) || 0, diff = tg - r.actualV; return (
@@ -1083,7 +1068,6 @@ function MoneyView({ t, stats, update }) {
         </section>
       </>}
       {mode === "split" && <>
-        <ExpenseSettle t={t} />
         <section className="card stack" style={{ gap: 10 }}>
           <h3>参加者</h3>
           <div className="chips">
@@ -1100,50 +1084,10 @@ function MoneyView({ t, stats, update }) {
             <input className="input" aria-label="参加者の名前" placeholder="名前を追加" value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === "Enter" && addMember()} />
             <button className="btn" onClick={addMember}>追加</button>
           </div>
-          <div className="xs muted">★を押した人が「自分」です。予算画面で自分の負担分を見られます。</div>
+          <div className="xs muted">★を押した人が「自分」です。支出を記録するとき、「払った人」の最初の値になります。</div>
         </section>
-        {participants.length > 1 && stays.length > 0 && (
-          <section className="card flush divide">
-            {/* 途中参加・途中で帰る人がいるときだけ使うので、最初は閉じておく */}
-            <button className="bookrow" style={{ gridTemplateColumns: "minmax(0,1fr) auto", padding: "12px 14px" }} aria-expanded={presOpen} onClick={() => setPresOpen(!presOpen)}>
-              <span style={{ minWidth: 0 }}><h3 style={{ margin: 0 }}>滞在ごとの参加者</h3><span className="xs muted" style={{ display: "block", whiteSpace: "normal" }}>{stays.some(s => participants.some(p => !daysOf(s).every(d => membersOn(d).includes(p)))) ? "一部の滞在で、参加しない人を外しています" : "途中から参加する人・先に帰る人がいるときに使います"}</span></span>
-              <span style={{ transform: presOpen ? "rotate(180deg)" : "none", display: "inline-flex" }}><Icon n="down" s={16} /></span>
-            </button>
-            {presOpen && <div style={{ padding: "0 14px 4px" }} className="xs muted">いない人を外すと、その日の宿代・移動費を残りの人で割ります</div>}
-            {presOpen && stays.map(s => (
-              <div key={s.id} style={{ padding: "10px 14px" }} className="row between">
-                <span style={{ minWidth: 0 }}><b>{splitCity(s.city).main}</b> <span className="mono xs muted">{md(s.startDate)}〜{md(stayEnd(s))}</span></span>
-                <span className="chips">{participants.map(p => { const on = daysOf(s).every(d => membersOn(d).includes(p)); return <button key={p} className="chip" aria-pressed={on} onClick={() => togglePresence(s, p)}>{p}</button>; })}</span>
-              </div>
-            ))}
-          </section>
-        )}
-        {participants.length > 0 && (
-          <section className="card flush divide">
-            <div style={{ padding: "12px 14px" }}><h3>人ごとの負担</h3></div>
-            {participants.map(p => (
-              <div key={p}>
-                <button className="bookrow" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }} aria-expanded={open === p} onClick={() => setOpen(open === p ? null : p)}>
-                  <span className="t1">{p}{t.myName === p ? "（自分）" : ""}</span><span className="mono">{yen(costs[p])}</span>
-                </button>
-                {open === p && <div style={{ padding: "0 14px 12px" }}>
-                  {(pb[p].items || []).map((it, i) => <div key={i} className="row between small" style={{ flexWrap: "nowrap", padding: "3px 0" }}><span className="muted" style={{ minWidth: 0 }}>[{it.category}] {it.label}</span><span className="mono">{yen(it.amount)}</span></div>)}
-                  {!pb[p].items.length && <div className="small muted">明細はありません</div>}
-                </div>}
-              </div>
-            ))}
-          </section>
-        )}
-        {participants.length > 1 && (
-          <section className="card stack" style={{ gap: 8 }}>
-            <div className="row between"><h3>精算</h3>
-              <label className="row small muted" htmlFor="payer">立て替えた人<select id="payer" className="input" style={{ width: "auto" }} value={effPayer || ""} onChange={e => setPayer(e.target.value)}>{participants.map(p => <option key={p}>{p}</option>)}</select></label>
-            </div>
-            {participants.filter(p => p !== effPayer && costs[p] > 0).map(p => (
-              <div key={p} className="row between" style={{ background: "var(--sunk)", borderRadius: 10, padding: "8px 12px" }}><span>{p} → {effPayer}</span><b className="mono">{yen(costs[p])}</b></div>
-            ))}
-          </section>
-        )}
+        <ExpenseSettle t={t} />
+        {participants.length > 1 && !(t.expenses || []).length && <div className="note">「支出」に記録した支払いから、誰が誰にいくら払えばいいかを計算します。予約した宿や移動も、「支出」からワンボタンで入れられます。</div>}
       </>}
     </div>
   );

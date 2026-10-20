@@ -50,7 +50,7 @@ await check("予約・手配：同じ日は時刻順", async () => {
 });
 await check("お金：予算・支出・精算が開く", async () => {
   await open("", "#money");
-  const r = await js(`${H} btn('お金').click(); await w(600); const a=main(); btn('支出').click(); await w(800); const b=main(); btn('精算').click(); await w(500); const c=main(); return [/予算（1人分/.test(a), /支出を記録/.test(b), /人ごとの負担/.test(c)].join(',');`);
+  const r = await js(`${H} btn('お金').click(); await w(600); const a=main(); btn('支出').click(); await w(800); const b=main(); btn('精算').click(); await w(500); const c=main(); return [/予算（1人分/.test(a), /支出を記録/.test(b), /参加者/.test(c) && /精算/.test(c) && !/人ごとの負担/.test(c)].join(',');`);
   if (r !== "true,true,true") throw new Error(r);
 });
 await check("お金：外貨レートが自動で入る", async () => { const r = await js(`${H} btn('支出').click(); await w(2500); return /1 KRW = /.test(main());`); if (!r) throw new Error("レートが入らない（通信できない環境では失敗します）"); });

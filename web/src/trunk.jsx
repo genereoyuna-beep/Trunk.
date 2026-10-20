@@ -134,7 +134,21 @@ function TrunkRequestsBanner({ tripId, onOpen }) {
 }
 
 // 見る専用の共有リンクと、そこから届いたリクエスト（作った人だけ）
-function TrunkViewShare({ tripId }) {
+// リンクを送るボタン：スマホは共有メニュー（LINE・インスタの DM・メッセージなど）、どこでも LINE とコピー
+const canNativeShare = typeof navigator !== "undefined" && !!navigator.share && (navigator.maxTouchPoints > 0 || /Android|iPhone|iPad/.test(navigator.userAgent));
+function SendLinkButtons({ url, text, onCopy }) {
+  const [shareErr, setShareErr] = useState(false);
+  const share = async () => { try { await navigator.share({ title: "Trunk.", text, url }); } catch (e) { if (e && e.name !== "AbortError") setShareErr(true); } };
+  const line = "https://line.me/R/share?text=" + encodeURIComponent(text + "\n" + url);
+  return (
+    <>
+      {canNativeShare && !shareErr && <button className="btn primary" onClick={share}>送る（LINE・インスタなど）</button>}
+      <a className={"btn" + (canNativeShare && !shareErr ? "" : " primary")} style={{ textDecoration: "none" }} href={line} target="_blank" rel="noopener">LINEで送る</a>
+      <button className="btn" onClick={onCopy}>リンクをコピー</button>
+    </>
+  );
+}
+function TrunkViewShare({ tripId, name }) {
   const [sh, setSh] = useState(undefined);
   const [reqs, setReqs] = useState([]);
   const [st, setSt] = useState("");
@@ -154,13 +168,13 @@ function TrunkViewShare({ tripId }) {
         <div className="stack" style={{ gap: 8 }}>
           <div className="mono small" style={{ wordBreak: "break-all", background: "var(--sunk)", borderRadius: 10, padding: "8px 10px" }}>{url}</div>
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            <button className="btn primary" onClick={copy}>リンクをコピー</button>
-            <a className="btn" href={url} target="_blank" rel="noopener">開いてみる</a>
+            <SendLinkButtons url={url} text={`「${name || "旅行"}」の旅程です`} onCopy={copy} />
+            <a className="btn ghost" href={url} target="_blank" rel="noopener">開いてみる</a>
             <button className="btn" onClick={() => run(() => Store.stopShare(tripId), "stopped")}>共有を止める</button>
           </div>
         </div>
       )}
-      {st === "copied" && <div className="small muted">コピーしました。LINE などで送ってください。</div>}
+      {st === "copied" && <div className="small muted">コピーしました。貼り付けて送ってください。</div>}
       {st === "copyerr" && <div className="small muted">コピーできませんでした。上のリンクを長押ししてコピーしてください。</div>}
       {st === "stopped" && <div className="small muted">共有を止めました。リンクはすぐに開けなくなります。</div>}
       {st === "err" && <div className="err">うまくいきませんでした。通信を確かめて、もう一度お試しください。</div>}
@@ -204,7 +218,7 @@ function TrunkShareSection({ t, tripId }) {
   const until = link ? new Date(link.expires_at) : null;
   return (
     <section className="stack" style={{ gap: 10 }}>
-      {owner ? <TrunkViewShare tripId={tripId} /> : <><div className="formsec">見せるだけの共有リンク</div><div className="small muted">共有リンクは、旅行を作った人が出せます。</div></>}
+      {owner ? <TrunkViewShare tripId={tripId} name={t && t.name} /> : <><div className="formsec">見せるだけの共有リンク</div><div className="small muted">共有リンクは、旅行を作った人が出せます。</div></>}
       <div className="formsec">一緒に編集する人</div>
       {people === null ? <div className="small muted">読み込み中…</div> : (
         <div className="stack" style={{ gap: 6 }}>
@@ -221,13 +235,13 @@ function TrunkShareSection({ t, tripId }) {
         <div className="stack" style={{ gap: 8 }}>
           <div className="mono small" style={{ wordBreak: "break-all", background: "var(--sunk)", borderRadius: 10, padding: "8px 10px" }}>{url}</div>
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            <button className="btn primary" onClick={copy}>リンクをコピー</button>
-            <button className="btn" onClick={stop}>このリンクを止める</button>
+            <SendLinkButtons url={url} text={`「${(t && t.name) || "旅行"}」を Trunk. で一緒に計画しよう`} onCopy={copy} />
+            <button className="btn ghost" onClick={stop}>このリンクを止める</button>
           </div>
           <div className="xs muted">{until.getMonth() + 1}月{until.getDate()}日まで使えます。知らない人に届いたときは「このリンクを止める」を押してください。</div>
         </div>
       )}
-      {st === "copied" && <div className="small muted">コピーしました。LINE などで送ってください。</div>}
+      {st === "copied" && <div className="small muted">コピーしました。貼り付けて送ってください。</div>}
       {st === "copyerr" && <div className="small muted">コピーできませんでした。上のリンクを長押ししてコピーしてください。</div>}
       {st === "stopped" && <div className="small muted">招待リンクを止めました。参加済みの人はそのまま編集できます。</div>}
       {st === "err" && <div className="err">うまくいきませんでした。通信を確かめて、もう一度お試しください。</div>}

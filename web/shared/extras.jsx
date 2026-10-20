@@ -130,7 +130,10 @@ function ExpenseView({ t, update }) {
   const curs = ["JPY", ...tripCurrencies(t)];
   const r = tripRange(t), today = todayISO();
   const defDate = r && today >= r.start && today <= r.end ? today : r ? r.start : today;
-  const blank = () => ({ date: defDate, title: "", amount: "", currency: curs[1] || "JPY", payer: t.myName || people[0] || "", split: [...people], category: "食事" });
+  const blank = () => ({ date: defDate, title: "", amount: "", currency: curs[1] || "JPY", payer: t.myName || people[0] || "", split: [...people], category: "食事", budgetId: budgetLinkGuess(t, "食事") });
+  const bRows = budgetManualRows(t);
+  // 予算の項目（手入力の項目だけ）。選ぶと、その項目の実費は支出の合計になる
+  const budgetSel = (value, onChange) => bRows.length > 0 && <Field label="予算の項目"><select value={value || ""} onChange={ev => onChange(ev.target.value)}><option value="">予算に入れない</option>{bRows.map(b => <option key={b.id} value={String(b.id)}>{b.category || "（名前なし）"}</option>)}</select></Field>;
   const [f, setF] = useState(blank);
   const list = [...(t.expenses || [])].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   const total = list.reduce((a, e) => a + toJPY(t, e.amount, e.currency), 0);
@@ -138,7 +141,7 @@ function ExpenseView({ t, update }) {
   const add = () => {
     if (!String(f.title).trim() || !(Number(f.amount) > 0)) return;
     update(tr => ({ ...tr, expenses: [...(tr.expenses || []), { id: uid(), ...f, title: f.title.trim(), amount: Number(f.amount) }] }));
-    setF({ ...blank(), date: f.date, currency: f.currency, payer: f.payer });
+    setF({ ...blank(), date: f.date, currency: f.currency, payer: f.payer, category: f.category, budgetId: f.budgetId });
   };
   // 予約済みの宿・移動・予定を、そのまま支出に入れる（払った人は自分、割り勘は全員。あとで直せる）
   const cands = bookedExpenseCandidates(t);
@@ -160,7 +163,8 @@ function ExpenseView({ t, update }) {
           <Field label="金額"><input type="number" inputMode="decimal" value={f.amount} onChange={e => setF({ ...f, amount: e.target.value })} /></Field>
           <Field label="通貨"><select value={f.currency} onChange={e => setF({ ...f, currency: e.target.value })}>{curs.map(c => <option key={c} value={c}>{c}（{CUR_NAME[c] || c}）</option>)}</select></Field>
           <Field label="日付"><DateIn value={f.date} onChange={v => setF({ ...f, date: v })} /></Field>
-          <Field label="種類"><select value={f.category} onChange={e => setF({ ...f, category: e.target.value })}>{EXP_CATS.map(c => <option key={c}>{c}</option>)}</select></Field>
+          <Field label="種類"><select value={f.category} onChange={e => setF({ ...f, category: e.target.value, budgetId: budgetLinkGuess(t, e.target.value) })}>{EXP_CATS.map(c => <option key={c}>{c}</option>)}</select></Field>
+          {budgetSel(f.budgetId, v => setF({ ...f, budgetId: v }))}
           {people.length > 0 && <Field label="払った人"><select value={f.payer} onChange={e => setF({ ...f, payer: e.target.value })}>{people.map(p => <option key={p}>{p}</option>)}</select></Field>}
         </div>
         {people.length > 1 && (
@@ -202,7 +206,7 @@ function ExpenseView({ t, update }) {
               <div key={e.id} style={{ padding: "8px 0" }}>
                 <div className="row between" style={{ flexWrap: "nowrap" }}>
                   <button style={{ minWidth: 0, flex: 1, textAlign: "left", background: "none", border: 0, padding: 0, color: "inherit", cursor: "pointer" }} aria-expanded={editing} onClick={() => setEditId(editing ? null : e.id)}>
-                    <span className="t1">{e.title}</span><span className="xs muted">{md(e.date)} ・ {e.category}{e.payer ? ` ・ ${e.payer}が払った` : ""}{people.length > 1 && sp.length < people.length ? `（${sp.join("・")}の分）` : ""}{editing ? "" : " ・ 直す"}</span>
+                    <span className="t1">{e.title}</span><span className="xs muted">{md(e.date)} ・ {e.category}{(() => { const b = bRows.find(x => String(x.id) === String(e.budgetId)); return b && b.category !== e.category ? `（予算：${b.category}）` : ""; })()}{e.payer ? ` ・ ${e.payer}が払った` : ""}{people.length > 1 && sp.length < people.length ? `（${sp.join("・")}の分）` : ""}{editing ? "" : " ・ 直す"}</span>
                   </button>
                   <span className="row" style={{ flexWrap: "nowrap", gap: 4 }}>
                     <span style={{ textAlign: "right" }}><span className="mono" style={{ display: "block" }}>{e.currency === "JPY" ? yen(e.amount) : `${Number(e.amount).toLocaleString("ja-JP")} ${e.currency}`}</span>{e.currency !== "JPY" && hasRate(t, e.currency) && <span className="xs muted mono">≒ {yen(toJPY(t, e.amount, e.currency))}</span>}</span>
@@ -217,6 +221,7 @@ function ExpenseView({ t, update }) {
                       <Field label="通貨"><select value={e.currency} onChange={ev => setE({ currency: ev.target.value })}>{uniq([...curs, e.currency]).map(c => <option key={c} value={c}>{c}（{CUR_NAME[c] || c}）</option>)}</select></Field>
                       <Field label="日付"><DateIn value={e.date} onChange={v => setE({ date: v })} /></Field>
                       <Field label="種類"><select value={e.category} onChange={ev => setE({ category: ev.target.value })}>{EXP_CATS.map(c => <option key={c}>{c}</option>)}</select></Field>
+                      {!e.src && budgetSel(e.budgetId, v => setE({ budgetId: v }))}
                       {people.length > 0 && <Field label="払った人"><select value={people.includes(e.payer) ? e.payer : ""} onChange={ev => setE({ payer: ev.target.value })}>{!people.includes(e.payer) && <option value="">選ぶ</option>}{people.map(p => <option key={p}>{p}</option>)}</select></Field>}
                     </div>
                     {people.length > 1 && (

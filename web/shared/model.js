@@ -339,7 +339,20 @@ function myShare(t) {
   return r;
 }
 
-function budgetActual(b, stats, mine) {
+// 支出の記録を、手入力の予算の項目（食費・予備費など）に結びつける。旅程から自動で出す項目（宿泊・交通費など）には結びつけない（予約から入れた支出と二重に数えないため）
+const budgetManualRows = (t) => (t.budget || []).filter(b => !b.auto);
+function budgetLinkGuess(t, expCat) {
+  const rows = budgetManualRows(t);
+  const re = expCat === "食事" ? /食/ : expCat === "買い物" ? /買|土産|ショッピング/ : expCat === "その他" ? /予備|その他|雑/ : expCat === "観光" ? /観光|体験|入場/ : expCat === "交通" ? /交通|移動/ : null;
+  const hit = re && rows.find(b => re.test(b.category || ""));
+  return hit ? String(hit.id) : "";
+}
+const budgetLinked = (t, b) => !b.auto && (t.expenses || []).filter(e => e.budgetId !== undefined && e.budgetId !== "" && String(e.budgetId) === String(b.id));
+// 1人分で見るときは、支出をその支出の割り勘の人数で割る
+const expenseYen = (t, e, perPerson) => { const y = toJPY(t, e.amount, e.currency); if (!perPerson) return y; const n = (e.split && e.split.length) || (t.participants || []).length || 1; return y / n; };
+function budgetActual(b, stats, mine, t) {
+  const linked = t ? budgetLinked(t, b) : [];
+  if (linked && linked.length) return Math.round(linked.reduce((a, e) => a + expenseYen(t, e, !!mine), 0));
   if (!b.auto) return Number(b.actual) || 0;
   const c = b.category || "";
   const move = c.startsWith("移動費") || c === "交通費";

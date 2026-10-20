@@ -1024,7 +1024,7 @@ function MoneyView({ t, stats, update }) {
   const participants = t.participants || [];
   const my = useMemo(() => myShare(t), [t]);
   const mine = allView ? null : my;
-  const rows = (t.budget || []).map(b => ({ ...b, actualV: budgetActual(b, stats, mine) }));
+  const rows = (t.budget || []).map(b => ({ ...b, actualV: budgetActual(b, stats, mine, t), linkedN: budgetLinked(t, b).length }));
   const totalT = rows.reduce((a, r) => a + (Number(r.target) || 0), 0), totalA = rows.reduce((a, r) => a + r.actualV, 0);
   // 予算を入れた項目だけで比べる（一部の項目だけ予算を入れたときに「超過」と誤って出ないように）
   const partial = rows.some(r => !(Number(r.target) > 0)) && totalT > 0;
@@ -1044,7 +1044,7 @@ function MoneyView({ t, stats, update }) {
           </div>
           <div className="bar" style={{ height: 10 }}><span style={{ width: `${Math.min(100, t.totalBudget ? totalA / t.totalBudget * 100 : 0)}%`, background: t.totalBudget && totalA > t.totalBudget ? "var(--danger)" : "var(--ink)" }} /></div>
           <Toggle checked={allView} onChange={setAllView}>全員分の合計で見る</Toggle>
-          <div className="note">宿・移動・現地の金額を、それぞれの「人数（何人分の金額か）」で割って1人分を出しています。人数は各予定の編集画面で変えられます。誰がいくら払うかは「精算」で計算します。</div>
+          <div className="note">宿・移動・現地の金額を、それぞれの「人数（何人分の金額か）」で割って1人分を出しています。人数は各予定の編集画面で変えられます。食費などは「支出」で予算の項目を選んで記録すると、実費に自動で入ります。</div>
         </section>
         <section className="card budget2">
           {rows.map(r => { const tg = Number(r.target) || 0, diff = tg - r.actualV; return (
@@ -1055,7 +1055,7 @@ function MoneyView({ t, stats, update }) {
               </div>
               <div className="brow2-g">
                 <label><span>予算</span><NumIn value={Number(r.target) ? r.target : ""} onChange={v => setB(r.id, { target: v })} className="input" aria-label={`${r.category}の予算`} /></label>
-                <label><span>{r.auto ? "見込み（自動）" : "実費"}</span>{r.auto ? <b className="mono">{yen(r.actualV)}</b> : <NumIn value={r.actual} onChange={v => setB(r.id, { actual: v })} className="input" aria-label={`${r.category}の実費`} />}</label>
+                <label><span>{r.auto ? "見込み（自動）" : r.linkedN ? `支出から（${r.linkedN}件）` : "実費"}</span>{r.auto || r.linkedN ? <b className="mono">{yen(r.actualV)}</b> : <NumIn value={r.actual} onChange={v => setB(r.id, { actual: v })} className="input" aria-label={`${r.category}の実費`} />}</label>
                 <div><span>差額</span><b className={"mono" + (tg && diff < 0 ? " over" : "")}>{tg ? (diff < 0 ? `${yen(-diff)} 超過` : `残り ${yen(diff)}`) : "—"}</b></div>
               </div>
             </div>); })}

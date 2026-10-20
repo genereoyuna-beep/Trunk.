@@ -111,9 +111,13 @@ function Toggle({ checked, onChange, children }) {
 const inEurope = (ll) => !!ll && ll[0] > 34 && ll[0] < 72 && ll[1] > -25 && ll[1] < 45;
 // 紹介料が入るリンク（Trunk. 版だけ）。「PR」と、料金が変わらないことを必ず添える
 // copy があるときは、押したときにその文字（行き先など）をコピーする（リンク先に行き先を渡せない広告のため）
+// アクセス解析のイベント（Trunk. のアナリティクスがあるときだけ送る。個人の情報は入れない）
+const track = (name, params) => { try { if (typeof gtag === "function") gtag("event", name, params || {}); } catch (e) {} };
+// 紹介先の名前（リンクの文言から）
+const partnerOf = (label) => /アゴダ/.test(label) ? "agoda" : /Klook/i.test(label) ? "klook" : /Omio/i.test(label) ? "omio" : /Airalo|eSIM/i.test(label) ? "airalo" : "other";
 function AffLink({ href, label, copy }) {
   const [copied, setCopied] = useState(false);
-  const onClick = () => { if (!copy) return; try { navigator.clipboard.writeText(copy).then(() => setCopied(true), () => {}); } catch (e) {} };
+  const onClick = () => { track("affiliate_click", { partner: partnerOf(label) }); if (!copy) return; try { navigator.clipboard.writeText(copy).then(() => setCopied(true), () => {}); } catch (e) {} };
   return (
     <div style={{ margin: "8px 0" }}>
       <div className="row" style={{ alignItems: "center" }}>
@@ -440,7 +444,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
                 </button>
                 {td.city && typeof FEATURES !== "undefined" && typeof FEATURES.hotelSearch === "function" && (
                   <div className="row small" style={{ padding: "0 14px 10px 62px", gap: 8, alignItems: "center", borderTop: "none" }}>
-                    <a href={FEATURES.hotelSearch(td.city)} target="_blank" rel="noopener sponsored">アゴダで{td.city}の宿を探す</a>
+                    <a href={FEATURES.hotelSearch(td.city)} target="_blank" rel="noopener sponsored" onClick={() => track("affiliate_click", { partner: "agoda", place: "home" })}>アゴダで{td.city}の宿を探す</a>
                     <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 4, padding: "0 4px" }}>PR</span>
                     <span className="xs muted">料金は変わりません</span>
                   </div>
@@ -475,7 +479,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
           </button>
         )}
         {typeof FEATURES.articleFor === "function" && (() => { const ar = FEATURES.articleFor(t); return ar && (
-          <a className="card row" style={{ width: "100%", textAlign: "left", flexWrap: "nowrap", gap: 12, color: "inherit", textDecoration: "none" }} href={ar.url} target="_blank" rel="noopener">
+          <a className="card row" style={{ width: "100%", textAlign: "left", flexWrap: "nowrap", gap: 12, color: "inherit", textDecoration: "none" }} href={ar.url} target="_blank" rel="noopener" onClick={() => track("article_click", { place: "home" })}>
             <span className="ico" style={{ background: "var(--sunk)", color: "var(--ink)" }}><Icon n="pencil" /></span>
             <span style={{ flex: 1, minWidth: 0 }}><span className="t2">読みもの</span><span className="t1" style={{ whiteSpace: "normal" }}>{ar.title}</span></span>
             <Icon n="ext" s={16} />
@@ -1525,6 +1529,7 @@ function App() {
       }
     }
     await Store.saveTrip(id, data).catch(() => {});
+    track("trip_create", { source: form.draft ? "course" : drafted ? "ai_draft" : "blank", people: form.people || 1 });
     rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("plan"); toast(drafted && form.draft ? "モデルコースから旅行を作りました。宿と移動を手配していきましょう" : drafted ? "日程の下書きを入れて旅行を作りました" : form.idea && form.idea.trim() ? "旅行を作りました（下書きは作れませんでした）" : "旅行を作りました");
   };
   const copyTrip = async () => {
@@ -1535,6 +1540,7 @@ function App() {
     const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36);
     try { await Store.saveTrip(id, data); }
     catch (e) { setNotice(e && e.code === "trip_limit" ? FREE_LIMIT_MSG : "コピーできませんでした。もう一度お試しください"); return; }
+    track("trip_create", { source: "copy" });
     rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("plan"); toast("コピーして新しい旅行を作りました。日程を直してください");
   };
   const deleteTrip = async () => {

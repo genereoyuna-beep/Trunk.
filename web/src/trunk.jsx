@@ -14,6 +14,7 @@ function TrunkBuyPass() {
   const open = passTest || Date.now() >= PASS_SALES_START;
   const buy = async (kind) => {
     setSt("busy");
+    track("begin_checkout", { currency: "JPY", value: kind === "3m" ? 980 : 440, items: [{ item_id: kind === "3m" ? "pass_3m" : "pass_trip" }] });
     try { await Store.buy(kind); } catch (e) { setSt(e.code === "not_yet" ? "notyet" : "err"); }
   };
   if (!open) return <div className="small muted">旅行パス・3か月パスは、2026年12月1日から購入できます。</div>;
@@ -164,7 +165,7 @@ function TrunkViewShare({ tripId, name }) {
       <div className="formsec">見せるだけの共有リンク</div>
       <div className="note">リンクを開いた人は、ログインなしで旅程・しおり・地図を見られます（編集はできません）。緊急時の情報と支出の記録は見えません。いつ開いても最新の旅程です。</div>
       {sh === undefined ? <div className="small muted">読み込み中…</div> : !url ? (
-        <button className="btn block" disabled={st === "busy"} onClick={() => run(() => Store.startShare(tripId))}>{sh ? "共有リンクをもう一度使う" : "共有リンクを作る"}</button>
+        <button className="btn block" disabled={st === "busy"} onClick={() => run(async () => { await Store.startShare(tripId); track("share_create", { type: "view" }); })}>{sh ? "共有リンクをもう一度使う" : "共有リンクを作る"}</button>
       ) : (
         <div className="stack" style={{ gap: 8 }}>
           <div className="mono small" style={{ wordBreak: "break-all", background: "var(--sunk)", borderRadius: 10, padding: "8px 10px" }}>{url}</div>
@@ -258,7 +259,7 @@ function TrunkShareSection({ t, tripId }) {
   const url = link ? location.origin + location.pathname + "?join=" + link.token : "";
   const make = async (fresh) => {
     setSt("busy");
-    try { setLink(await Store.inviteLink(tripId, fresh)); setSt(""); } catch (e) { setSt("err"); }
+    try { setLink(await Store.inviteLink(tripId, fresh)); setSt(""); track("share_create", { type: "invite" }); } catch (e) { setSt("err"); }
   };
   const copy = async () => {
     try { await navigator.clipboard.writeText(url); setSt("copied"); } catch (e) { setSt("copyerr"); }
@@ -362,7 +363,7 @@ function TrunkMailCard({ t, update, toast, trips, tripId, onPick, onCreate, onEd
   const [done, setDone] = useState(null);
   const load = () => inboundWatch.load();
   const decide = async (id, status) => { try { await Store.setInboundStatus(id, status); } catch (e) {} load(); };
-  const apply = (item, p) => { update(p.apply); decide(item.gmailId, "applied"); setDone({ target: p.target, edit: p.edit || null }); toast && toast("旅程に反映しました"); };
+  const apply = (item, p) => { track("mail_import_apply", { kind: (item.extracted && item.extracted.kind) || "" }); update(p.apply); decide(item.gmailId, "applied"); setDone({ target: p.target, edit: p.edit || null }); toast && toast("旅程に反映しました"); };
   const copy = async () => { try { await navigator.clipboard.writeText(st.address); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {} };
   const makeTrip = async (it) => {
     const p = it.parsed || {}, start = inboundDate(p);
@@ -696,7 +697,11 @@ function Root() {
       const err = q.get("error_description") || "";
       await Store.init().catch(() => {});
       // 招待リンク（?join=）：ログインしていなければ、ログイン後に戻ってきたときに受ける
-      if (q.get("paid")) { try { sessionStorage.setItem("trunk-paid", q.get("paid")); } catch (e) {} }
+      if (q.get("paid")) {
+        try { sessionStorage.setItem("trunk-paid", q.get("paid")); } catch (e) {}
+        const k = q.get("paid");
+        if (k === "trip" || k === "3m") track("purchase", { currency: "JPY", value: k === "3m" ? 980 : 440, items: [{ item_id: k === "3m" ? "pass_3m" : "pass_trip" }] });
+      }
       const join = q.get("join") || (() => { try { return sessionStorage.getItem("trunk-join"); } catch (e) { return null; } })();
       let joinErr = "";
       if (join && !Store.session) { try { sessionStorage.setItem("trunk-join", join); } catch (e) {} }
@@ -710,6 +715,7 @@ function Root() {
       if (q.has("code") || q.has("error") || q.has("join") || q.has("paid") || q.has("passtest")) history.replaceState(null, "", location.pathname + location.hash);
     })();
     const { data } = SB.auth.onAuthStateChange((_e, session) => {
+      if (_e === "SIGNED_IN" && !Store.session) track("login", { method: "google" });
       Store.session = session;
       // Google のボタンでログインしたときはページが読み直されないので、ここで招待を受ける
       const pending = (() => { try { return sessionStorage.getItem("trunk-join"); } catch (e) { return null; } })();

@@ -10,8 +10,8 @@ const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<!-- Google アナリティクス。招待リンクなどの「?」以降は送らない -->
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-7ZYC3Z9MQL",{page_location:location.origin+location.pathname});addEventListener("load",function(){setTimeout(function(){var s=document.createElement("script");s.async=1;s.src="https://www.googletagmanager.com/gtag/js?id=G-7ZYC3Z9MQL";document.head.appendChild(s)},1500)});</script>
+<!-- Google アナリティクス。招待リンクなどの「?」以降は送らない（utm_ だけ残す）。?noga=1 を一度開いた端末では送らない -->
+<script>(function(){try{var q=new URLSearchParams(location.search);if(q.get("noga")==="1")localStorage.setItem("trunk-noga","1");if(q.get("noga")==="0")localStorage.removeItem("trunk-noga");if(localStorage.getItem("trunk-noga")==="1"){window.gtag=function(){};return}}catch(e){}window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag("js",new Date());gtag("config","G-7ZYC3Z9MQL",{page_location:location.origin+location.pathname+(function(){var u=new URLSearchParams();new URLSearchParams(location.search).forEach(function(v,k){if(/^utm_/.test(k))u.set(k,v)});var t=u.toString();return t?"?"+t:""})()});addEventListener("load",function(){setTimeout(function(){var s=document.createElement("script");s.async=1;s.src="https://www.googletagmanager.com/gtag/js?id=G-7ZYC3Z9MQL";document.head.appendChild(s)},1500)})})();</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Trunk.</title>
 <meta name="description" content="手配もれが見える旅行プランナー。しおりPDFとリンク共有つき。">

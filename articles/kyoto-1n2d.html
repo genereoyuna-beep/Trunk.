@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <!-- Google アナリティクス（利用状況の把握。プライバシーポリシー参照） -->
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-7ZYC3Z9MQL");addEventListener("load",function(){setTimeout(function(){var s=document.createElement("script");s.async=1;s.src="https://www.googletagmanager.com/gtag/js?id=G-7ZYC3Z9MQL";document.head.appendChild(s)},1500)});</script>
+<!-- Google アナリティクス。?noga=1 を一度開いた端末では送らない（自分のアクセスを数えない。?noga=0 で戻す） -->
+<script>(function(){try{var q=new URLSearchParams(location.search);if(q.get("noga")==="1")localStorage.setItem("trunk-noga","1");if(q.get("noga")==="0")localStorage.removeItem("trunk-noga");if(localStorage.getItem("trunk-noga")==="1"){window.gtag=function(){};return}}catch(e){}window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag("js",new Date());gtag("config","G-7ZYC3Z9MQL");addEventListener("load",function(){setTimeout(function(){var s=document.createElement("script");s.async=1;s.src="https://www.googletagmanager.com/gtag/js?id=G-7ZYC3Z9MQL";document.head.appendChild(s)},1500)})})();</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>京都1泊2日のモデルコース（定番をめぐる） | Trunk.</title>
 <meta name="description" content="京都1泊2日のモデルコース。清水寺・祇園・伏見稲荷・嵐山を、混雑を避けてまわる順番と、準備のコツ。">

@@ -77,9 +77,13 @@ Deno.serve(async (req) => {
 
   // Gmail の自動転送の確認メール：確認コードとリンクだけ取り出す（AI は使わない）
   if (/forwarding-noreply@google\.com/i.test(from)) {
-    const code = body.match(/(?:確認コード|Confirmation code)[:：\s]*([0-9]{6,12})/i)?.[1] ?? body.match(/\b([0-9]{9})\b/)?.[1] ?? "";
+    // 件名の「(#123456789)」が確実。なければ本文から探す
+    const hay = `${subject}\n${body}`;
+    const code = hay.match(/#\s*([0-9]{6,12})/)?.[1]
+      ?? hay.match(/(?:確認コード|Confirmation code)[^0-9]{0,12}([0-9]{6,12})/i)?.[1]
+      ?? hay.match(/(?<![0-9])([0-9]{9})(?![0-9])/)?.[1] ?? "";
     const link = body.match(/https:\/\/mail(?:-settings)?\.google\.com\/mail\/[^\s<>"]+/)?.[0] ?? "";
-    await admin.from("inbound_items").insert({ user_id: userId, from_addr: from, subject, kind: "gmail_confirm", status: "parsed", parsed: { code, link } });
+    await admin.from("inbound_items").insert({ user_id: userId, from_addr: from, subject, body, kind: "gmail_confirm", status: "parsed", parsed: { code, link } });
     return new Response("ok", { status: 200 });
   }
 

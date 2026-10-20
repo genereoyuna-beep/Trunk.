@@ -278,7 +278,8 @@ function TrunkMailCard({ t, update, toast }) {
         </ol>
       </details>
       {confirms.map(c => (
-        <div key={c.id} className="note">Gmail の転送の確認コード：<b className="mono" style={{ userSelect: "all" }}>{(c.parsed && c.parsed.code) || "（本文から読み取れませんでした）"}</b>
+        <div key={c.id} className="note">Gmail の転送の確認コード：<b className="mono" style={{ userSelect: "all" }}>{(c.parsed && c.parsed.code) || ((c.subject || "").match(/[0-9]{6,12}/) || [])[0] || "（読み取れませんでした）"}</b>
+          {!(c.parsed && c.parsed.code) && c.subject && <div className="xs muted">件名：{c.subject}</div>}
           <div className="row" style={{ marginTop: 6 }}><button className="btn small" onClick={() => decide(c.id, "dismissed")}>確認した</button></div></div>
       ))}
       {state.err && <div className="err">{state.err}</div>}

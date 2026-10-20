@@ -532,7 +532,9 @@ function buildProposal(e, t, yenAmount) {
       status: statusFor(hotel && hotel.status), paymentStatus: paymentOf(e.paid),
     });
     const before = hotel || {};
+    const newStayId = uid();
     return {
+      edit: stay ? { kind: "stay", id: stay.id } : isISO(e.checkin_date) ? { kind: "stay", id: newStayId } : null,
       target: stay ? `宿：${splitCity(stay.city).main}（${md(stay.startDate)}〜${md(stayEnd(stay))}）` : `宿：日程にない滞在（${e.city || "都市不明"}）を追加`,
       dateCheck,
       changes: Object.entries(patch).filter(([k, v]) => before[k] !== v).map(([k, v]) => [HOTEL_LABELS[k] || k, before[k], v]),
@@ -544,7 +546,7 @@ function buildProposal(e, t, yenAmount) {
           return { ...tr, itinerary, hotels: has ? hs.map(h => h.linkedStayId === stay.id ? { ...h, ...patch } : h) : [...hs, { id: uid(), linkedStayId: stay.id, city: stay.city, guests: 1, total: 0, status: "候補", paymentStatus: "未払い", ...patch }] };
         }
         if (!isISO(e.checkin_date)) return tr;
-        const ns = { id: uid(), type: "stay", city: e.city || e.name || "新しい滞在", startDate: e.checkin_date, nights: isISO(e.checkout_date) ? Math.max(1, dayDiff(e.checkin_date, e.checkout_date)) : 1, memo: "", status: "未確定", noHotel: false };
+        const ns = { id: newStayId, type: "stay", city: e.city || e.name || "新しい滞在", startDate: e.checkin_date, nights: isISO(e.checkout_date) ? Math.max(1, dayDiff(e.checkin_date, e.checkout_date)) : 1, memo: "", status: "未確定", noHotel: false };
         return { ...tr, itinerary: normalizeItinerary([...tr.itinerary, ns]), hotels: [...(tr.hotels || []), { id: uid(), linkedStayId: ns.id, city: ns.city, guests: 1, total: 0, status: "候補", paymentStatus: "未払い", ...patch }] };
       },
     };
@@ -557,6 +559,7 @@ function buildProposal(e, t, yenAmount) {
     if (x) {
       const patch = cancelled ? { status: "候補" } : compact({ airline: e.carrier, departTime: e.depart_time, arriveDate: e.arrive_date, arriveTime: e.arrive_time, cls: e.seat_class, price: yenAmount, status: statusFor(x.status), paymentStatus: paymentOf(e.paid), mode: x.mode === "未定" && MODES.includes(e.transport_mode) ? e.transport_mode : "" });
       return {
+        edit: { kind: "transit", id: x.id },
         target: `移動：${splitCity(x.fromCity).main} → ${splitCity(x.toCity).main}（${md(x.departDate)}）`,
         dateCheck: e.depart_date ? { ok: x.departDate === e.depart_date, text: x.departDate === e.depart_date ? "日程と一致" : `日程は ${md(x.departDate)} 出発、メールは ${md(e.depart_date)} 出発` } : null,
         changes: Object.entries(patch).filter(([k, v]) => x[k] !== v).map(([k, v]) => [TRANSIT_LABELS[k] || (k === "mode" ? "手段" : k), x[k], v]),
@@ -580,6 +583,7 @@ function buildProposal(e, t, yenAmount) {
     if (isMove) {
       const mv = localToMove({ ...row, needsBooking: true });
       return {
+        edit: mv.id ? { kind: "transit", id: mv.id } : null,
         target: `移動に追加（${moveTitle(mv)}）`,
         dateCheck: date ? { ok: true, text: md(date) } : null,
         changes: [["内容", "", row.desc], ["日時", "", `${md(date)} ${row.startTime}`.trim()], ["金額", "", yenAmount ? yen(yenAmount) : ""]].filter(r => r[2]),
@@ -587,6 +591,7 @@ function buildProposal(e, t, yenAmount) {
       };
     }
     return {
+      edit: { kind: "local", id: row.id },
       target: req ? `予定に追加（${row.category}${date ? "" : "・日付未定"}）` : `現地手配に追加（${row.category}）`,
       dateCheck: date ? (stay ? { ok: true, text: `${splitCity(stay.city).main}の滞在中（${md(date)}）` } : { ok: false, text: `${md(date)} はどの滞在にも入っていません` }) : null,
       changes: [["内容", "", row.desc], ["日時", "", `${md(date)} ${row.startTime}`.trim()], ["金額", "", yenAmount ? yen(yenAmount) : ""]].filter(r => r[2]),

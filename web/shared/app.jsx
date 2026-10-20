@@ -894,10 +894,26 @@ function DaySuggest({ t, iso, update, done }) {
 }
 
 // ================= 予約・手配 =================
+// 目安の為替レート（1 外貨 ＝ 何円）。読めないときは 0
+const yenRateCache = {};
+function yenRate(cur) {
+  if (!yenRateCache[cur]) yenRateCache[cur] = fetch("https://open.er-api.com/v6/latest/JPY").then(r => r.json()).then(d => { const v = Number(d && d.rates && d.rates[cur]); return v > 0 ? Math.round(10000 / v) / 10000 : 0; }).catch(() => 0);
+  return yenRateCache[cur];
+}
 function InboxItem({ item, t, onApply, onDecide }) {
   const e = item.extracted || {};
   const foreign = e.total_amount > 0 && e.currency && e.currency !== "JPY";
   const [yenIn, setYenIn] = useState("");
+  // 外貨の金額は、旅行に入っているレート（なければ目安のレート）で円にしておく。直せる
+  const [rateUsed, setRateUsed] = useState(0);
+  useEffect(() => {
+    if (!foreign || yenIn) return;
+    let alive = true;
+    const put = (r) => { if (alive && r > 0) { setRateUsed(r); setYenIn(String(Math.round(Number(e.total_amount) * r))); } };
+    const own = Number((t.rates || {})[e.currency]) || 0;
+    if (own) put(own); else yenRate(e.currency).then(put);
+    return () => { alive = false; };
+  }, [foreign, e.currency, e.total_amount]);
   const amount = foreign ? Number(yenIn) || 0 : e.currency === "JPY" ? Math.round(e.total_amount) : 0;
   const p = buildProposal(e, t, amount);
   const cancelled = e.booking_status === "cancelled";
@@ -912,7 +928,7 @@ function InboxItem({ item, t, onApply, onDecide }) {
       <div style={{ fontWeight: 500 }}>→ {p.target}</div>
       {p.dateCheck && <div className="small" style={{ color: p.dateCheck.ok ? "var(--blue)" : "var(--danger)" }}>{p.dateCheck.ok ? "✓ " : "⚠ "}{p.dateCheck.text}</div>}
       {foreign && !cancelled && (
-        <label className="field" htmlFor={"yen-" + item.gmailId}><span>金額 {e.currency} {Number(e.total_amount).toLocaleString()} を円にすると（空なら金額は変えません）</span>
+        <label className="field" htmlFor={"yen-" + item.gmailId}><span>金額 {e.currency} {Number(e.total_amount).toLocaleString()} を円にすると{rateUsed ? `（1 ${e.currency} ＝ ${rateUsed}円で計算。直せます）` : "（空なら金額は変えません）"}</span>
           <input id={"yen-" + item.gmailId} type="number" inputMode="numeric" value={yenIn} onChange={ev => setYenIn(ev.target.value)} /></label>
       )}
       {p.changes.length > 0 && (
@@ -1351,6 +1367,8 @@ function App() {
     return () => { alive = false; };
   }, [tripId]);
   const [inboxAll, setInboxAll] = useState([]);
+  // 転送で届いた予約メールの件数（Trunk. の予約メールの取り込み。なければ 0）
+  const extInbox = typeof useTrunkInbound === "function" && FEATURES.mailImport ? useTrunkInbound(trips, tripId) : 0;
   const [scan, setScan] = useState({ st: "idle", msg: "", more: false });
   const [scrolled, setScrolled] = useState(false);
   // opsRef：まだ保存が終わっていない変更（関数）。同行者の保存と重なったときに、最新の内容へ重ね直すために取っておく
@@ -1679,7 +1697,7 @@ function App() {
   }) : update;
   const sugg = buildSuggestions([t, ...trips.filter(x => x.id !== tripId).map(x => x.data)]);
   const stats = tripStats(t);
-  const todos = buildTodos(t, inbox.length);
+  const todos = buildTodos(t, inbox.length + extInbox);
   const mine = myShare(t);
   const openDay = (iso) => setSheet({ kind: "day", iso });
   const closeSheet = () => {
@@ -1706,7 +1724,7 @@ function App() {
       <nav className="nav" aria-label="メインメニュー">
         {NAV.map(([k, l, ic]) => (
           <button key={k} aria-current={tab === k ? "page" : undefined} onClick={() => setTab(k)}>
-            <span className="navicon"><Icon n={ic} s={22} />{k === "book" && (inbox.length || openCount) > 0 && <span className="badge">{inbox.length || openCount}</span>}</span>{l}
+            <span className="navicon"><Icon n={ic} s={22} />{k === "book" && ((inbox.length + extInbox) || openCount) > 0 && <span className="badge">{(inbox.length + extInbox) || openCount}</span>}</span>{l}
           </button>
         ))}
       </nav>
@@ -1716,7 +1734,7 @@ function App() {
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
         {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "settings", section: "trip" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
-        {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => addLocal()} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
+        {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => addLocal()} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={t} stats={stats} update={update} />}
         {tab === "pack" && <PackView t={packT} update={packUpdate} />}
       </main>

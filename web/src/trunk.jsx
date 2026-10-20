@@ -237,38 +237,97 @@ function TrunkShareSection({ t, tripId }) {
 
 // 機能の要望。名前やメールアドレスは聞かない
 // ---- 予約メールの転送取り込み（パスを持っている人だけ） ----
-function TrunkMailCard({ t, update, toast }) {
-  const [state, setState] = useState({ ready: false, paid: false, address: "", items: [], err: "" });
-  const [copied, setCopied] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const load = async () => {
+// ===== 予約メールの取り込み（パスの機能） =====
+// 届いたメールを1分ごとと画面に戻ったときに読み直し、カード・「予約・手配」の印・ホームの「今やること」で同じものを使う
+const inboundWatch = {
+  st: { ready: false, paid: false, address: "", items: [], err: "" }, subs: new Set(), started: false,
+  async load() {
     try {
       const paid = await Store.canMailImport();
-      if (!paid) { setState({ ready: true, paid: false, address: "", items: [], err: "" }); return; }
-      const [address, items] = await Promise.all([Store.myInboundAddress(), Store.listInbound()]);
-      setState({ ready: true, paid: true, address, items, err: "" });
-    } catch (e) { setState(s => ({ ...s, ready: true, err: "読み込めませんでした。少し待ってからもう一度お試しください。" })); }
-  };
-  useEffect(() => { load(); const id = setInterval(load, 60000); return () => clearInterval(id); }, []);
+      if (!paid) { this.set({ ready: true, paid: false, address: "", items: [], err: "" }); return; }
+      const [address, items] = await Promise.all([this.st.address ? this.st.address : Store.myInboundAddress(), Store.listInbound()]);
+      this.set({ ready: true, paid: true, address, items, err: "" });
+    } catch (e) { this.set({ ...this.st, ready: true, err: "読み込めませんでした。少し待ってからもう一度お試しください。" }); }
+  },
+  set(v) { this.st = v; this.subs.forEach(f => f(v)); },
+  use() {
+    const [v, setV] = useState(this.st);
+    useEffect(() => {
+      this.subs.add(setV); setV(this.st);
+      if (!this.started) {
+        this.started = true; this.load();
+        setInterval(() => { if (document.visibilityState === "visible") this.load(); }, 60000);
+        document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") this.load(); });
+      }
+      return () => { this.subs.delete(setV); };
+    }, []);
+    return v;
+  },
+};
+// メールの日付（チェックイン・出発・体験の日）から、どの旅行の予約かを決める
+const inboundDate = (p) => (p && (p.checkin_date || p.depart_date || p.activity_date)) || "";
+function inboundTripOf(trips, it) {
+  const d = inboundDate(it.parsed);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  return (trips || []).find(tr => { const r = tripRange(tr.data || {}); return r && d >= r.start && d <= r.end; }) || null;
+}
+// この旅行で見せるもの（この旅行の日程に入る予約と、どの旅行にも入らない予約）と、ほかの旅行の予約に分ける
+function inboundSplit(items, trips, tripId) {
+  const here = [], elsewhere = [];
+  items.filter(i => i.kind !== "gmail_confirm").forEach(it => {
+    const tr = it.status === "parsed" ? inboundTripOf(trips, it) : null;
+    if (tr && tr.id !== tripId) elsewhere.push({ it, trip: tr }); else here.push({ it, trip: tr });
+  });
+  return { here, elsewhere };
+}
+// 「予約・手配」の印とホームの「今やること」に足す件数（アプリ本体から呼ぶ）
+function useTrunkInbound(trips, tripId) {
+  const st = inboundWatch.use();
+  if (!st.paid) return 0;
+  return inboundSplit(st.items, trips, tripId).here.length + st.items.filter(i => i.kind === "gmail_confirm").length;
+}
+// 転送先を連絡先に入れておくと、スマホで転送するとき宛先に「Trunk」と打つだけで済む
+function vcardHref(address) {
+  const v = ["BEGIN:VCARD", "VERSION:3.0", "N:;Trunk 予約メール;;;", "FN:Trunk 予約メール", "EMAIL;TYPE=INTERNET:" + address, "END:VCARD"].join("\r\n");
+  return "data:text/vcard;charset=utf-8," + encodeURIComponent(v);
+}
+function TrunkMailCard({ t, update, toast, trips, tripId, onPick, onCreate, onEdit }) {
+  const st = inboundWatch.use();
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(null);
+  const load = () => inboundWatch.load();
   const decide = async (id, status) => { try { await Store.setInboundStatus(id, status); } catch (e) {} load(); };
-  const apply = (item, p) => { update(p.apply); decide(item.gmailId, "applied"); toast && toast("旅程に反映しました"); };
-  const copy = async () => { try { await navigator.clipboard.writeText(state.address); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {} };
-  if (!state.ready) return null;
-  if (!state.paid) return (
-    <section className="card stack" style={{ gap: 6 }}>
+  const apply = (item, p) => { update(p.apply); decide(item.gmailId, "applied"); setDone({ target: p.target, edit: p.edit || null }); toast && toast("旅程に反映しました"); };
+  const copy = async () => { try { await navigator.clipboard.writeText(st.address); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (e) {} };
+  const makeTrip = async (it) => {
+    const p = it.parsed || {}, start = inboundDate(p);
+    const place = String(p.city || p.to_place || p.name || "").replace(/[（(].*$/, "").trim();
+    const nights = p.checkin_date && p.checkout_date ? Math.max(1, Math.round((Date.parse(p.checkout_date) - Date.parse(p.checkin_date)) / 86400000)) : 1;
+    await onCreate({ name: place ? place + "の旅行" : "新しい旅行", start, nights, label: "", people: 1 });
+  };
+  if (!st.ready) return null;
+  if (!st.paid) return (
+    <section className="card stack" style={{ gap: 8 }}>
       <h3>予約メールから取り込む</h3>
-      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを転送すると、宿や移動を読み取って旅程に反映できます。旅行パス・3か月パスを使っているときに使えます。</p>
+      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを転送するだけで、宿や移動を読み取って旅程に反映できます。旅行パス・3か月パスの機能です。</p>
+      {typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
     </section>
   );
-  const confirms = state.items.filter(i => i.kind === "gmail_confirm");
-  const bookings = state.items.filter(i => i.kind !== "gmail_confirm");
+  const confirms = st.items.filter(i => i.kind === "gmail_confirm");
+  const { here, elsewhere } = inboundSplit(st.items, trips, tripId);
+  const otherTrips = [...new Map(elsewhere.map(e => [e.trip.id, e.trip])).values()];
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <div className="row between"><h3>予約メールから取り込む</h3><button className="btn small ghost" disabled={busy} onClick={async () => { setBusy(true); await load(); setBusy(false); }}>更新</button></div>
-      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを、下のあなた専用のアドレスに転送するだけ。予約サイトでも、ホテルや航空会社からの直接のメールでも、1〜2分で読み取ってここに並びます。</p>
+      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを、このアドレスに転送するだけ。予約サイトでも、ホテルや航空会社からの直接のメールでも、1〜2分で読み取ってここに並びます。</p>
       <div className="row" style={{ flexWrap: "nowrap" }}>
-        <input className="input mono" readOnly value={state.address} aria-label="転送用のアドレス" onFocus={e => e.target.select()} />
+        <input className="input mono" readOnly value={st.address} aria-label="転送用のアドレス" onFocus={e => e.target.select()} />
         <button className="btn small" onClick={copy}>{copied ? "コピーしました" : "コピー"}</button>
+      </div>
+      <div className="row small" style={{ gap: 6, alignItems: "baseline" }}>
+        <a href={vcardHref(st.address)} download="trunk-mail.vcf">連絡先に追加</a>
+        <span className="xs muted">追加しておくと、転送するとき宛先に「Trunk」と入れるだけで選べます</span>
       </div>
       <details className="small"><summary>よく使う予約サイトは、自動で転送することもできます</summary>
         <ol style={{ margin: "6px 0 0", paddingLeft: 18 }}>
@@ -290,14 +349,37 @@ function TrunkMailCard({ t, update, toast }) {
           </div>
         );
       })}
-      {state.err && <div className="err">{state.err}</div>}
-      {bookings.length === 0 && <p className="xs muted" style={{ margin: 0 }}>取り込み待ちのメールはありません。</p>}
-      {bookings.map(it => it.status === "failed" ? (
+      {done && (
+        <div className="note row between" style={{ gap: 8 }}>
+          <span className="small">反映しました：{done.target}</span>
+          <span className="row" style={{ gap: 6 }}>{done.edit && onEdit && <button className="btn small" onClick={() => { const e = done.edit; setDone(null); onEdit(e); }}>開く</button>}<button className="btn small ghost" onClick={() => setDone(null)}>閉じる</button></span>
+        </div>
+      )}
+      {st.err && <div className="err">{st.err}</div>}
+      {otherTrips.map(tr => {
+        const n = elsewhere.filter(e => e.trip.id === tr.id).length;
+        return (
+          <div key={tr.id} className="note row between" style={{ gap: 8 }}>
+            <span className="small">「{(tr.data && tr.data.name) || "旅行"}」の予約メールが{n}件あります</span>
+            <button className="btn small" onClick={() => onPick && onPick(tr.id)}>その旅行を開く</button>
+          </div>
+        );
+      })}
+      {here.length === 0 && <p className="xs muted" style={{ margin: 0 }}>この旅行の取り込み待ちのメールはありません。</p>}
+      {here.map(({ it, trip }) => it.status === "failed" ? (
         <div key={it.id} className="inboxitem"><b>{it.subject || "（件名なし）"}</b><div className="xs muted">読み取れませんでした。手で入力してください。</div>
           <div className="row"><button className="btn small" onClick={() => decide(it.id, "dismissed")}>閉じる</button></div></div>
       ) : (
-        <InboxItem key={it.id} t={t} onApply={apply} onDecide={decide}
-          item={{ gmailId: it.id, subject: it.subject, from: it.from_addr, receivedAt: it.received_at, extracted: normalizeBooking(it.parsed) || { ...BOOKING_DEFAULTS, summary: it.subject } }} />
+        <div key={it.id} className="stack" style={{ gap: 6 }}>
+          {!trip && inboundDate(it.parsed) && (
+            <div className="note row between" style={{ gap: 8 }}>
+              <span className="small">この予約（{inboundDate(it.parsed).slice(5).split("-").map(Number).join("/")}〜）は、どの旅行の日程にも入っていません。</span>
+              {onCreate && <button className="btn small" onClick={() => makeTrip(it)}>新しい旅行として作る</button>}
+            </div>
+          )}
+          <InboxItem t={t} onApply={apply} onDecide={decide}
+            item={{ gmailId: it.id, subject: it.subject, from: (it.parsed && it.parsed.provider) || it.from_addr, receivedAt: it.received_at, extracted: normalizeBooking(it.parsed) || { ...BOOKING_DEFAULTS, summary: it.subject } }} />
+        </div>
       ))}
     </section>
   );

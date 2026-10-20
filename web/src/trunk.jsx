@@ -16,7 +16,7 @@ function TrunkBuyPass() {
     setSt("busy");
     try { await Store.buy(kind); } catch (e) { setSt(e.code === "not_yet" ? "notyet" : "err"); }
   };
-  if (!open) return <div className="note">旅行パス・3か月パスは、2026年12月1日から購入できます。それまでは、今の旅行が終わると次の旅行を無料で作れます。</div>;
+  if (!open) return <div className="small muted">旅行パス・3か月パスは、2026年12月1日から購入できます。</div>;
   return (
     <div className="stack" style={{ gap: 8 }}>
       <button className="btn primary block" disabled={st === "busy"} onClick={() => buy("trip")}>旅行パスを買う（1旅行 440円）</button>
@@ -198,6 +198,19 @@ function TrunkViewShare({ tripId, name }) {
 }
 
 // 一緒に編集する人（招待リンク）
+// 招待から参加した人を、精算の参加者にワンタップで足す（名前は Google の表示名）
+function TrunkMemberSuggest({ tripId, participants, onAdd }) {
+  const [people, setPeople] = useState([]);
+  useEffect(() => { let alive = true; Store.people(tripId).then(p => { if (alive) setPeople(p || []); }).catch(() => {}); return () => { alive = false; }; }, [tripId]);
+  const names = people.map(p => String(p.display_name || "").trim()).filter(n => n && !participants.includes(n));
+  if (!names.length) return null;
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <span className="xs muted">一緒に編集している人を参加者に足す</span>
+      <div className="chips">{names.map(n => <button key={n} className="chip" onClick={() => onAdd(n)}><Icon n="plus" s={12} />{n}</button>)}</div>
+    </div>
+  );
+}
 function TrunkShareSection({ t, tripId }) {
   const [people, setPeople] = useState(null);
   const [link, setLink] = useState(null);

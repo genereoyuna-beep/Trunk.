@@ -333,7 +333,7 @@ function LocalEditor({ t, id, update, close }) {
 }
 
 // ================= ホーム =================
-function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go, openDay, openPhrases, openEmergency, openShiori, openSettings }) {
+function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go, openDay, openPhrases, openEmergency, openShiori, openSettings, onExpense }) {
   const r = tripRange(t), today = todayISO();
   const days = r ? dayDiff(today, r.start) : null;
   const sorted = sortItinerary(t.itinerary || []);
@@ -368,9 +368,16 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
             <Icon n="down" s={16} />
           </button>
         )}
+        {r && onExpense && today >= r.start && today <= r.end && (
+          <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12, boxShadow: "0 0 0 1.5px var(--blue)" }} onClick={onExpense}>
+            <span className="ico blue"><Icon n="wallet" /></span>
+            <span style={{ flex: 1, minWidth: 0 }}><span className="t1">支出を記録</span><span className="t2" style={{ whiteSpace: "normal" }}>ごはん・交通・お土産など、使ったお金をその場で</span></span>
+            <Icon n="plus" s={16} />
+          </button>
+        )}
         {r && r.days <= 10 && (
           <section className="card flush divide">
-            <div className="row" style={{ padding: "12px 14px", justifyContent: "space-between", alignItems: "center" }}><h3>日程</h3>{openSettings && <button className="btn small" onClick={openSettings}>日程を変える</button>}</div>
+            <div className="row" style={{ padding: "12px 14px", justifyContent: "space-between", alignItems: "center" }}><h3>日程</h3>{openSettings && <button className="btn small" onClick={openSettings}>日程をずらす</button>}</div>
             {Array.from({ length: r.days }, (_, i) => addDays(r.start, i)).map((d, i) => {
               const { ev, head } = dayEvents(t, d);
               const first = ev.find(e => e.time);
@@ -1017,8 +1024,7 @@ function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
 }
 
 // ================= お金 =================
-function MoneyView({ t, stats, update }) {
-  const [mode, setMode] = useState("budget");
+function MoneyView({ t, stats, update, mode, setMode, tripId }) {
   const [allView, setAllView] = useState(false);
   const [newName, setNewName] = useState("");
   const participants = t.participants || [];
@@ -1084,6 +1090,7 @@ function MoneyView({ t, stats, update }) {
             <input className="input" aria-label="参加者の名前" placeholder="名前を追加" value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === "Enter" && addMember()} />
             <button className="btn" onClick={addMember}>追加</button>
           </div>
+          {typeof TrunkMemberSuggest === "function" && <TrunkMemberSuggest tripId={tripId} participants={participants} onAdd={(n) => update(tr => (tr.participants || []).includes(n) ? tr : ({ ...tr, participants: [...(tr.participants || []), n] }))} />}
           <div className="xs muted">★を押した人が「自分」です。支出を記録するとき、「払った人」の最初の値になります。</div>
         </section>
         <ExpenseSettle t={t} />
@@ -1311,6 +1318,7 @@ function App() {
   const [sheet, setSheet] = useState(DEMO.sheet ? { kind: DEMO.sheet } : null);
   const [menu, setMenu] = useState(false);
   const [menuData, setMenuData] = useState(false);
+  const [moneyMode, setMoneyMode] = useState("budget");
   const [toastMsg, setToastMsg] = useState("");
   const [notice, setNotice] = useState("");
   const [privEm, setPrivEm] = useState({});
@@ -1665,7 +1673,7 @@ function App() {
   };
   const openCount = staysOf(t).filter(s => isOpenState(stayState(t, s))).length + transitsOf(t).filter(x => isOpenState(transitState(x))).length + (t.localTransport || []).filter(l => isOpenState(localState(l))).length;
   const mail = <MailCard t={t} update={update} inbox={inbox} scan={scan} onScan={scanGmail} onPaste={pasteImport} onApply={applyInbox} onDecide={decide} />;
-  const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", settings: sheet.section === "share" ? "共有" : sheet.section === "account" ? "アカウント" : "この旅行の設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", shiori: "旅のしおり", suggest: "予定の提案", consult: "AIに相談", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
+  const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", shift: "日程をずらす", settings: sheet.section === "share" ? "共有" : sheet.section === "account" ? "アカウント" : "この旅行の設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", shiori: "旅のしおり", suggest: "予定の提案", consult: "AIに相談", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
 
   return (
     <GeoCtx.Provider value={(names, ll) => update(tr => ({ ...tr, geo: { ...(tr.geo || {}), ...Object.fromEntries(names.filter(Boolean).map(n => [n, ll])) } }))}>
@@ -1688,10 +1696,10 @@ function App() {
         {tab === "home" && typeof TrunkPassBanner === "function" && <TrunkPassBanner onTrips={() => setSheet({ kind: "trips" })} />}
         {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings", section: "share" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
-        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "settings", section: "trip" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
+        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "shift" })} onExpense={() => { setMoneyMode("expense"); setTab("money"); }} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => setSheet({ kind: "add" })} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
-        {tab === "money" && <MoneyView t={t} stats={stats} update={update} />}
+        {tab === "money" && <MoneyView t={t} stats={stats} update={update} mode={moneyMode} setMode={setMoneyMode} tripId={tripId} />}
         {tab === "pack" && <PackView t={packT} update={packUpdate} />}
       </main>
       {menu && (
@@ -1738,6 +1746,7 @@ function App() {
             </div>
           )}
           {sheet.kind === "trips" && <TripsSheet limited={atLimit} trips={trips} currentId={tripId} onPick={pickTrip} onCreate={createTrip} onSettings={() => setSheet({ kind: "settings" })} />}
+          {sheet.kind === "shift" && <ShiftDates t={t} update={update} />}
           {sheet.kind === "settings" && <SettingsSheet t={t} tripId={tripId} update={update} onCopy={copyTrip} onDelete={deleteTrip} joined={!!(Store.isJoined && Store.isJoined(tripId))} section={sheet.section} canDelete={FEATURES.account || trips.length > 1} onRequest={importRequest} busy={scan.st === "busy"} />}
           {sheet.kind === "import" && (
             <>

@@ -1352,6 +1352,8 @@ function App() {
   const [menu, setMenu] = useState(false);
   const [menuData, setMenuData] = useState(false);
   const [moneyMode, setMoneyMode] = useState("budget");
+  // 「…」メニューは Escape キーでも閉じる
+  useEffect(() => { if (!menu) return; const f = (e) => { if (e.key === "Escape") { setMenu(false); setMenuData(false); } }; document.addEventListener("keydown", f); return () => document.removeEventListener("keydown", f); }, [menu]);
   const [toastMsg, setToastMsg] = useState("");
   const [notice, setNotice] = useState("");
   const [privEm, setPrivEm] = useState({});

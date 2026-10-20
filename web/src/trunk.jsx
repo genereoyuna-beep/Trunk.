@@ -154,7 +154,8 @@ function TrunkViewShare({ tripId, name }) {
   const [st, setSt] = useState("");
   const reload = () => { Store.share(tripId).then(setSh).catch(() => setSh(null)); Store.requests(tripId).then(setReqs).catch(() => {}); };
   useEffect(() => { setSh(undefined); setReqs([]); setSt(""); reload(); }, [tripId]);
-  const url = sh && sh.enabled ? location.origin + "/s/?k=" + sh.token : "";
+  // 本番では s.trunk-travelplanner.com 経由にする（LINE などで旅行名と画像が出る。開くと共有ページへ移る）
+  const url = sh && sh.enabled ? (location.hostname === "trunk-travelplanner.com" ? "https://s.trunk-travelplanner.com/?k=" : location.origin + "/s/?k=") + sh.token : "";
   const run = async (f, ok) => { setSt("busy"); try { await f(); setSt(ok || ""); reload(); } catch (e) { setSt("err"); } };
   const copy = async () => { try { await navigator.clipboard.writeText(url); setSt("copied"); } catch (e) { setSt("copyerr"); } };
   const fmt = (iso) => { const d = new Date(iso); return (d.getMonth() + 1) + "/" + d.getDate(); };

@@ -1,0 +1,12 @@
+# 共有リンクのプレビュー：LINE などで送ったとき、旅行ごとの題名と画像を出す
+# s.trunk-travelplanner.com/?k=… を開くと、旅行名・日程の入った OGP を返して、共有ページ（/s/?k=…）へ移る
+name = "trunk-share"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+routes = [{ pattern = "s.trunk-travelplanner.com", custom_domain = true }]
+
+[vars]
+SITE = "https://trunk-travelplanner.com"
+SUPABASE_URL = "https://nlstbgnflnchjpnqnelr.supabase.co"
+SUPABASE_KEY = "sb_publishable_bLXkuhZMT1-Dv000H8Fm3g_8-mBaYPY"

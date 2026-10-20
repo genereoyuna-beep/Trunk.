@@ -1,0 +1,8 @@
+{
+  "name": "trunk-share",
+  "private": true,
+  "type": "module",
+  "scripts": { "deploy": "wrangler deploy" },
+  "dependencies": { "workers-og": "0.0.27" },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

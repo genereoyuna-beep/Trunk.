@@ -162,6 +162,15 @@ section{padding:72px 0}
 .mi-steps{counter-reset:mi;list-style:none;margin-top:18px;display:grid;gap:10px}
 .mi-steps li{counter-increment:mi;display:grid;grid-template-columns:26px minmax(0,1fr);gap:8px;font-size:14px}
 .mi-steps li::before{content:counter(mi);width:22px;height:22px;border-radius:11px;background:var(--blue);color:#fff;font-family:var(--f-mono);font-size:11px;display:grid;place-items:center;margin-top:2px}
+.reads{display:grid;gap:14px;margin-top:28px}
+@media(min-width:760px){.reads{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.read{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 20px 18px;color:inherit;text-decoration:none;transition:border-color .2s,transform .2s}
+.read:hover{border-color:var(--blue);transform:translateY(-2px)}
+.read .eyebrow{color:var(--blue)}
+.read b{font-size:17px;line-height:1.5}
+.read p{font-size:13.5px;color:var(--ink2);margin:0}
+.read span.go{margin-top:auto;padding-top:6px;font-size:13px;color:var(--blue);font-weight:600}
+.reads-more{margin-top:18px;text-align:center;font-size:14px}
 .panel{background:var(--surface);border-radius:20px;padding:18px;border:1px solid var(--line);box-shadow:0 24px 50px -36px rgba(21,32,43,.5)}
 .dark .panel{border-color:#2A3743}
 
@@ -838,6 +847,23 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
 </section>
 
 <!-- FAQ -->
+<!-- READS -->
+<section id="reads" data-sec="読みもの">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="eyebrow">Reads</div>
+      <h2>旅の準備に、<br>読みもの。</h2>
+      <p>モデルコースや持ち物、しおりの作り方など。計画のヒントにどうぞ。</p>
+    </div>
+    <div class="reads">
+      <a class="read rv" href="/articles/seoul-3n4d.html"><span class="eyebrow">Model course</span><b>ソウル3泊4日のモデルコースと、準備のチェックリスト</b><p>定番をめぐる4日間の流れと、出発前にやることをまとめました。</p><span class="go">読む →</span></a>
+      <a class="read rv" href="/articles/shiori.html"><span class="eyebrow">Booklet</span><b>旅のしおりの作り方と、載せるものの一覧</b><p>日程・宿・移動・持ち物まで、しおりに入れておくと安心な項目。</p><span class="go">読む →</span></a>
+      <a class="read rv" href="/articles/packing-list.html"><span class="eyebrow">Packing</span><b>旅行の持ち物リスト（国内・海外）</b><p>忘れやすいものと、海外旅行で追加で必要なものをチェック。</p><span class="go">読む →</span></a>
+    </div>
+    <p class="reads-more rv"><a href="/articles/">台北・バンコク・京都・ヨーロッパ周遊・割り勘の記事も見る</a></p>
+  </div>
+</section>
+
 <section class="band" id="faq" data-sec="よくある質問">
   <div class="wrap">
     <div class="sec-head rv">

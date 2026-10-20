@@ -34,3 +34,17 @@ FEATURES.esimSearch = (cities) => {
 const GOOGLE_CLIENT_ID = "910425972252-2l37io82lfbb5ja2rrossr783sh634v8.apps.googleusercontent.com";
 // 予約メールの転送取り込み（パスを持っている人だけ）。サーバー側（Cloudflare・Supabase・AI のキー）の準備ができたら true にする
 FEATURES.mailImport = true;
+
+// ホームに出す読みもの：行き先に合う記事（なければ持ち物リスト）
+FEATURES.articleFor = (t) => {
+  const cities = staysOf(t).map(s => splitCity(s.city || "").main).join(" ");
+  const zones = tripCountries(t);
+  const names = zones.map(z => z.country).join(" ");
+  const A = (slug, title) => ({ url: `/articles/${slug}.html?utm_source=app_home`, title });
+  if (/韓国/.test(names) || /ソウル/.test(cities)) return A("seoul-3n4d", "ソウル3泊4日のモデルコースと、準備のチェックリスト");
+  if (/台湾/.test(names) || /台北/.test(cities)) return A("taipei-2n3d", "台北2泊3日のモデルコースと、準備のチェックリスト");
+  if (/タイ/.test(names) || /バンコク/.test(cities)) return A("bangkok-3n4d", "バンコク3泊4日のモデルコースと、準備のチェックリスト");
+  if (zones.some(z => /^Europe\//.test(z.zone))) return A("europe-plan", "ヨーロッパ周遊旅行の計画の立て方");
+  if (/京都/.test(cities)) return A("kyoto-1n2d", "京都1泊2日のモデルコース（定番をめぐる）");
+  return A("packing-list", "旅行の持ち物リスト（国内・海外）");
+};

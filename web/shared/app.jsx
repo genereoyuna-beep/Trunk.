@@ -474,6 +474,13 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
             <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>
           </button>
         )}
+        {typeof FEATURES.articleFor === "function" && (() => { const ar = FEATURES.articleFor(t); return ar && (
+          <a className="card row" style={{ width: "100%", textAlign: "left", flexWrap: "nowrap", gap: 12, color: "inherit", textDecoration: "none" }} href={ar.url} target="_blank" rel="noopener">
+            <span className="ico" style={{ background: "var(--sunk)", color: "var(--ink)" }}><Icon n="pencil" /></span>
+            <span style={{ flex: 1, minWidth: 0 }}><span className="t2">読みもの</span><span className="t1" style={{ whiteSpace: "normal" }}>{ar.title}</span></span>
+            <Icon n="ext" s={16} />
+          </a>
+        ); })()}
         {FEATURES.mail && <section className="card row" style={{ flexWrap: "nowrap", gap: 12 }}>
           <span className="ico blue"><Icon n="mail" /></span>
           <span style={{ flex: 1, minWidth: 0 }}>

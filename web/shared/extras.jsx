@@ -143,6 +143,7 @@ function ExpenseView({ t, update }) {
   // 予約済みの宿・移動・予定を、そのまま支出に入れる（払った人は自分、割り勘は全員。あとで直せる）
   const cands = bookedExpenseCandidates(t);
   const [bPayer, setBPayer] = useState("");
+  const [editId, setEditId] = useState(null);
   const addBooked = (list) => update(tr => {
     const have = new Set((tr.expenses || []).map(e => e.src).filter(Boolean));
     const payer = (bPayer && (tr.participants || []).includes(bPayer) ? bPayer : "") || tr.myName || (tr.participants || [])[0] || "";
@@ -175,7 +176,7 @@ function ExpenseView({ t, update }) {
       {cands.length > 0 && (
         <section className="card stack" style={{ gap: 8 }}>
           <div className="row between"><h3>予約したものを支出に入れる</h3>{cands.length > 1 && <button className="btn small" onClick={() => addBooked(cands)}>まとめて入れる</button>}</div>
-          <div className="xs muted">予約済み・支払い済みで金額が入っているものです。{people.length > 1 ? "参加者全員の割り勘として入ります。" : ""}</div>
+          <div className="xs muted">予約済み・支払い済みで金額が入っているものです。{people.length > 1 ? "参加者全員の割り勘として入ります。途中から来る人などは、入れたあと「これまでの支出」で直せます。" : ""}</div>
           {people.length > 1 && <label className="row small" style={{ gap: 8 }}>払った人<select className="input" style={{ width: "auto" }} value={bPayer && people.includes(bPayer) ? bPayer : (t.myName || people[0])} onChange={e => setBPayer(e.target.value)}>{people.map(p => <option key={p}>{p}</option>)}</select></label>}
           <div className="divide">
             {cands.map(c => (
@@ -193,15 +194,43 @@ function ExpenseView({ t, update }) {
         {noRate.length > 0 && <div className="xs" style={{ color: "var(--orange)" }}>{noRate.join("・")}のレートが未入力のため、合計に入っていません</div>}
         {!list.length && <p className="empty">まだ記録がありません。</p>}
         <div className="divide">
-          {list.map(e => (
-            <div key={e.id} className="row between" style={{ flexWrap: "nowrap", padding: "8px 0" }}>
-              <span style={{ minWidth: 0 }}><span className="t1">{e.title}</span><span className="xs muted">{md(e.date)} ・ {e.category}{e.payer ? ` ・ ${e.payer}が払った` : ""}{e.split && e.split.length && people.length > 1 && e.split.length < people.length ? `（${e.split.join("・")}の分）` : ""}</span></span>
-              <span className="row" style={{ flexWrap: "nowrap", gap: 4 }}>
-                <span style={{ textAlign: "right" }}><span className="mono" style={{ display: "block" }}>{e.currency === "JPY" ? yen(e.amount) : `${Number(e.amount).toLocaleString("ja-JP")} ${e.currency}`}</span>{e.currency !== "JPY" && hasRate(t, e.currency) && <span className="xs muted mono">≒ {yen(toJPY(t, e.amount, e.currency))}</span>}</span>
-                <button className="iconbtn" aria-label={`${e.title}を削除`} onClick={() => update(tr => ({ ...tr, expenses: tr.expenses.filter(x => x.id !== e.id) }))}><Icon n="x" s={16} /></button>
-              </span>
-            </div>
-          ))}
+          {list.map(e => {
+            const sp = e.split && e.split.length ? e.split : people;
+            const setE = (patch) => update(tr => ({ ...tr, expenses: tr.expenses.map(x => x.id === e.id ? { ...x, ...patch } : x) }));
+            const editing = editId === e.id;
+            return (
+              <div key={e.id} style={{ padding: "8px 0" }}>
+                <div className="row between" style={{ flexWrap: "nowrap" }}>
+                  <button style={{ minWidth: 0, flex: 1, textAlign: "left", background: "none", border: 0, padding: 0, color: "inherit", cursor: "pointer" }} aria-expanded={editing} onClick={() => setEditId(editing ? null : e.id)}>
+                    <span className="t1">{e.title}</span><span className="xs muted">{md(e.date)} ・ {e.category}{e.payer ? ` ・ ${e.payer}が払った` : ""}{people.length > 1 && sp.length < people.length ? `（${sp.join("・")}の分）` : ""}{editing ? "" : " ・ 直す"}</span>
+                  </button>
+                  <span className="row" style={{ flexWrap: "nowrap", gap: 4 }}>
+                    <span style={{ textAlign: "right" }}><span className="mono" style={{ display: "block" }}>{e.currency === "JPY" ? yen(e.amount) : `${Number(e.amount).toLocaleString("ja-JP")} ${e.currency}`}</span>{e.currency !== "JPY" && hasRate(t, e.currency) && <span className="xs muted mono">≒ {yen(toJPY(t, e.amount, e.currency))}</span>}</span>
+                    <button className="iconbtn" aria-label={`${e.title}を削除`} onClick={() => update(tr => ({ ...tr, expenses: tr.expenses.filter(x => x.id !== e.id) }))}><Icon n="x" s={16} /></button>
+                  </span>
+                </div>
+                {editing && (
+                  <div className="stack" style={{ gap: 8, marginTop: 8, background: "var(--sunk)", borderRadius: 12, padding: 12 }}>
+                    <div className="fgrid">
+                      <Field label="内容" wide><TextIn value={e.title} onChange={v => setE({ title: v })} /></Field>
+                      <Field label="金額"><input type="number" inputMode="decimal" value={e.amount} onChange={ev => setE({ amount: Number(ev.target.value) || 0 })} /></Field>
+                      <Field label="通貨"><select value={e.currency} onChange={ev => setE({ currency: ev.target.value })}>{uniq([...curs, e.currency]).map(c => <option key={c} value={c}>{c}（{CUR_NAME[c] || c}）</option>)}</select></Field>
+                      <Field label="日付"><DateIn value={e.date} onChange={v => setE({ date: v })} /></Field>
+                      <Field label="種類"><select value={e.category} onChange={ev => setE({ category: ev.target.value })}>{EXP_CATS.map(c => <option key={c}>{c}</option>)}</select></Field>
+                      {people.length > 0 && <Field label="払った人"><select value={people.includes(e.payer) ? e.payer : ""} onChange={ev => setE({ payer: ev.target.value })}>{!people.includes(e.payer) && <option value="">選ぶ</option>}{people.map(p => <option key={p}>{p}</option>)}</select></Field>}
+                    </div>
+                    {people.length > 1 && (
+                      <div className="stack" style={{ gap: 6 }}>
+                        <span className="small muted">誰の分か（割り勘する人）</span>
+                        <div className="chips">{people.map(p => { const on = sp.includes(p); return <button key={p} className="chip" aria-pressed={on} disabled={on && sp.length === 1} onClick={() => setE({ split: on ? sp.filter(x => x !== p) : [...sp, p] })}>{p}</button>; })}</div>
+                      </div>
+                    )}
+                    <div className="row"><button className="btn small" onClick={() => setEditId(null)}>閉じる</button></div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
       <CurrencyCard t={t} update={update} />

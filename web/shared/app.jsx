@@ -1022,6 +1022,7 @@ function MoneyView({ t, stats, update }) {
   const [allView, setAllView] = useState(false);
   const [newName, setNewName] = useState("");
   const [open, setOpen] = useState(null);
+  const [presOpen, setPresOpen] = useState(false);
   const [payer, setPayer] = useState("");
   const pb = useMemo(() => personBreakdown(t), [t]);
   const participants = t.participants || [];
@@ -1103,8 +1104,13 @@ function MoneyView({ t, stats, update }) {
         </section>
         {participants.length > 1 && stays.length > 0 && (
           <section className="card flush divide">
-            <div style={{ padding: "12px 14px" }}><h3>滞在ごとの参加者</h3><div className="xs muted">いない人を外すと、その日の宿代・移動費を残りの人で割ります</div></div>
-            {stays.map(s => (
+            {/* 途中参加・途中で帰る人がいるときだけ使うので、最初は閉じておく */}
+            <button className="bookrow" style={{ gridTemplateColumns: "minmax(0,1fr) auto", padding: "12px 14px" }} aria-expanded={presOpen} onClick={() => setPresOpen(!presOpen)}>
+              <span style={{ minWidth: 0 }}><h3 style={{ margin: 0 }}>滞在ごとの参加者</h3><span className="xs muted" style={{ display: "block", whiteSpace: "normal" }}>{stays.some(s => participants.some(p => !daysOf(s).every(d => membersOn(d).includes(p)))) ? "一部の滞在で、参加しない人を外しています" : "途中から参加する人・先に帰る人がいるときに使います"}</span></span>
+              <span style={{ transform: presOpen ? "rotate(180deg)" : "none", display: "inline-flex" }}><Icon n="down" s={16} /></span>
+            </button>
+            {presOpen && <div style={{ padding: "0 14px 4px" }} className="xs muted">いない人を外すと、その日の宿代・移動費を残りの人で割ります</div>}
+            {presOpen && stays.map(s => (
               <div key={s.id} style={{ padding: "10px 14px" }} className="row between">
                 <span style={{ minWidth: 0 }}><b>{splitCity(s.city).main}</b> <span className="mono xs muted">{md(s.startDate)}〜{md(stayEnd(s))}</span></span>
                 <span className="chips">{participants.map(p => { const on = daysOf(s).every(d => membersOn(d).includes(p)); return <button key={p} className="chip" aria-pressed={on} onClick={() => togglePresence(s, p)}>{p}</button>; })}</span>

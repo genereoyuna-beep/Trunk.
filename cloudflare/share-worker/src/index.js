@@ -2,6 +2,7 @@
 // LINE・X などの読み取りには、旅行名・日程・都市の入った題名と画像（/og/トークン.png）を返す。
 // 旅程の中身は get_share（共有ページと同じ、緊急時の情報・支出・予約番号を外したもの）から読む。
 import { ImageResponse, loadGoogleFont } from "workers-og";
+import { EmailMessage } from "cloudflare:email";
 
 const TOKEN = /^[A-Za-z0-9_-]{6,80}$/;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -80,9 +81,28 @@ async function image(s) {
   ] });
 }
 
+// 日本語の件名・本文を、そのまま送れる形（UTF-8）のメールにする
+const b64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+function rawMail(from, to, subject, text) {
+  const body = b64(text).replace(/.{1,76}/g, "$&\r\n");
+  return [`From: Trunk. <${from}>`, `To: ${to}`, `Subject: =?UTF-8?B?${b64(subject)}?=`, `Message-ID: <${crypto.randomUUID()}@trunk-travelplanner.com>`, `Date: ${new Date().toUTCString()}`,
+    "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", body].join("\r\n");
+}
+async function notifyFeedback(req, env) {
+  if (!env.NOTIFY_SECRET || !env.NOTIFY_TO || req.headers.get("x-notify-secret") !== env.NOTIFY_SECRET) return new Response("forbidden", { status: 403 });
+  const j = await req.json().catch(() => ({}));
+  const r = j.record || j;
+  const when = new Date(r.created_at || Date.now()).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+  const text = `Trunk. に要望が届きました。\n\n${String(r.body || "").slice(0, 4000)}\n\n----\n送られた場所：${r.where_from || "（不明）"}\n日時：${when}\n\n一覧は Supabase の feedback の表で見られます。`;
+  const from = "notify@trunk-travelplanner.com";
+  await env.MAILER.send(new EmailMessage(from, env.NOTIFY_TO, rawMail(from, env.NOTIFY_TO, "Trunk. に要望が届きました", text)));
+  return new Response("ok");
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    if (url.pathname === "/notify/feedback" && req.method === "POST") return notifyFeedback(req, env);
     // 予約メールの転送先を、スマホの連絡先に入れるためのファイル（/vcf/トークン.vcf）。iPhone はアプリの中で作ったファイルを連絡先に渡せないので、ここから配る
     const vc = url.pathname.match(/^\/vcf\/([a-z0-9]{10})\.vcf$/);
     if (vc) {

@@ -10,3 +10,8 @@ routes = [{ pattern = "s.trunk-travelplanner.com", custom_domain = true }]
 SITE = "https://trunk-travelplanner.com"
 SUPABASE_URL = "https://nlstbgnflnchjpnqnelr.supabase.co"
 SUPABASE_KEY = "sb_publishable_bLXkuhZMT1-Dv000H8Fm3g_8-mBaYPY"
+
+# 要望が届いたら、運営者にメールで知らせる（Supabase の feedback に入ったとき、データベースから /notify/feedback が呼ばれる）
+# 送り先は Email Routing で確認済みのアドレス。アドレスと合言葉はリポジトリに書かず、wrangler secret で入れる（NOTIFY_TO, NOTIFY_SECRET）
+[[send_email]]
+name = "MAILER"

@@ -650,7 +650,7 @@ function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
                 {onAddMove && <button className="btn small" onClick={() => onAddMove(d)}><Icon n="plus" s={14} />移動</button>}
               </span>
             </div>
-            <DayTimeline t={t} iso={d} onEdit={onEdit} />
+            <DayTimeline t={t} iso={d} onEdit={onEdit} onInsert={(k, o) => k === "move" ? onAddMove(d, o) : onAddLocal(d, o)} />
           </section>
         );
       })())}
@@ -768,12 +768,37 @@ function dayEvents(t, iso) {
   const night = sleeping ? (sleeping.noHotel ? { name: sleeping.lodgingLabel || "宿不要" } : hotelOf(t, sleeping) || {}) : null;
   return { ev, head, sleeping, night };
 }
-function DayTimeline({ t, iso, onEdit, showNight = true }) {
+// 予定と予定の間に足すときの時刻（前後の真ん中を15分単位で。後ろがなければ前の1時間後）
+const toMin = (hm) => { const m = /^(\d{1,2}):(\d{2})/.exec(hm || ""); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+const fromMin = (n) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+function betweenTime(a, b) {
+  const x = toMin(a), y = toMin(b);
+  if (x != null && y != null && y > x) return fromMin(Math.round((x + y) / 2 / 15) * 15);
+  if (x != null && x + 60 < 24 * 60) return fromMin(Math.ceil((x + 60) / 15) * 15);
+  return "";
+}
+function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
   const { ev, sleeping, night } = dayEvents(t, iso);
+  const [open, setOpen] = useState(null);
+  // 予定と予定の間の「＋」。押すと「予定」「移動」を選べて、時刻と前後の場所が入った状態で開く
+  const gap = (i) => {
+    if (!onInsert) return null;
+    const a = ev[i], b = ev[i + 1];
+    const opts = { time: betweenTime(a && a.time, b && b.time), from: a ? (a.map || a.title || "") : "", to: b ? (b.map || b.title || "") : "" };
+    return open === i ? (
+      <div key={"g" + i} className="tl-gap open">
+        <button className="btn small" onClick={() => { setOpen(null); onInsert("local", opts); }}><Icon n="plus" s={14} />予定{opts.time ? `（${opts.time}）` : ""}</button>
+        <button className="btn small" onClick={() => { setOpen(null); onInsert("move", opts); }}><Icon n="route" s={14} />移動</button>
+        <button className="btn small ghost" onClick={() => setOpen(null)}>やめる</button>
+      </div>
+    ) : (
+      <button key={"g" + i} className="tl-gap" aria-label={b ? `${a.title} と ${b.title} の間に追加` : `${a.title} のあとに追加`} onClick={() => setOpen(i)}><span><Icon n="plus" s={12} /></span></button>
+    );
+  };
   return (
     <>
       {ev.length === 0 && <p className="empty" style={{ padding: "10px 14px" }}>この日の予定はまだありません。</p>}
-      {ev.map((e, i) => (
+      {ev.map((e, i) => [(
         <div key={i} className="bookrow" style={{ gridTemplateColumns: "56px minmax(0,1fr) auto", cursor: "default", minHeight: 52, padding: "8px 14px" }}>
           <span className="mono" style={{ fontSize: 15, fontWeight: 600, color: e.time ? "var(--ink)" : "var(--faint)" }}>{e.time ? e.time.slice(0, 5) : "—"}</span>
           <button style={{ border: 0, background: "none", textAlign: "left", padding: 0, minWidth: 0 }} onClick={() => onEdit(e.edit)}>
@@ -783,7 +808,7 @@ function DayTimeline({ t, iso, onEdit, showNight = true }) {
           </button>
           {e.map ? <a className="iconbtn" aria-label="地図で開く" href={`https://www.google.com/maps?q=${encodeURIComponent(e.map)}`} target="_blank" rel="noopener noreferrer"><Icon n="pin" /></a> : <span />}
         </div>
-      ))}
+      ), gap(i)])}
       {showNight && sleeping && (
         <div className="row between" style={{ padding: "10px 14px", flexWrap: "nowrap", background: "#FAFAF8" }}>
           <span style={{ minWidth: 0 }}><span className="xs muted">この夜の宿</span><span className="t1" style={{ fontSize: 13 }}>{night.name || "宿未定"}</span>
@@ -809,7 +834,7 @@ function DayDetail({ t, iso, setIso, onEdit, onAddLocal, onAddMove, onSuggest })
         </div>
         <button className="iconbtn" aria-label="次の日" disabled={!canNext} onClick={() => setIso(addDays(iso, 1))} style={{ transform: "rotate(-90deg)" }}><Icon n="down" /></button>
       </div>
-      <div className="card flush divide"><DayTimeline t={t} iso={iso} onEdit={onEdit} /></div>
+      <div className="card flush divide"><DayTimeline t={t} iso={iso} onEdit={onEdit} onInsert={(k, o) => k === "move" ? onAddMove(iso, o) : onAddLocal(iso, o)} /></div>
       <DayMap t={t} iso={iso} />
       <div className="row" style={{ flexWrap: "nowrap" }}>
         <button className="btn block" style={{ flex: 1 }} onClick={() => onAddLocal(iso)}><Icon n="plus" s={16} />予定を追加</button>
@@ -1555,18 +1580,18 @@ function App() {
     const s = { id: uid(), type: "stay", city: "", startDate: last ? stayEnd(last) : todayISO(), nights: 1, memo: "", status: "未確定", noHotel: false };
     update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, s]) })); setSheet({ kind: "stay", id: s.id });
   };
-  const addTransit = (date, back) => {
+  const addTransit = (date, back, o) => {
     const t = draftRef.current, stays = sortItinerary(staysOf(t)).filter(s => isISO(s.startDate)), last = stays[stays.length - 1];
     const onDay = isISO(date), d = onDay ? date : last ? stayEnd(last) : todayISO();
     const here = onDay ? stays.find(s => d >= s.startDate && d < stayEnd(s)) : null;
-    const x = { id: uid(), type: "transit", mode: onDay ? "未定" : "飛行機", desc: "", fromCity: onDay ? (here ? here.city : "") : last ? last.city : "", toCity: "", departDate: d, departTime: "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い" };
+    const x = { id: uid(), type: "transit", mode: onDay ? "未定" : "飛行機", desc: "", fromCity: o && o.from ? o.from : onDay ? (here ? here.city : "") : last ? last.city : "", toCity: (o && o.to) || "", departDate: d, departTime: (o && o.time) || "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い" };
     update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); setSheet({ kind: "transit", id: x.id, back });
   };
-  const addLocal = (date, back) => {
+  const addLocal = (date, back, o) => {
     const tr0 = draftRef.current, r = tripRange(tr0);
     const d = isISO(date) ? date : r ? r.start : todayISO();
     const stay = staysOf(tr0).find(s => s.startDate && d >= s.startDate && d < stayEnd(s));
-    const l = { id: uid(), linkedStayId: stay ? stay.id : null, category: "観光", desc: "", address: "", fromAddress: "", toAddress: "", date: d, startTime: "", endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: "", paymentStatus: "未払い", status: "候補" };
+    const l = { id: uid(), linkedStayId: stay ? stay.id : null, category: "観光", desc: "", address: "", fromAddress: "", toAddress: "", date: d, startTime: (o && o.time) || "", endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: "", paymentStatus: "未払い", status: "候補" };
     update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l] })); setSheet({ kind: "local", id: l.id, back });
   };
 
@@ -1748,7 +1773,7 @@ function App() {
         {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings", section: "share" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
         {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "shift" })} onExpense={() => { setMoneyMode("expense"); setTab("money"); }} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
-        {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d) => addLocal(d)} onAddMove={(d) => addTransit(d)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
+        {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d, o) => addLocal(d, undefined, o)} onAddMove={(d, o) => addTransit(d, undefined, o)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => setSheet({ kind: "add" })} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={meName === t.myName ? t : { ...t, myName: meName }} stats={stats} update={update} mode={moneyMode} setMode={setMoneyMode} tripId={tripId} setMe={setMe} />}
         {tab === "pack" && <PackView t={packT} update={packUpdate} />}
@@ -1785,7 +1810,7 @@ function App() {
           {sheet.kind === "consult" && <ConsultView t={t} update={update} initialTopic={sheet.topic} initialIso={sheet.iso} done={(m) => { toast(m); closeSheet(); }} />}
           {sheet.kind === "phrases" && <PhraseView t={t} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} onConsult={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "phrase" })} />}
           {sheet.kind === "suggest" && <DaySuggest t={t} iso={sheet.iso} update={update} done={(n) => { toast(`${n}件の予定を追加しました`); closeSheet(); }} />}
-          {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d) => addLocal(d, d)} onAddMove={(d) => addTransit(d, d)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d, back: d })} />}
+          {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d, o) => addLocal(d, d, o)} onAddMove={(d, o) => addTransit(d, d, o)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d, back: d })} />}
           {sheet.kind === "stay" && <StayEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
           {sheet.kind === "transit" && <TransitEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
           {sheet.kind === "local" && <LocalEditor t={t} id={sheet.id} update={update} close={closeSheet} />}

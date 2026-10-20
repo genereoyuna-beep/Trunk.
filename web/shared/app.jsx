@@ -1514,11 +1514,7 @@ function App() {
       data = { ...data, participants: uniq, myName: uniq[0] };
     }
     let drafted = false;
-    // モデルコース（Trunk. の記事から）：下書きと同じ形のデータをそのまま入れる
-    if (form.draft && form.start) {
-      const next = applyTripDraft({ ...data, itinerary: [] }, form.draft, form.start, form.draftTag || "モデルコース");
-      if (staysOf(next).length) { data = next; drafted = true; }
-    } else if (form.idea && form.idea.trim() && form.start) {
+    if (form.idea && form.idea.trim() && form.start) {
       const sample = await useCap("sample");
       if (sample) {
         try {
@@ -1529,8 +1525,8 @@ function App() {
       }
     }
     await Store.saveTrip(id, data).catch(() => {});
-    track("trip_create", { source: form.draft ? "course" : drafted ? "ai_draft" : "blank", people: form.people || 1 });
-    rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("plan"); toast(drafted && form.draft ? "モデルコースから旅行を作りました。宿と移動を手配していきましょう" : drafted ? "日程の下書きを入れて旅行を作りました" : form.idea && form.idea.trim() ? "旅行を作りました（下書きは作れませんでした）" : "旅行を作りました");
+    track("trip_create", { source: drafted ? "ai_draft" : "blank", people: form.people || 1 });
+    rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("plan"); toast(drafted ? "日程の下書きを入れて旅行を作りました" : form.idea && form.idea.trim() ? "旅行を作りました（下書きは作れませんでした）" : "旅行を作りました");
   };
   const copyTrip = async () => {
     flushNow();
@@ -1682,7 +1678,6 @@ function App() {
       <div className="card stack">
         <h1>{FEATURES.appName || "旅行プランナー"}</h1>
         <p className="muted">旅行ごとに、日程・宿・移動・予算・持ち物をまとめて管理します。最初の旅行を作ってください。</p>
-        {typeof TrunkTemplateOffer === "function" && <TrunkTemplateOffer onCreate={createTrip} limited={false} />}
         <TripsSheet trips={[]} currentId={null} onPick={() => {}} onCreate={createTrip} onSettings={null} />
       </div>
       {FEATURES.account && <button className="btn ghost" style={{ marginTop: 16 }} onClick={() => Store.signOut()}>ログアウト</button>}
@@ -1749,7 +1744,6 @@ function App() {
         ))}
       </nav>
       <main className="main">
-        {typeof TrunkTemplateOffer === "function" && <TrunkTemplateOffer onCreate={createTrip} limited={atLimit} />}
         {tab === "home" && typeof TrunkPassBanner === "function" && <TrunkPassBanner onTrips={() => setSheet({ kind: "trips" })} />}
         {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings", section: "share" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}

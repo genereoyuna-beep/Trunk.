@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://trunk-travelplanner.com/sitemap.xml

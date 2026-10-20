@@ -580,6 +580,7 @@ function LoginView({ err, joining }) {
         {gsiOk && !busy && gErr && <button className="link xs muted" style={{ background: "none", border: "none", textDecoration: "underline", cursor: "pointer" }} onClick={login}>別の方法でログイン</button>}
         {(err || gErr) && <div className="err">{err || gErr}</div>}
         <p className="xs muted">ログインすると <a href="/privacy.html">プライバシーポリシー</a> に同意したものとみなします。</p>
+        {!joining && <a className="btn ghost block" style={{ textDecoration: "none" }} href="/demo/#home">ログインせずに見本の旅行を見てみる</a>}
       </div>
     </div>
   );

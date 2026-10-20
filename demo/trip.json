@@ -1,0 +1,444 @@
+{
+ "name": "ソウル 3泊4日",
+ "gmailLabel": "",
+ "createdAt": "2026-10-17T00:00:00.000Z",
+ "itinerary": [
+  {
+   "id": "tr1",
+   "type": "transit",
+   "fromCity": "東京・羽田(HND)",
+   "toCity": "ソウル・仁川(ICN)",
+   "mode": "飛行機",
+   "airline": "KE2708",
+   "departDate": "2026-12-04",
+   "departTime": "08:55",
+   "arriveDate": "2026-12-04",
+   "arriveTime": "11:25",
+   "status": "予約済み",
+   "price": 32000,
+   "people": 1,
+   "cls": "エコノミー 32A"
+  },
+  {
+   "id": "tr2",
+   "type": "transit",
+   "fromCity": "仁川空港",
+   "toCity": "ソウル駅",
+   "mode": "鉄道",
+   "airline": "AREX 直通",
+   "departDate": "2026-12-04",
+   "departTime": "12:10",
+   "arriveDate": "2026-12-04",
+   "arriveTime": "12:53",
+   "status": "",
+   "needsBooking": false,
+   "price": 1100,
+   "people": 1
+  },
+  {
+   "id": "s1",
+   "type": "stay",
+   "city": "ソウル",
+   "startDate": "2026-12-04",
+   "nights": 1,
+   "memo": "",
+   "status": "確定",
+   "dates": "",
+   "noHotel": false
+  },
+  {
+   "id": "s2",
+   "type": "stay",
+   "city": "ソウル",
+   "startDate": "2026-12-05",
+   "nights": 1,
+   "memo": "",
+   "status": "未確定",
+   "dates": "",
+   "noHotel": false
+  },
+  {
+   "id": "s3",
+   "type": "stay",
+   "city": "ソウル",
+   "startDate": "2026-12-06",
+   "nights": 1,
+   "memo": "",
+   "status": "確定",
+   "dates": "",
+   "noHotel": false
+  },
+  {
+   "id": "tr3",
+   "type": "transit",
+   "fromCity": "ソウル駅",
+   "toCity": "水原",
+   "mode": "鉄道",
+   "airline": "KTX",
+   "departDate": "2026-12-06",
+   "departTime": "09:10",
+   "arriveDate": "2026-12-06",
+   "arriveTime": "09:40",
+   "status": "予約済み",
+   "price": 1000,
+   "people": 1
+  },
+  {
+   "id": "tr4",
+   "type": "transit",
+   "fromCity": "ソウル・仁川(ICN)",
+   "toCity": "東京・羽田(HND)",
+   "mode": "飛行機",
+   "airline": "KE2709",
+   "departDate": "2026-12-07",
+   "departTime": "18:30",
+   "arriveDate": "2026-12-07",
+   "arriveTime": "20:55",
+   "status": "予約済み",
+   "price": 0,
+   "people": 1
+  }
+ ],
+ "hotels": [
+  {
+   "id": "h1",
+   "linkedStayId": "s1",
+   "city": "ソウル",
+   "name": "明洞のホテル",
+   "address": "明洞のホテル",
+   "guests": 3,
+   "total": 36000,
+   "status": "予約済み",
+   "paymentStatus": "支払い済み",
+   "checkinTime": "15:00",
+   "checkoutTime": "08:30",
+   "site": "Booking.com"
+  },
+  {
+   "id": "h2",
+   "linkedStayId": "s2",
+   "city": "ソウル",
+   "name": "",
+   "guests": 3,
+   "total": 0,
+   "status": "候補",
+   "paymentStatus": "未払い"
+  },
+  {
+   "id": "h3",
+   "linkedStayId": "s3",
+   "city": "ソウル",
+   "name": "弘大のゲストハウス",
+   "address": "弘大のゲストハウス",
+   "guests": 3,
+   "total": 27000,
+   "status": "予約済み",
+   "paymentStatus": "未払い",
+   "checkinTime": "16:00",
+   "checkoutTime": "10:00",
+   "site": "Airbnb"
+  }
+ ],
+ "localTransport": [
+  {
+   "id": "l1",
+   "linkedStayId": null,
+   "category": "食事",
+   "desc": "明洞でサムギョプサル",
+   "address": "明洞",
+   "fromAddress": "",
+   "toAddress": "",
+   "date": "2026-12-04",
+   "startTime": "18:30",
+   "endTime": "",
+   "mode": "",
+   "price": 3000,
+   "people": 1,
+   "needsBooking": false,
+   "memo": "",
+   "paymentStatus": "未払い",
+   "status": "予約済み"
+  },
+  {
+   "id": "l2",
+   "linkedStayId": null,
+   "category": "観光",
+   "desc": "景福宮（韓服で）",
+   "address": "景福宮",
+   "fromAddress": "",
+   "toAddress": "",
+   "date": "2026-12-05",
+   "startTime": "09:00",
+   "endTime": "10:30",
+   "mode": "",
+   "price": 1500,
+   "people": 1,
+   "needsBooking": false,
+   "memo": "",
+   "paymentStatus": "未払い",
+   "status": "予約済み"
+  },
+  {
+   "id": "l3",
+   "linkedStayId": null,
+   "category": "食事",
+   "desc": "広蔵市場で昼ごはん",
+   "address": "広蔵市場",
+   "fromAddress": "",
+   "toAddress": "",
+   "date": "2026-12-05",
+   "startTime": "12:00",
+   "endTime": "",
+   "mode": "",
+   "price": 1200,
+   "people": 1,
+   "needsBooking": false,
+   "memo": "",
+   "paymentStatus": "未払い",
+   "status": "予約済み"
+  },
+  {
+   "id": "l4",
+   "linkedStayId": null,
+   "category": "観光",
+   "desc": "北村韓屋村を散歩",
+   "address": "北村韓屋村",
+   "fromAddress": "",
+   "toAddress": "",
+   "date": "2026-12-05",
+   "startTime": "14:00",
+   "endTime": "",
+   "mode": "",
+   "price": 0,
+   "people": 1,
+   "needsBooking": false,
+   "memo": "",
+   "paymentStatus": "未払い",
+   "status": "予約済み"
+  },
+  {
+   "id": "l5",
+   "linkedStayId": null,
+   "category": "観光",
+   "desc": "聖水洞のカフェめぐり",
+   "address": "聖水洞",
+   "fromAddress": "",
+   "toAddress": "",
+   "date": "2026-12-05",
+   "startTime": "16:30",
+   "endTime": "",
+   "mode": "",
+   "price": 1000,
+   "people": 1,
+   "needsBooking": false,
+   "memo": "",
+   "paymentStatus": "未払い",
+   "status": "候補"
+  },
+  {
+   "id": "l6",
+   "linkedStayId": null,
+   "category": "観光",
+   "desc": "水原華城",
+   "address": "水原華城",
+   "fromAddress": "",
+   "toAddress": "",
+   "date": "2026-12-06",
+   "startTime": "10:00",
+   "endTime": "13:00",
+   "mode": "",
+   "price": 400,
+   "people": 1,
+   "needsBooking": false,
+   "memo": "",
+   "paymentStatus": "未払い",
+   "status": "予約済み"
+  },
+  {
+   "id": "l7",
+   "linkedStayId": null,
+   "category": "買い物",
+   "desc": "南大門市場",
+   "address": "南大門市場",
+   "fromAddress": "",
+   "toAddress": "",
+   "date": "2026-12-06",
+   "startTime": "18:00",
+   "endTime": "",
+   "mode": "",
+   "price": 0,
+   "people": 1,
+   "needsBooking": false,
+   "memo": "",
+   "paymentStatus": "未払い",
+   "status": "予約済み"
+  },
+  {
+   "id": "l8",
+   "linkedStayId": null,
+   "category": "買い物",
+   "desc": "明洞で買い物",
+   "address": "明洞",
+   "fromAddress": "",
+   "toAddress": "",
+   "date": "2026-12-07",
+   "startTime": "10:00",
+   "endTime": "",
+   "mode": "",
+   "price": 0,
+   "people": 1,
+   "needsBooking": false,
+   "memo": "",
+   "paymentStatus": "未払い",
+   "status": "予約済み"
+  }
+ ],
+ "budget": [
+  {
+   "id": 1,
+   "category": "交通費",
+   "target": 0,
+   "auto": true
+  },
+  {
+   "id": 2,
+   "category": "宿泊",
+   "target": 0,
+   "auto": true
+  },
+  {
+   "id": 4,
+   "category": "観光・体験",
+   "target": 0,
+   "auto": true
+  },
+  {
+   "id": 5,
+   "category": "食費",
+   "target": 15000,
+   "auto": false,
+   "actual": 0
+  },
+  {
+   "id": 6,
+   "category": "予備費",
+   "target": 5000,
+   "auto": false,
+   "actual": 0
+  }
+ ],
+ "totalBudget": 90000,
+ "packing": {
+  "書類": [
+   {
+    "id": "p1",
+    "name": "パスポート",
+    "checked": true,
+    "bag": ""
+   },
+   {
+    "id": "p2",
+    "name": "eチケットの控え",
+    "checked": true,
+    "bag": ""
+   },
+   {
+    "id": "p3",
+    "name": "K-ETA の確認",
+    "checked": false,
+    "bag": ""
+   }
+  ],
+  "電子機器": [
+   {
+    "id": "p4",
+    "name": "充電ケーブル",
+    "checked": true,
+    "bag": ""
+   },
+   {
+    "id": "p5",
+    "name": "変換プラグ（Cタイプ）",
+    "checked": false,
+    "bag": ""
+   },
+   {
+    "id": "p6",
+    "name": "モバイルバッテリー",
+    "checked": false,
+    "bag": ""
+   }
+  ],
+  "衣類": [
+   {
+    "id": "p7",
+    "name": "ダウンジャケット",
+    "checked": false,
+    "bag": ""
+   },
+   {
+    "id": "p8",
+    "name": "カイロ",
+    "checked": false,
+    "bag": ""
+   }
+  ],
+  "洗面・薬": [
+   {
+    "id": "p9",
+    "name": "常備薬",
+    "checked": true,
+    "bag": ""
+   }
+  ]
+ },
+ "participants": [
+  "あおい",
+  "けんた",
+  "みさき"
+ ],
+ "dayParticipants": {},
+ "myName": "あおい",
+ "geo": {
+  "明洞のホテル": [
+   37.5636,
+   126.985
+  ],
+  "弘大のゲストハウス": [
+   37.5563,
+   126.922
+  ],
+  "景福宮": [
+   37.5796,
+   126.977
+  ],
+  "広蔵市場": [
+   37.57,
+   126.9996
+  ],
+  "北村韓屋村": [
+   37.5826,
+   126.9836
+  ],
+  "聖水洞": [
+   37.5446,
+   127.0557
+  ],
+  "水原華城": [
+   37.2871,
+   127.0118
+  ],
+  "南大門市場": [
+   37.5592,
+   126.9776
+  ],
+  "明洞": [
+   37.5636,
+   126.9827
+  ],
+  "ソウル駅": [
+   37.5547,
+   126.9707
+  ]
+ }
+}

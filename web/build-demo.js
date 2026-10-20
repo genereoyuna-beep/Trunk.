@@ -1,4 +1,4 @@
-// 紹介用の画面を作る（手元の確認用。../preview/demo/index.html。preview はサイトに出さない）
+// 見本の画面を作る（preview/demo は手元の確認用、/demo/ はサイトに出す「ログインせずに見てみる」）
 const Babel = require('@babel/standalone');
 const fs = require('fs'), path = require('path');
 const S = (f) => fs.readFileSync(path.join(__dirname, f), 'utf8');
@@ -7,7 +7,15 @@ const src = [S('src/trunk-config.js'), S('src/places.js'), ...['shared/model.js'
 const code = Babel.transform(src, { presets: ['react'] }).code.replace(/<\/script/gi, '<\\/script');
 const app = fs.readFileSync(path.join(__dirname, '../app/index.html'), 'utf8');
 const html = app.slice(0, app.lastIndexOf('<script>')) + '<script>\n' + code + '\n</script>\n</body>\n</html>\n';
-const out = path.resolve(__dirname, '../preview/demo/index.html');
-fs.mkdirSync(path.dirname(out), { recursive: true });
-fs.writeFileSync(out, html);
-console.log('built', out);
+// 手元の確認用（preview/demo）と、サイトに出す見本（/demo/。ログインせずに触れる）の2つを作る
+const trip = path.resolve(__dirname, '../marketing/threads/demo-seoul.json');
+const pub = html
+  .replace(/<title>[^<]*<\/title>/, '<title>見本の旅行（ソウル3泊4日） | Trunk.</title>\n<meta name="robots" content="noindex">')
+  .replace(/<meta name="description" content="[^"]*">/, '<meta name="description" content="ログインせずに Trunk. を試せる見本の旅行です。">');
+for (const [dir, page] of [['../preview/demo', html], ['../demo', pub]]) {
+  const d = path.resolve(__dirname, dir);
+  fs.mkdirSync(d, { recursive: true });
+  fs.writeFileSync(path.join(d, 'index.html'), page);
+  fs.copyFileSync(trip, path.join(d, 'trip.json'));
+  console.log('built', path.join(d, 'index.html'));
+}

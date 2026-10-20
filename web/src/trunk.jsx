@@ -237,13 +237,9 @@ function TrunkShareSection({ t, tripId }) {
 
 // 機能の要望。名前やメールアドレスは聞かない
 // ---- 予約メールの転送取り込み（パスを持っている人だけ） ----
-// Gmail のフィルタの「含む」に貼る条件。主な予約サイト・航空会社から届く、予約らしい件名のメール
-const GMAIL_FILTER = "from:(booking.com OR agoda.com OR trip.com OR expedia.co.jp OR hotels.com OR airbnb.com OR jalan.net OR rakuten.co.jp OR ikyu.com OR jal.com OR jal.co.jp OR ana.co.jp OR flypeach.com OR jetstar.com OR zipair.net OR skymark.co.jp OR koreanair.com OR flyasiana.com OR evaair.com OR china-airlines.com OR cathaypacific.com OR klook.com OR kkday.com OR veltra.com OR omio.com OR eki-net.com OR smart-ex.jp OR jr-odekake.net OR highway-buses.jp OR willer.co.jp) subject:(予約 OR 確定 OR 確認 OR 搭乗 OR 旅程 OR eチケット OR booking OR confirmation OR reservation OR itinerary OR ticket)";
-
 function TrunkMailCard({ t, update, toast }) {
   const [state, setState] = useState({ ready: false, paid: false, address: "", items: [], err: "" });
   const [copied, setCopied] = useState(false);
-  const [fcopied, setFcopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const load = async () => {
     try {
@@ -269,22 +265,17 @@ function TrunkMailCard({ t, update, toast }) {
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <div className="row between"><h3>予約メールから取り込む</h3><button className="btn small ghost" disabled={busy} onClick={async () => { setBusy(true); await load(); setBusy(false); }}>更新</button></div>
-      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを、下のあなた専用のアドレスに転送してください。1〜2分で読み取って、ここに並びます。</p>
+      <p className="small muted" style={{ margin: 0 }}>予約の確認メールを、下のあなた専用のアドレスに転送するだけ。予約サイトでも、ホテルや航空会社からの直接のメールでも、1〜2分で読み取ってここに並びます。</p>
       <div className="row" style={{ flexWrap: "nowrap" }}>
         <input className="input mono" readOnly value={state.address} aria-label="転送用のアドレス" onFocus={e => e.target.select()} />
         <button className="btn small" onClick={copy}>{copied ? "コピーしました" : "コピー"}</button>
       </div>
-      <details className="small"><summary>Gmail で自動的に転送するには</summary>
+      <details className="small"><summary>よく使う予約サイトは、自動で転送することもできます</summary>
         <ol style={{ margin: "6px 0 0", paddingLeft: 18 }}>
           <li>Gmail（パソコン）の 設定 →「すべての設定を表示」→「メール転送と POP/IMAP」→「転送先アドレスを追加」に、上のアドレスを入れる</li>
           <li>1〜2分すると、ここに「Gmail で承認する」が出るので、押して承認する</li>
-          <li>Gmail の検索窓の右のボタンからフィルタを作る。「含む」に下の条件を貼り付けて「フィルタを作成」→「次のアドレスに転送する」で上のアドレスを選ぶ</li>
+          <li>Gmail でそのサイトのメールを開き、︙ →「メールの自動振り分け設定」→「フィルタを作成」→「次のアドレスに転送する」で上のアドレスを選ぶ</li>
         </ol>
-        <div className="row" style={{ marginTop: 6, flexWrap: "nowrap" }}>
-          <input className="input xs" readOnly value={GMAIL_FILTER} aria-label="Gmail のフィルタの条件" onFocus={e => e.target.select()} />
-          <button className="btn small" onClick={async () => { try { await navigator.clipboard.writeText(GMAIL_FILTER); setFcopied(true); setTimeout(() => setFcopied(false), 2000); } catch (e) {} }}>{fcopied ? "コピーしました" : "条件をコピー"}</button>
-        </div>
-        <p className="xs muted" style={{ margin: "4px 0 0" }}>主な予約サイト・航空会社から届く、件名に「予約」「確定」「搭乗」などがあるメールが対象です。予約ではないメールが混ざっても、取り込み候補には出ません。ほかのサイトは、届いたメールを手で転送してください。</p>
       </details>
       {confirms.map(c => {
         const code = (c.parsed && c.parsed.code) || "";

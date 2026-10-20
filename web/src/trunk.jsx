@@ -586,6 +586,37 @@ function LoginView({ err, joining }) {
   );
 }
 
+// ===== 画面の中で起きたエラーを、アナリティクスに送る（エラーの種類・場所・画面名だけ。個人の情報は入れない） =====
+const errWatch = { sent: 0, seen: new Set() };
+function reportError(kind, msg, where) {
+  try {
+    const m = String(msg || "").replace(/https?:\/\/\S+/g, "").replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "").slice(0, 100);
+    const key = kind + m + where;
+    if (errWatch.sent >= 5 || errWatch.seen.has(key)) return;
+    errWatch.seen.add(key); errWatch.sent++;
+    track("js_error", { kind, message: m, where: String(where || "").slice(0, 80), screen: (location.pathname + location.hash).slice(0, 40) });
+  } catch (e) {}
+}
+addEventListener("error", (e) => { if (e && e.message) reportError("error", e.message, `${String(e.filename || "").split("/").pop()}:${e.lineno || 0}`); });
+addEventListener("unhandledrejection", (e) => { const r = e && e.reason; reportError("promise", (r && (r.message || r.code)) || String(r || ""), ""); });
+// 表示中に止まるエラーが起きたら、真っ白にせず再読み込みを出す
+class TrunkErrorBoundary extends React.Component {
+  constructor(p) { super(p); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err, info) { reportError("render", err && err.message, String((info && info.componentStack) || "").trim().split("\n")[0].trim()); }
+  render() {
+    if (!this.state.err) return this.props.children;
+    return (
+      <div className="main" style={{ paddingTop: 60 }}>
+        <div className="card stack" style={{ gap: 10 }}>
+          <b>うまく表示できませんでした</b>
+          <span className="small muted">入力した内容は、ほとんどの場合もう保存されています。再読み込みすると元に戻ることが多いです。続くときは、お問い合わせフォームから教えてください。</span>
+          <div className="row" style={{ gap: 8 }}><button className="btn primary" onClick={() => location.reload()}>再読み込み</button><a className="btn ghost" style={{ textDecoration: "none" }} href="https://docs.google.com/forms/d/e/1FAIpQLSer9zFwZVQZNRfikCbReF14vVYvk1lx13RBv6AU9DCVoGeMpA/viewform" target="_blank" rel="noopener">お問い合わせ</a></div>
+        </div>
+      </div>
+    );
+  }
+}
 function Root() {
   const [st, setSt] = useState({ ready: false, session: null, err: "" });
   useEffect(() => {
@@ -633,6 +664,6 @@ function Root() {
   }, []);
   if (!st.ready) return <div className="empty" style={{ paddingTop: 80 }}>読み込み中…</div>;
   if (!st.session) return <LoginView err={st.err} joining={st.joining} />;
-  return <>{st.joinErr && <div className="err" style={{ margin: 12 }}>{st.joinErr}</div>}<App /></>;
+  return <>{st.joinErr && <div className="err" style={{ margin: 12 }}>{st.joinErr}</div>}<TrunkErrorBoundary><App /></TrunkErrorBoundary></>;
 }
 ReactDOM.createRoot(document.getElementById("root")).render(<Root />);

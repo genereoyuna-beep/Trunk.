@@ -80,7 +80,7 @@ await check("共有：右上のボタンで共有の画面が開く", async () =
 await check("予約メール：転送先・承認・日程外の予約・外貨の円換算", async () => {
   await open("?mail=1", "#book");
   const t = await js(`${H} await w(800); const a=document.querySelector('[aria-label="転送用のアドレス"]'); return (a ? a.value : '') + '\\n' + main();`);
-  const need = [/@in\.trunk-travelplanner\.com/, /連絡先に追加/, /Gmail で承認する/, /どの旅行の日程にも入っていません/, /新しい旅行として作る/, /円で計算/];
+  const need = [/@in\.trunk-travelplanner\.com/, /Gmail で承認する/, /どの旅行の日程にも入っていません/, /新しい旅行として作る/, /円で計算/];
   const miss = need.filter(r => !r.test(t)); if (miss.length) throw new Error("見つからない：" + miss.join(" "));
 });
 await check("支出：予約を入れて精算、誰の分を直すと金額が変わる", async () => {

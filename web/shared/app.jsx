@@ -1129,7 +1129,7 @@ function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
             <input className="input" aria-label="参加者の名前" placeholder="名前を追加" value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === "Enter" && addMember()} />
             <button className="btn" onClick={addMember}>追加</button>
           </div>
-          {typeof TrunkMemberSuggest === "function" && <TrunkMemberSuggest tripId={tripId} participants={participants} links={t.memberLinks || {}} onLink={(uid, n) => update(tr => {
+          {typeof TrunkMemberSuggest === "function" && <TrunkMemberSuggest tripId={tripId} participants={participants} meName={t.myName} links={t.memberLinks || {}} onLink={(uid, n) => update(tr => {
             const links = { ...(tr.memberLinks || {}) };
             if (n) links[uid] = n; else delete links[uid];
             const ps = tr.participants || [];

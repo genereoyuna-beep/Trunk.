@@ -156,7 +156,9 @@ function TrunkViewShare({ tripId, name }) {
   const reload = () => { Store.share(tripId).then(setSh).catch(() => setSh(null)); Store.requests(tripId).then(setReqs).catch(() => {}); };
   useEffect(() => { setSh(undefined); setReqs([]); setSt(""); reload(); }, [tripId]);
   // 本番では s.trunk-travelplanner.com 経由にする（LINE などで旅行名と画像が出る。開くと共有ページへ移る）
-  const url = sh && sh.enabled ? (location.hostname === "trunk-travelplanner.com" ? "https://s.trunk-travelplanner.com/?k=" : location.origin + "/s/?k=") + sh.token : "";
+  // DNS の切り替え（2026-10-19）が古いネームサーバーを覚えている環境に行き渡るまで、新しいアドレスは使わない
+  const useShort = shortDomainReady();
+  const url = sh && sh.enabled ? (useShort ? "https://s.trunk-travelplanner.com/?k=" : location.origin + "/s/?k=") + sh.token : "";
   const run = async (f, ok) => { setSt("busy"); try { await f(); setSt(ok || ""); reload(); } catch (e) { setSt("err"); } };
   const copy = async () => { try { await navigator.clipboard.writeText(url); setSt("copied"); } catch (e) { setSt("copyerr"); } };
   const fmt = (iso) => { const d = new Date(iso); return (d.getMonth() + 1) + "/" + d.getDate(); };
@@ -218,8 +220,13 @@ function trunkSetMe(tr, name) {
   return { ...tr, memberLinks: links };
 }
 // 一緒に編集している人（Google アカウント）を、精算の参加者と結びつける。「葵」さんが参加者の「あおい」なら、同じ人として扱う
-function TrunkMemberSuggest({ tripId, participants, links, onLink }) {
+function TrunkMemberSuggest({ tripId, participants, links, onLink, meName }) {
   const [people, setPeople] = useState([]);
+  // 自分のアカウントがまだ結びついていなくて、前から ★ で「自分」を選んでいたら、その参加者と結びつけておく
+  useEffect(() => {
+    const uid = Store.userId && Store.userId();
+    if (uid && !links[uid] && meName && participants.includes(meName) && !Object.values(links).includes(meName)) onLink(uid, meName);
+  }, [meName, tripId]);
   useEffect(() => { let alive = true; Store.people(tripId).then(p => { if (alive) setPeople(p || []); }).catch(() => {}); return () => { alive = false; }; }, [tripId]);
   const me = Store.userId && Store.userId();
   const taken = new Set(Object.values(links));
@@ -352,9 +359,11 @@ function useTrunkInbound(trips, tripId) {
   return inboundSplit(st.items, trips, tripId).here.length + st.items.filter(i => i.kind === "gmail_confirm").length;
 }
 // 転送先を連絡先に入れておくと、スマホで転送するとき宛先に「Trunk」と打つだけで済む
+// s.trunk-travelplanner.com は DNS の切り替えが行き渡る 2026-10-22 から使う
+const shortDomainReady = () => location.hostname === "trunk-travelplanner.com" && Date.now() >= Date.parse("2026-10-22T00:00:00+09:00");
 function vcardHref(address) {
-  const v = ["BEGIN:VCARD", "VERSION:3.0", "N:;Trunk 予約メール;;;", "FN:Trunk 予約メール", "EMAIL;TYPE=INTERNET:" + address, "END:VCARD"].join("\r\n");
-  return "data:text/vcard;charset=utf-8," + encodeURIComponent(v);
+  const tok = String(address || "").split("@")[0];
+  return /^[a-z0-9]{10}$/.test(tok) ? `https://s.trunk-travelplanner.com/vcf/${tok}.vcf` : "";
 }
 function TrunkMailCard({ t, update, toast, trips, tripId, onPick, onCreate, onEdit }) {
   const st = inboundWatch.use();
@@ -392,10 +401,10 @@ function TrunkMailCard({ t, update, toast, trips, tripId, onPick, onCreate, onEd
         <input className="input mono" readOnly value={st.address} aria-label="転送用のアドレス" onFocus={e => e.target.select()} />
         <button className="btn small" onClick={copy}>{copied ? "コピーしました" : "コピー"}</button>
       </div>
-      <div className="row small" style={{ gap: 6, alignItems: "baseline" }}>
-        <a href={vcardHref(st.address)} download="trunk-mail.vcf">連絡先に追加</a>
+      {shortDomainReady() && vcardHref(st.address) && <div className="row small" style={{ gap: 6, alignItems: "baseline" }}>
+        <a href={vcardHref(st.address)} target="_blank" rel="noopener">連絡先に追加</a>
         <span className="xs muted">追加しておくと、転送するとき宛先に「Trunk」と入れるだけで選べます</span>
-      </div>
+      </div>}
       <details className="small"><summary>よく使う予約サイトは、自動で転送することもできます</summary>
         <ol style={{ margin: "6px 0 0", paddingLeft: 18 }}>
           <li>Gmail（パソコン）の 設定 →「すべての設定を表示」→「メール転送と POP/IMAP」→「転送先アドレスを追加」に、上のアドレスを入れる</li>

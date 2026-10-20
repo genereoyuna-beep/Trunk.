@@ -83,6 +83,12 @@ async function image(s) {
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    // 予約メールの転送先を、スマホの連絡先に入れるためのファイル（/vcf/トークン.vcf）。iPhone はアプリの中で作ったファイルを連絡先に渡せないので、ここから配る
+    const vc = url.pathname.match(/^\/vcf\/([a-z0-9]{10})\.vcf$/);
+    if (vc) {
+      const card = ["BEGIN:VCARD", "VERSION:3.0", "N:;Trunk 予約メール;;;", "FN:Trunk 予約メール", `EMAIL;TYPE=INTERNET:${vc[1]}@in.trunk-travelplanner.com`, "END:VCARD", ""].join("\r\n");
+      return new Response(card, { headers: { "content-type": "text/vcard; charset=utf-8", "content-disposition": 'inline; filename="trunk-mail.vcf"', "cache-control": "no-store", "x-robots-tag": "noindex" } });
+    }
     const og = url.pathname.match(/^\/og\/([^/]+)\.png$/);
     const token = og ? decodeURIComponent(og[1]) : (url.searchParams.get("k") || url.pathname.slice(1));
     if (!TOKEN.test(token || "")) return Response.redirect(env.SITE + "/", 302);

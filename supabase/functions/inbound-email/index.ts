@@ -10,7 +10,7 @@ const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE
 const SECRET = Deno.env.get("INBOUND_SECRET") ?? "";
 const MODEL = Deno.env.get("MAIL_IMPORT_MODEL") ?? "claude-haiku-5-5";
 const DAILY_LIMIT = 30;       // 1人1日に受け付ける通数
-const BODY_LIMIT = 20000;     // AI に渡す本文の最大文字数
+const BODY_LIMIT = 20000;     // AI に渡す本文の最大文字数（1通から読み取る予約は10件まで）
 const KEEP_DAYS = 3;          // 本文を残す日数
 
 // アプリの BOOKING_DEFAULTS と同じ形（アプリ側の normalizeBooking・buildProposal にそのまま渡せる）
@@ -28,6 +28,8 @@ const Booking = z.object({
   carrier: z.string(), seat_class: z.string(), activity_date: z.string(), activity_time: z.string(),
 });
 
+const Result = z.object({ bookings: z.array(Booking) });
+
 const PROMPT = `あなたは旅行の予約確認メールを読み取るアシスタントです。次のメールが、宿・交通・ツアー・入場券などの「予約」に関するメール（予約確定・変更・キャンセル・支払い完了の通知）かを判定し、決められた形で返してください。
 宣伝、ニュースレター、おすすめ、レビュー依頼、仕事の会議室やイベントの予約は is_booking=false にしてください。
 
@@ -39,7 +41,9 @@ const PROMPT = `あなたは旅行の予約確認メールを読み取るアシ�
 - city・from_place・to_place は日本語の都市名（例：パリ、ソウル、東京）。空港なら「東京・羽田(HND)」の形。
 - total_amount は税・手数料込みの合計、currency は ISO の通貨コード（JPY, EUR など）。
 - provider は予約したサイトや会社。summary は日本語の1行要約（例：「プラハ Praha 1のゲストルーム 6/15〜6/19 予約確定」）。
-- 転送されたメールの場合は、転送された元のメールの内容を読む。`;
+- 転送されたメールの場合は、転送された元のメールの内容を読む。
+- 1通に複数の予約が入っているとき（往復の航空券、別々の日の宿、複数のツアーなど）は、bookings に1件ずつ分けて入れる。往復便は行きと帰りで2件。
+- 予約に関係ないメールのときは、bookings を空にする。`;
 
 function htmlToText(html: string) {
   return html.replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ").replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|tr|li|h\d)>/gi, "\n")
@@ -94,13 +98,21 @@ Deno.serve(async (req) => {
     const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
     const res = await client.messages.parse({
       model: MODEL,
-      max_tokens: 4000,
-      output_config: { effort: "low", format: zodOutputFormat(Booking) },
+      max_tokens: 8000,
+      output_config: { effort: "low", format: zodOutputFormat(Result) },
       messages: [{ role: "user", content: `${PROMPT}\n\n--- メール ---\n件名: ${subject}\n差出人: ${from}\n\n${body}` }],
     });
     if (res.stop_reason === "refusal" || !res.parsed_output) throw new Error(res.stop_reason === "refusal" ? "refusal" : "no output");
-    const p = res.parsed_output;
-    await admin.from("inbound_items").update({ parsed: p, status: p.is_booking ? "parsed" : "dismissed" }).eq("id", item.id);
+    // 予約が複数あれば、1件目をこのメールの行に、2件目からは同じメールの別の行として入れる
+    const list = (res.parsed_output.bookings || []).filter(b => b.is_booking).slice(0, 10);
+    if (!list.length) {
+      await admin.from("inbound_items").update({ parsed: (res.parsed_output.bookings || [])[0] ?? null, status: "dismissed" }).eq("id", item.id);
+    } else {
+      await admin.from("inbound_items").update({ parsed: list[0], status: "parsed", subject: list.length > 1 ? `${subject}（1/${list.length}）` : subject }).eq("id", item.id);
+      if (list.length > 1) {
+        await admin.from("inbound_items").insert(list.slice(1).map((b, i) => ({ user_id: userId, from_addr: from, subject: `${subject}（${i + 2}/${list.length}）`, parsed: b, status: "parsed", body_deleted_at: new Date().toISOString() })));
+      }
+    }
   } catch (e) {
     await admin.from("inbound_items").update({ status: "failed", error: (e instanceof Error ? e.message : String(e)).slice(0, 300) }).eq("id", item.id);
   }

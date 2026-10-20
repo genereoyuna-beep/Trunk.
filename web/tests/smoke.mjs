@@ -72,6 +72,43 @@ await check("新しい旅行：人数と名前の欄", async () => {
   const r = await js(`${H} const d=document.createElement('div'); document.body.appendChild(d); ReactDOM.createRoot(d).render(React.createElement(TripsSheet,{trips:[],currentId:null,onPick:()=>{},onCreate:async()=>{},onSettings:null})); await w(300); [...d.querySelectorAll('button')].find(b=>b.innerText.trim()==='新しい旅行').click(); await w(300); const sel=[...d.querySelectorAll('select')].find(s=>[...s.options].some(o=>o.text==='3人')); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(sel,'3'); sel.dispatchEvent(new Event('change',{bubbles:true})); await w(300); const n=[...d.querySelectorAll('input')].filter(i=>/自分|同行者/.test(i.placeholder)).length; d.remove(); return n;`);
   if (r !== 3) throw new Error("名前の欄：" + r);
 });
+await check("共有：右上のボタンで共有の画面が開く", async () => {
+  await open();
+  const t = await js(`${H} document.querySelector('[aria-label="この旅行を共有する"]').click(); await w(700); const d=document.querySelector('[role=dialog]'); return d ? d.innerText : '';`);
+  if (!/^共有/.test(t) || !/共有リンク/.test(t) || !/招待リンク/.test(t)) throw new Error(t.slice(0, 80));
+});
+await check("予約メール：転送先・承認・日程外の予約・外貨の円換算", async () => {
+  await open("?mail=1", "#book");
+  const t = await js(`${H} await w(800); const a=document.querySelector('[aria-label="転送用のアドレス"]'); return (a ? a.value : '') + '\\n' + main();`);
+  const need = [/@in\.trunk-travelplanner\.com/, /連絡先に追加/, /Gmail で承認する/, /どの旅行の日程にも入っていません/, /新しい旅行として作る/, /円で計算/];
+  const miss = need.filter(r => !r.test(t)); if (miss.length) throw new Error("見つからない：" + miss.join(" "));
+});
+await check("支出：予約を入れて精算、誰の分を直すと金額が変わる", async () => {
+  await open("", "#money");
+  const r = await js(`${H} btn('支出').click(); await w(500); btn('入れる').click(); await w(500);
+    btn('精算').click(); await w(500); const before=main();
+    btn('支出').click(); await w(500); [...document.querySelectorAll('button[aria-expanded]')].find(b=>/明洞のホテル/.test(b.innerText)).click(); await w(400);
+    const c=[...document.querySelectorAll('button.chip')].filter(b=>b.innerText.trim()==='みさき'); c[c.length-1].click(); await w(400);
+    btn('精算').click(); await w(500); return [/みさき → あおい\\n¥12,000/.test(before), /けんた → あおい\\n¥18,000/.test(main())].join(',');`);
+  if (r !== "true,true") throw new Error(r);
+});
+await check("精算：参加者の名前を直すと支出にも反映", async () => {
+  const r = await js(`${H} const setV=(el,v)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,v); el.dispatchEvent(new Event('input',{bubbles:true}));};
+    document.querySelector('[aria-label="けんたの名前を直す"]').click(); await w(300); setV(document.querySelector('[aria-label="けんたの新しい名前"]'),'ケンタ'); await w(100);
+    document.querySelector('[aria-label="名前を変える"]').click(); await w(500);
+    let msg=''; window.confirm=(m)=>{msg=m; return false;}; document.querySelector('[aria-label="あおいを外す"]').click(); await w(200);
+    return [/ケンタ → あおい/.test(main()), /払った支出が1件/.test(msg)].join(',');`);
+  if (r !== "true,true") throw new Error(r);
+});
+await check("予算：支出を食費に入れると実費に出る", async () => {
+  await open("", "#money");
+  const r = await js(`${H} const setV=(el,v)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,v); el.dispatchEvent(new Event('input',{bubbles:true}));};
+    btn('支出').click(); await w(500); const sec=[...document.querySelectorAll('section')].find(s=>s.innerText.startsWith('支出を記録'));
+    const ins=sec.querySelectorAll('input'); setV(ins[0],'ランチ'); setV(ins[1],'3000'); const sel=sec.querySelector('select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(sel,'JPY'); sel.dispatchEvent(new Event('change',{bubbles:true})); await w(200);
+    btn('記録する').click(); await w(400); btn('予算').click(); await w(400);
+    const row=[...document.querySelectorAll('.brow2')].find(r=>r.querySelector('input') && r.querySelector('input').value==='食費'); return row ? row.innerText : 'no row';`);
+  if (!/支出から（1件）/.test(r) || !/¥1,000/.test(r)) throw new Error(r.replace(/\n/g, " ").slice(0, 120));
+});
 await check("LP・ガイド・記事が開く", async () => {
   for (const p of ["/", "/guide.html", "/articles/shiori.html", "/articles/seoul-3n4d.html", "/privacy.html"]) { const res = await fetch(BASE + p); if (!res.ok) throw new Error(p + " " + res.status); const t = await res.text(); if (/広告なし</.test(t)) throw new Error(p + "：「広告なし」が残っている"); }
 });

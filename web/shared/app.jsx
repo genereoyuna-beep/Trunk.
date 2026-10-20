@@ -1036,6 +1036,28 @@ function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
   const partial = rows.some(r => !(Number(r.target) > 0)) && totalT > 0;
   const totalAT = rows.reduce((a, r) => a + (Number(r.target) > 0 ? r.actualV : 0), 0);
   const setB = (id, patch) => update(tr => ({ ...tr, budget: tr.budget.map(b => b.id === id ? { ...b, ...patch } : b) }));
+  // 参加者の名前を直す：支出（払った人・誰の分か）、アカウントとの結びつき、自分の設定もまとめて直す
+  const [renaming, setRenaming] = useState(null);
+  const doRename = () => {
+    const from = renaming.from, to = String(renaming.to || "").trim();
+    if (!to || to === from) { setRenaming(null); return; }
+    if (participants.includes(to)) { alert(`「${to}」はもう参加者にいます。`); return; }
+    const sw = (x) => x === from ? to : x;
+    update(tr => ({
+      ...tr, participants: (tr.participants || []).map(sw), myName: sw(tr.myName),
+      memberLinks: Object.fromEntries(Object.entries(tr.memberLinks || {}).map(([k, v]) => [k, sw(v)])),
+      dayParticipants: Object.fromEntries(Object.entries(tr.dayParticipants || {}).map(([k, v]) => [k, (v || []).map(sw)])),
+      expenses: (tr.expenses || []).map(e => ({ ...e, payer: sw(e.payer), split: (e.split || []).map(sw) })),
+    }));
+    setRenaming(null);
+  };
+  // 参加者を外す：その人が払った・その人の分の支出があれば、精算から外れることを確かめる
+  const removeMember = (p) => {
+    const paid = (t.expenses || []).filter(e => e.payer === p).length, inSplit = (t.expenses || []).filter(e => e.payer !== p && (e.split || []).includes(p)).length;
+    const msg = [paid && `${p}さんが払った支出が${paid}件あります。外すと、精算で計算されなくなります。`, inSplit && `${p}さんの分を含む支出が${inSplit}件あります。外すと、残りの人で割ります。`].filter(Boolean).join("\n");
+    if (msg && !confirm(msg + "\n（支出の記録は残ります。名前を直すときは、えんぴつのボタンを使ってください）\n外しますか？")) return;
+    update(tr => ({ ...tr, participants: tr.participants.filter(x => x !== p), myName: tr.myName === p ? "" : tr.myName, memberLinks: Object.fromEntries(Object.entries(tr.memberLinks || {}).filter(([, v]) => v !== p)) }));
+  };
   const addMember = () => { const n = newName.trim(); if (!n || participants.includes(n)) return; update(tr => ({ ...tr, participants: [...(tr.participants || []), n] })); setNewName(""); };
   return (
     <div className="stack">
@@ -1077,11 +1099,17 @@ function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
         <section className="card stack" style={{ gap: 10 }}>
           <h3>参加者</h3>
           <div className="chips">
-            {participants.map(p => (
+            {participants.map(p => renaming && renaming.from === p ? (
+              <span key={p} className="member" style={{ paddingRight: 4 }}>
+                <input className="input" style={{ minHeight: 28, width: 110, padding: "0 8px" }} aria-label={`${p}の新しい名前`} autoFocus value={renaming.to} onChange={e => setRenaming({ ...renaming, to: e.target.value })} onKeyDown={e => { if (e.key === "Enter") doRename(); if (e.key === "Escape") setRenaming(null); }} />
+                <button aria-label="名前を変える" onClick={doRename}><Icon n="check" s={14} /></button>
+              </span>
+            ) : (
               <span key={p} className={"member" + (t.myName === p ? " me" : "")}>
                 {p}
+                <button aria-label={`${p}の名前を直す`} title="名前を直す" onClick={() => setRenaming({ from: p, to: p })}><Icon n="pencil" s={13} /></button>
                 <button aria-label={t.myName === p ? "自分の設定を外す" : `${p}を自分にする`} title="自分にする" onClick={() => setMe(t.myName === p ? "" : p)}><Icon n="star" s={14} /></button>
-                <button aria-label={`${p}を外す`} onClick={() => update(tr => ({ ...tr, participants: tr.participants.filter(x => x !== p), myName: tr.myName === p ? "" : tr.myName, memberLinks: Object.fromEntries(Object.entries(tr.memberLinks || {}).filter(([, v]) => v !== p)) }))}><Icon n="x" s={14} /></button>
+                <button aria-label={`${p}を外す`} onClick={() => removeMember(p)}><Icon n="x" s={14} /></button>
               </span>
             ))}
             {!participants.length && <span className="small muted">まだ参加者がいません</span>}

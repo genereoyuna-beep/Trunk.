@@ -210,7 +210,10 @@ a.btn.ghost{color:var(--muted)}
 .field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
 .input,.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--surface);color:var(--ink);font-size:14px;min-width:0;width:100%}
 .field textarea{min-height:84px;resize:vertical}
-.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+/* iPhone の日付・時刻の欄は、そのままだと縮まず隣にはみ出し、空のときは高さも変わる */
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;box-sizing:border-box;max-width:100%;min-height:41px;line-height:1.4}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left;min-height:1.4em}
+.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}
 .fgrid .wide{grid-column:1 / -1}
 .toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);min-height:40px}
 .toggle input{width:18px;height:18px;accent-color:var(--ink)}

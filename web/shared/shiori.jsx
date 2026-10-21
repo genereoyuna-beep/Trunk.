@@ -69,6 +69,7 @@ function entryChecks(t) {
     if (!h.name) out.push(`${c}の宿：宿泊先名を入れる`);
     else if (!h.address) out.push(`${c}の宿：住所を入れる（予約サイトの英語の住所がおすすめ）`);
     else if (hasJa(enAddress(h.addressEn || h.address))) out.push(`${c}の宿：住所が日本語です。英語の住所にすると伝わりやすくなります`);
+    if (h.name && !h.nameEn && hasJa(h.name) && h.nameEnTried) out.push(`${c}の宿：名前が日本語です。宿の画面の「英語の名前」に入れると伝わりやすくなります`);
   });
   return out;
 }
@@ -96,7 +97,7 @@ function EntryPage({ t }) {
       {stays.length ? stays.map(({ s, h }) => (
         <div key={s.id} className="en-item">
           <b className="mono">{fullDate(s.startDate)} – {fullDate(stayEnd(s))}</b>
-          <span>{h.name || "—"}{h.addressEn || h.address ? <><br />{enAddress(h.addressEn || h.address)}</> : null}{h.confirmation ? <><br />Booking No. {h.confirmation}</> : null}</span>
+          <span>{h.nameEn || h.name || "—"}{h.addressEn || h.address ? <><br />{enAddress(h.addressEn || h.address)}</> : null}{h.confirmation ? <><br />Booking No. {h.confirmation}</> : null}</span>
         </div>
       )) : <div className="en-item"><span>—</span></div>}
       <div className="en-foot">This itinerary was prepared by the traveler with Trunk. (trunk-travelplanner.com)</div>
@@ -419,20 +420,26 @@ async function shioriToPDF(container, onProgress) {
 function ShioriView({ t, canExport, update }) {
   const exportRef = useRef(null);
   const [st, setSt] = useState("");
-  // 入国審査用ページのため、日本語の住所の宿は英語の住所を調べて「英語の住所」に入れる（1つの宿につき1回だけ。元の住所は変えない）
+  // 入国審査用ページのため、日本語の住所・宿の名前は英語を調べて「英語の住所」「英語の名前」に入れる（それぞれ1回だけ。元の値は変えない）
   useEffect(() => {
     if (!update || typeof Places === "undefined" || (t.shioriParts || {}).en === false) return;
-    const need = entryStays(t).map(x => x.h).filter(h => h && h.id && h.address && !h.addressEn && !h.addressEnTried && hasJa(enAddress(h.address)));
+    const needAddr = (h) => h.address && !h.addressEn && !h.addressEnTried && hasJa(enAddress(h.address));
+    const needName = (h) => h.name && !h.nameEn && !h.nameEnTried && hasJa(h.name);
+    const need = entryStays(t).map(x => x.h).filter(h => h && h.id && (needAddr(h) || needName(h)));
     if (!need.length) return;
     (async () => {
+      // 「Seoul, South Korea」のような大まかな住所は使わない（番地の数字があって、3つ以上に区切れるものだけ）
+      const ok = (x) => x && x.address && !hasJa(x.address) && /\d/.test(x.address) && x.address.split(",").length >= 3;
       for (const h of need) {
-        let r = null;
-        try { r = await Places.locateEn([h.name, splitCity(h.city || "").main].filter(Boolean).join(" ") || h.address); } catch (e) {}
-        // 「Seoul, South Korea」のような大まかな住所は使わない（番地の数字があって、3つ以上に区切れるものだけ）
-        const ok = (x) => x && x.address && !hasJa(x.address) && /\d/.test(x.address) && x.address.split(",").length >= 3;
-        if (!ok(r)) { try { r = await Places.locateEn(h.address); } catch (e) {} }
-        const en = ok(r) ? r.address : "";
-        update(tr => ({ ...tr, hotels: (tr.hotels || []).map(x => x.id === h.id ? { ...x, addressEnTried: true, ...(en ? { addressEn: en } : {}) } : x) }));
+        let byName = null, r = null;
+        try { byName = await Places.locateEn([h.name, splitCity(h.city || "").main].filter(Boolean).join(" ") || h.address); } catch (e) {}
+        r = byName;
+        if (needAddr(h) && !ok(r) && h.address) { try { r = await Places.locateEn(h.address); } catch (e) {} }
+        const patch = {};
+        if (needAddr(h)) { patch.addressEnTried = true; if (ok(r)) patch.addressEn = r.address; }
+        // 名前は、宿の名前で調べて見つかったときだけ使う（住所で調べると通りの名前が返ることがあるため）
+        if (needName(h)) { patch.nameEnTried = true; if (byName && byName.name && !hasJa(byName.name) && ok(byName)) patch.nameEn = byName.name; }
+        update(tr => ({ ...tr, hotels: (tr.hotels || []).map(x => x.id === h.id ? { ...x, ...patch } : x) }));
       }
     })();
   }, []);

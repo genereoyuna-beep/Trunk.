@@ -244,7 +244,7 @@ function StayEditor({ t, id, update, close }) {
           <BookingStatus status={h.status || "候補"} paid={h.paymentStatus} openLabel="未手配" onStatus={v => setHotel({ status: v })} onPaid={v => setHotel({ paymentStatus: v })} />
           {typeof FEATURES !== "undefined" && typeof FEATURES.hotelSearch === "function" && !isBooked(h.status) && s.city && <AffLink href={FEATURES.hotelSearch(splitCity(s.city).main)} label={`アゴダで${splitCity(s.city).main}の宿を探す`} />}
           <div className="fgrid">
-            <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}), geo: llOf(r) })} placeholder="候補の宿もここに" /></Field>
+            <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v, nameEnTried: false })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}), geo: llOf(r) })} placeholder="候補の宿もここに" /></Field>
             <Field label="総額"><MoneyIn t={t} update={update} item={h} field="total" onChange={p => setHotel({ ...p, perNight: Math.round((Number(p.total) || 0) / n) })} /></Field>
             <Field label="人数（総額は何人分か）" opt><select value={h.guests || guessGuests(t)} onChange={e => setHotel({ guests: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
             {/* 宿の決まり（予約ページやメールに書いてある時刻）と、実際に行く予定の時刻は分けて持つ */}
@@ -261,6 +261,7 @@ function StayEditor({ t, id, update, close }) {
             <Field label="無料キャンセル期限" opt><DateIn value={h.cancelDeadline} onChange={v => setHotel({ cancelDeadline: v })} /></Field>
             <Field label="予約ページのURL" opt><TextIn value={h.url} onChange={v => setHotel({ url: v })} inputMode="url" /></Field>
             <Field label="住所" opt wide><PlaceIn value={h.address} onChange={v => setHotel({ address: v, geo: null, addressEnTried: false })} onPick={(r, it) => setHotel({ address: r.address || it.main, geo: llOf(r), addressEnTried: false })} /></Field>
+            {(h.nameEn || /[\u3040-\u30ff\u3400-\u9fff]/.test(String(h.name || ""))) && <Field label="英語の名前（入国審査用ページに載せます）" opt wide><TextIn value={h.nameEn || ""} onChange={v => setHotel({ nameEn: v })} placeholder="空なら、しおりを開いたときに自動で調べます" /></Field>}
             {(h.addressEn || /[\u3040-\u30ff\u3400-\u9fff]/.test(String(h.address || ""))) && <Field label="英語の住所（入国審査用ページに載せます）" opt wide><TextIn value={h.addressEn || ""} onChange={v => setHotel({ addressEn: v })} placeholder="空なら、しおりを開いたときに自動で調べます" /></Field>}
           </div>
           <div className="row">

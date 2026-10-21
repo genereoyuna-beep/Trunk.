@@ -45,6 +45,12 @@ const COUNTRY_EN = { "台湾": "Taiwan", "韓国": "Republic of Korea", "香港"
   "スロバキア": "Slovakia", "ハンガリー": "Hungary", "ポーランド": "Poland", "デンマーク": "Denmark", "スウェーデン": "Sweden", "スペイン": "Spain", "イタリア": "Italy", "ギリシャ": "Greece", "クロアチア": "Croatia",
   "フィンランド": "Finland", "ノルウェー": "Norway", "ニュージーランド": "New Zealand", "メキシコ": "Mexico", "モンゴル": "Mongolia", "カンボジア": "Cambodia", "ラオス": "Laos", "ミャンマー": "Myanmar", "ネパール": "Nepal" };
 const hasJa = (v) => /[\u3040-\u30ff\u3400-\u9fff]/.test(String(v || ""));
+// 英語のページ用に住所を整える：全角の英数字を半角に、日本語の国名（「, 韓国」など）を英語に
+const enAddress = (a) => {
+  let v = String(a || "").replace(/[\uFF01-\uFF5E]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, " ");
+  Object.keys(COUNTRY_EN).sort((x, y) => y.length - x.length).forEach(k => { v = v.split(k).join(COUNTRY_EN[k]); });
+  return v.replace(/\s+/g, " ").trim();
+};
 const entryFlights = (t) => sortItinerary(transitsOf(t)).filter(x => x.mode === "飛行機");
 function entryStays(t) { return sortItinerary(staysOf(t)).filter(s => isISO(s.startDate) && !s.noHotel).map(s => ({ s, h: hotelOf(t, s) || {} })); }
 // 入国審査用のページに足りないもの（海外旅行のときだけ）
@@ -62,7 +68,7 @@ function entryChecks(t) {
     const c = `${splitCity(s.city).main || "滞在"}（${md(s.startDate)}〜）`;
     if (!h.name) out.push(`${c}の宿：宿泊先名を入れる`);
     else if (!h.address) out.push(`${c}の宿：住所を入れる（予約サイトの英語の住所がおすすめ）`);
-    else if (hasJa(h.address)) out.push(`${c}の宿：住所が日本語です。英語の住所にすると伝わりやすくなります`);
+    else if (hasJa(enAddress(h.address))) out.push(`${c}の宿：住所が日本語です。英語の住所にすると伝わりやすくなります`);
   });
   return out;
 }
@@ -90,7 +96,7 @@ function EntryPage({ t }) {
       {stays.length ? stays.map(({ s, h }) => (
         <div key={s.id} className="en-item">
           <b className="mono">{fullDate(s.startDate)} – {fullDate(stayEnd(s))}</b>
-          <span>{h.name || "—"}{h.address ? <><br />{h.address}</> : null}{h.confirmation ? <><br />Booking No. {h.confirmation}</> : null}</span>
+          <span>{h.name || "—"}{h.address ? <><br />{enAddress(h.address)}</> : null}{h.confirmation ? <><br />Booking No. {h.confirmation}</> : null}</span>
         </div>
       )) : <div className="en-item"><span>—</span></div>}
       <div className="en-foot">This itinerary was prepared by the traveler with Trunk. (trunk-travelplanner.com)</div>

@@ -229,6 +229,24 @@ function normalizeItinerary(list) {
   return markLegs(sortItinerary(out));
 }
 
+// 滞在の途中で別の都市へ移ったら、その日から滞在を分ける（「都市・宿」を自分で足さなくても都市が変わるように）
+// 同じ日に元の都市へ戻る移動があれば日帰りとみなして分けない。分けたら、分けた都市の名前を返す
+const townOf = (c) => String(splitCity(c).main || "").split(/[・(（]/)[0].trim();
+function splitStaysByMove(t, moveId) {
+  const x = transitsOf(t).find(r => r.id === moveId);
+  if (!x || !isISO(x.departDate) || SHORT_MODES.includes(x.mode)) return null;
+  const to = townOf(x.toCity), d = x.arriveDate && isISO(x.arriveDate) ? x.arriveDate : x.departDate;
+  if (!to) return null;
+  const s = staysOf(t).find(s => isISO(s.startDate) && s.startDate < d && d < stayEnd(s));
+  if (!s || townOf(s.city) === to) return null;
+  const back = transitsOf(t).some(r => r.id !== x.id && r.departDate === x.departDate && townOf(r.fromCity) === to && townOf(r.toCity) === townOf(s.city));
+  if (back) return null;
+  const end = stayEnd(s);
+  const first = { ...s, nights: dayDiff(s.startDate, d) };
+  const next = { id: uid(), type: "stay", city: to, startDate: d, nights: dayDiff(d, end), memo: "", status: "未確定", noHotel: false };
+  return { trip: { ...t, itinerary: normalizeItinerary((t.itinerary || []).map(r => r.id === s.id ? first : r).concat(next)) }, city: to, from: townOf(s.city), date: d };
+}
+
 // 無料版の数え方：帰ってくる日がまだ来ていない旅行と、日程が未定の旅行は「進行中」。旅行パスを使った旅行は数えない
 const isActiveTrip = (t) => { const r = tripRange(t); return !t.tripPass && (!r || r.end >= todayISO()); };
 // 招待されて参加した旅行（joined）と、パスで準備している旅行（pass）は、自分の枠には数えない

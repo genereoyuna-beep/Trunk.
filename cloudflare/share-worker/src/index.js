@@ -123,9 +123,48 @@ async function notifySignup(req, env) {
   return new Response("ok");
 }
 
+// 毎朝の数字（前の日の分）。数だけで、名前やメールアドレスは入っていない
+async function notifyDaily(req, env) {
+  if (!env.NOTIFY_SECRET || !env.NOTIFY_TO || req.headers.get("x-notify-secret") !== env.NOTIFY_SECRET) return new Response("forbidden", { status: 403 });
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(env.NOTIFY_TO)) return new Response("send failed: NOTIFY_TO is not an email address", { status: 500 });
+  const j = await req.json().catch(() => ({}));
+  const n = (k) => Number(j[k]) || 0;
+  const day = String(j.day || "").replace(/^\d{4}-0?(\d+)-0?(\d+)$/, "$1/$2");
+  const pct = (a, b) => b ? `（${Math.round(a / b * 100)}%）` : "";
+  const text = [
+    `${day} の Trunk.`,
+    "",
+    "■ 人",
+    `新しく登録：${n("users_new")}人（合計 ${n("users_total")}人）`,
+    `旅行を編集した人：${n("editors")}人`,
+    `  うち前の日までに登録していた人（戻ってきた人）：${n("returning")}人`,
+    `登録したけれど旅行がない人：${n("no_trip")}人`,
+    "",
+    "■ 旅行",
+    `新しく作られた旅行：${n("trips_new")}件（合計 ${n("trips_total")}件）`,
+    `予定が入っている旅行：${n("with_plans")}件${pct(n("with_plans"), n("trips_total"))}`,
+    `宿の名前が入っている旅行：${n("with_hotel")}件${pct(n("with_hotel"), n("trips_total"))}`,
+    `支出が入っている旅行：${n("with_expense")}件${pct(n("with_expense"), n("trips_total"))}`,
+    "",
+    "■ 前の日にあったこと",
+    `共有リンクを作った：${n("shares_new")}件`,
+    `招待リンクを作った：${n("invites_new")}件`,
+    `要望：${n("feedback_new")}件`,
+    `パスの購入：${n("passes_new")}件`,
+    `予約メールの取り込み：${n("mail_new")}通`,
+    "",
+    "数には、本人とテスト用のアカウントも入っています。",
+  ].join("\n");
+  const from = "notify@in.trunk-travelplanner.com";
+  try { await env.MAILER.send(new EmailMessage(from, env.NOTIFY_TO, rawMail(from, env.NOTIFY_TO, `Trunk. ${day} の数字（新規${n("users_new")}・編集${n("editors")}）`, text))); }
+  catch (e) { return new Response("send failed: " + (/mail from/i.test(String(e && e.message)) ? "sender" : "other"), { status: 500 }); }
+  return new Response("ok");
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    if (url.pathname === "/notify/daily" && req.method === "POST") return notifyDaily(req, env);
     if (url.pathname === "/notify/feedback" && req.method === "POST") return notifyFeedback(req, env);
     if (url.pathname === "/notify/signup" && req.method === "POST") return notifySignup(req, env);
     // 予約メールの転送先を、スマホの連絡先に入れるためのファイル（/vcf/トークン.vcf）。iPhone はアプリの中で作ったファイルを連絡先に渡せないので、ここから配る

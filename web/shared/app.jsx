@@ -25,6 +25,8 @@ const ICONS = {
   check: <path d="M5 12l5 5L20 7" />,
   map: <><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z" /><path d="M9 4v14M15 6v14" /></>,
   pin: <><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z" /><circle cx="12" cy="9" r="2.5" /></>,
+  camera: <><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></>,
+  flag: <><path d="M5 21V4" /><path d="M5 4h11l-2 4 2 4H5" /></>,
   star: <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />,
   paste: <><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4V3h6v1M9 10h6M9 14h6" /></>,
   pencil: <><path d="M4 20l4-1 11-11-3-3L5 16z" /><path d="M14 6l3 3" /></>,
@@ -36,6 +38,8 @@ function Icon({ n, s = 18, w = 2 }) {
 }
 // 旅程で移動の線につける色（手段ごと）
 const modeColor = (m) => /飛行機/.test(m) ? "#1F3A5F" : /鉄道|夜行列車|地下鉄|電車/.test(m) ? "#2D6CDF" : /バス/.test(m) ? "#2E8B57" : /タクシー|車|Uber|送迎|レンタカー/.test(m) ? "#C98A00" : /フェリー|船/.test(m) ? "#1A8C9C" : "#8A9199";
+// 予定の種類ごとのアイコン（観光はカメラ、ツアーは旗、入場券はチケット、その他体験は星）
+const catIcon = (c) => ({ 移動: "route", 観光: "camera", 食事: "food", 買い物: "bag", ツアー: "flag", 入場券: "ticket", その他体験: "star" })[c] || "ticket";
 const modeIcon = (m) => m === "飛行機" ? "plane" : (m === "鉄道" || m === "夜行列車" || m === "地下鉄") ? "train" : (m === "フェリー" || m === "夜行フェリー") ? "ship" : m === "バス" ? "bus" : (m === "車" || m === "タクシー") ? "car" : (m === "徒歩" || m === "その他") ? "route" : "question";
 const Pill = ({ st }) => <span className={"pill tone-" + st.tone}><i />{st.label}</span>;
 const NAV = [["home", "ホーム", "home"], ["plan", "旅程", "cal"], ["book", "予約・手配", "ticket"], ["money", "お金", "wallet"], ["pack", "持ち物", "bag"]];
@@ -769,7 +773,7 @@ function dayEvents(t, iso) {
   });
   (t.localTransport || []).filter(l => l.date === iso).forEach(l => ev.push({
     at: l.category === "移動" ? [[l.fromAddress], [l.toAddress]] : [[l.address, l.desc]], mv: l.category === "移動" ? modeColor(l.mode) : null, ll: l.category === "移動" ? null : l.geo || null,
-    k: l.startTime || "13:00", time: l.startTime ? l.startTime + (l.endTime ? `〜${l.endTime}` : "") : "", icon: l.category === "移動" ? "route" : l.category === "食事" ? "food" : l.category === "観光" ? "pin" : l.category === "買い物" ? "bag" : "ticket", title: l.desc || l.category,
+    k: l.startTime || "13:00", time: l.startTime ? l.startTime + (l.endTime ? `〜${l.endTime}` : "") : "", icon: catIcon(l.category), title: l.desc || l.category,
     sub: [l.category, l.category === "移動" ? [l.fromAddress, l.toAddress].filter(Boolean).join(" → ") : l.address].filter(Boolean).join(" ・ "), st: localState(l), edit: { kind: "local", id: l.id },
     map: l.category !== "移動" && l.address ? l.address : "",
   }));
@@ -1131,7 +1135,7 @@ function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
   const items = [];
   staysOf(t).forEach(s => { if (s.noHotel) return; const h = hotelOf(t, s); const cm = splitCity(s.city).main; items.push({ type: "stay", date: s.startDate, icon: "bed", title: h && h.name ? h.name : stayTitle(s, "宿"), sub: `${md(s.startDate)}〜${md(stayEnd(s))} ・ ${nightsOf(s)}泊${h && h.name && cm ? " ・ " + cm : ""}`, st: stayState(t, s), price: h ? h.total : 0, people: h ? peopleOf(h) : 1, edit: { kind: "stay", id: s.id } }); });
   transitsOf(t).forEach(x => items.push({ type: "transit", date: x.departDate, icon: modeIcon(x.mode), title: moveTitle(x), sub: `${md(x.departDate)}${x.departTime ? " " + x.departTime : ""} ・ ${x.mode || "未定"}${x.airline ? " ・ " + x.airline : ""}`, st: transitState(x), price: x.price, people: peopleOf(x), edit: { kind: "transit", id: x.id } }));
-  (t.localTransport || []).forEach(l => items.push({ type: "local", date: l.date, icon: "ticket", title: l.desc || l.category, sub: `${md(l.date)}${l.startTime ? " " + l.startTime : ""} ・ ${l.category}`, st: localState(l), price: l.price, people: peopleOf(l), edit: { kind: "local", id: l.id } }));
+  (t.localTransport || []).forEach(l => items.push({ type: "local", date: l.date, icon: catIcon(l.category), title: l.desc || l.category, sub: `${md(l.date)}${l.startTime ? " " + l.startTime : ""} ・ ${l.category}`, st: localState(l), price: l.price, people: peopleOf(l), edit: { kind: "local", id: l.id } }));
   const tk = (x) => x.type === "transit" ? (transitsOf(t).find(r => r.id === (x.edit && x.edit.id)) || {}).departTime || "" : x.type === "local" ? ((t.localTransport || []).find(r => r.id === (x.edit && x.edit.id)) || {}).startTime || "" : "";
   items.sort((a, b) => (a.date || "9").localeCompare(b.date || "9") || tk(a).localeCompare(tk(b)));
   const byState = (k) => items.filter(i => k === "all" ? true : k === "open" ? i.st.tone === "open" : i.st.tone === k);

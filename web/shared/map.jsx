@@ -217,14 +217,18 @@ function MapLegend() {
 // 広い範囲なら陸地も描く。街の中だけのときは、位置関係が分かる図にする
 function dayPoints(t, iso) {
   const pts = [];
-  dayEvents(t, iso).ev.forEach(e => (e.at || []).forEach(cands => {
+  dayEvents(t, iso).ev.forEach(e => (e.at || []).forEach((cands, gi) => {
     const name = (cands || []).find(n => n && geoFor(n, t.geo));
     if (!name) return;
     const ll = geoFor(name, t.geo), last = pts[pts.length - 1];
     if (last && Math.abs(last.ll[0] - ll[0]) < 0.002 && Math.abs(last.ll[1] - ll[1]) < 0.002) return;
     // 名前：宿は宿の名前、予定はその名前、移動は場所の名前
     const label = e.icon === "bed" ? (String(e.sub || "").split(" ・ ")[0] || name) : (e.edit && e.edit.kind === "local" && e.at.length === 1) ? e.title : splitCity(name).main;
-    pts.push({ ll, label: String(label).replace(/\s*\([A-Z]{3}\)\s*$/, ""), title: e.title, time: (e.time || "").slice(0, 5) });
+    const lb = String(label).replace(/\s*\([A-Z]{3}\)\s*$/, "");
+    // 移動の着く側の点は「〇〇 着」と着く時刻で出す（出発と同じ行が2つ並ばないように）
+    const arrive = gi > 0 && e.at.length > 1;
+    const tm = String(e.time || "").match(/\d{1,2}:\d{2}/g) || [];
+    pts.push({ ll, label: lb, title: arrive ? `${splitCity(name).main} 着` : e.title, time: arrive ? (tm[1] || "") : (tm[0] || "") });
   }));
   return pts;
 }
@@ -265,14 +269,24 @@ function DayMap({ t, iso, width = 640, height = 300, print }) {
   if (raw.length < 2) return print ? null : <p className="xs muted" style={{ margin: "4px 2px" }}>この日の地図：場所を2つ以上、Google の候補から選ぶと出ます。</p>;
   return <DayMapBody t={t} iso={iso} raw={raw} width={width} height={height} print={print} />;
 }
-function DayMapBody({ t, iso, raw, width, height, print }) {
+// 2点のおよその距離（km）
+const kmOf = (a, b) => Math.hypot(a[0] - b[0], (a[1] - b[1]) * Math.cos(a[0] * Math.PI / 180)) * 111;
+function DayMapBody({ t, iso, raw: raw0, width, height, print }) {
+  // 遠くから飛んできた日などは、その日いちばん多くの点がある場所（40km 以内のまとまり）に地図を合わせ、
+  // ほかの場所は地図の端に「〇〇から」「〇〇へ」と出す
+  const groups = [];
+  raw0.forEach((p, i) => { const g = groups.find(g => g.some(q => kmOf(q.ll, p.ll) < 40)); const q = { ...p, no: i + 1 }; if (g) g.push(q); else groups.push([q]); });
+  const focus = groups.length > 1 ? [...groups].sort((a, b) => b.length - a.length || b[b.length - 1].no - a[a.length - 1].no)[0] : null;
+  const useFocus = focus && focus.length >= 2;
+  const raw = useFocus ? focus : raw0.map((p, i) => ({ ...p, no: i + 1 }));
+  const away = useFocus ? groups.filter(g => g !== focus).map(g => ({ ll: g[0].ll, label: g[0].label, before: g[0].no < focus[0].no })) : [];
   // 国をまたぐような広い日は、近く（約25km以内）の続いた点を1つにまとめる（空港・駅・宿が重なって読めなくならないように）
   const rawSpan = raw.length ? Math.max(Math.max(...raw.map(p => p.ll[1])) - Math.min(...raw.map(p => p.ll[1])), Math.max(...raw.map(p => p.ll[0])) - Math.min(...raw.map(p => p.ll[0]))) : 0;
   const pts = [];
   raw.forEach((p, i) => {
     const last = pts[pts.length - 1];
-    if (rawSpan > 1.2 && last && Math.abs(last.ll[0] - p.ll[0]) < Math.max(0.25, rawSpan * 0.05) && Math.abs(last.ll[1] - p.ll[1]) < Math.max(0.3, rawSpan * 0.05)) { last.to = i + 1; last.label = p.label; }
-    else pts.push({ ...p, no: i + 1 });
+    if (rawSpan > 1.2 && last && Math.abs(last.ll[0] - p.ll[0]) < Math.max(0.25, rawSpan * 0.05) && Math.abs(last.ll[1] - p.ll[1]) < Math.max(0.3, rawSpan * 0.05)) { last.to = p.no; last.label = p.label; }
+    else pts.push({ ...p });
   });
   let x0 = Math.min(...pts.map(p => p.ll[1])), x1 = Math.max(...pts.map(p => p.ll[1]));
   let y0 = Math.min(...pts.map(p => mercY(p.ll[0]))), y1 = Math.max(...pts.map(p => mercY(p.ll[0])));
@@ -332,12 +346,23 @@ function DayMapBody({ t, iso, raw, width, height, print }) {
           </g>
         ))}
         {lab.map((l, i) => <text key={"l" + i} x={l.x} y={l.y} textAnchor={l.anchor} fontSize="12" fill="#15202B" fontFamily="Noto Sans JP, sans-serif" stroke="#F3F4F1" strokeWidth="3" paintOrder="stroke">{l.text}</text>)}
+        {away.map((a, i) => {
+          // 地図の外の場所は、その方向の端に「〇〇から」「〇〇へ」と出す
+          const [px, py] = P(a.ll[0], a.ll[1]), dx = px - width / 2, dy = py - height / 2;
+          const sc = Math.min((width / 2 - 70) / Math.max(1, Math.abs(dx)), (height / 2 - 16) / Math.max(1, Math.abs(dy)));
+          const x = width / 2 + dx * Math.min(1, sc), y = height / 2 + dy * Math.min(1, sc);
+          const ang = Math.atan2(dy, dx) * 180 / Math.PI, arrows = ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"];
+          const ar = arrows[((Math.round(ang / 45) % 8) + 8) % 8];
+          const text = a.before ? `${a.label}から` : `${a.label}へ`, tw = [...text].reduce((s, c) => s + (c.charCodeAt(0) > 255 ? 12 : 7), 0) + 22;
+          const bx = Math.max(4, Math.min(width - tw - 4, x - tw / 2));
+          return <g key={"a" + i}><rect x={bx} y={y - 11} width={tw} height="22" rx="11" fill="#FFFFFF" stroke="#C9CDC6" /><text x={bx + tw / 2} y={y + 4} textAnchor="middle" fontSize="11" fill="#15202B" fontFamily="Noto Sans JP, sans-serif">{ar} {text}</text></g>;
+        })}
         <g transform={`translate(${width - 12 - scaleKm / kmPerPx}, ${height - 14})`}>
           <line x1="0" y1="0" x2={scaleKm / kmPerPx} y2="0" stroke="#5A6470" strokeWidth="2" />
           <text x={scaleKm / kmPerPx / 2} y="-5" textAnchor="middle" fontSize="10" fill="#5A6470" fontFamily="Chivo Mono, monospace">{scaleKm} km</text>
         </g>
       </svg>
-      <div className="xs muted" style={{ marginTop: 4 }}>{raw.map((p, i) => `${i + 1} ${p.time ? p.time + " " : ""}${p.title}`).join("　")}</div>
+      <div className="xs muted" style={{ marginTop: 4 }}>{raw0.map((p, i) => `${i + 1} ${p.time ? p.time + " " : ""}${p.title}`).join("　")}</div>
     </div>
   );
 }

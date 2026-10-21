@@ -1585,7 +1585,7 @@ function App() {
     const onDay = isISO(date), d = onDay ? date : last ? stayEnd(last) : todayISO();
     const here = onDay ? stays.find(s => d >= s.startDate && d < stayEnd(s)) : null;
     const x = { id: uid(), type: "transit", mode: onDay ? "未定" : "飛行機", desc: "", fromCity: o && o.from ? o.from : onDay ? (here ? here.city : "") : last ? last.city : "", toCity: (o && o.to) || "", departDate: d, departTime: (o && o.time) || "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い" };
-    update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); setSheet({ kind: "transit", id: x.id, back });
+    update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); setSheet({ kind: "transit", id: x.id, back, init: JSON.stringify(x) });
   };
   const addLocal = (date, back, o) => {
     const tr0 = draftRef.current, r = tripRange(tr0);
@@ -1744,6 +1744,14 @@ function App() {
     if (sheet && sheet.kind === "local") {
       const l = (draftRef.current.localTransport || []).find(x => x.id === sheet.id);
       if (l && !String(l.desc || "").trim() && !l.startTime && !Number(l.price) && !String(l.memo || "").trim()) update(tr => ({ ...tr, localTransport: tr.localTransport.filter(x => x.id !== sheet.id) }));
+    }
+    // 追加したまま何も変えずに閉じた移動も残さない（「＋」で前後の場所や時刻が入っていても、触っていなければ消す）
+    if (sheet && sheet.kind === "transit" && sheet.init) {
+      const x = (draftRef.current.itinerary || []).find(r => r.id === sheet.id);
+      const empty = x && !String(x.toCity || "").trim() && !x.departTime && !Number(x.price) && !String(x.airline || "").trim() && !String(x.desc || "").trim() && !String(x.memo || "").trim();
+      const keys = ["fromCity", "toCity", "mode", "departDate", "departTime", "arriveTime", "airline", "desc", "price", "cls", "memo", "status", "paymentStatus"];
+      const pick = (o) => JSON.stringify(keys.map(k => o[k] == null ? "" : String(o[k])));
+      if (x && (empty || pick(x) === pick(JSON.parse(sheet.init)))) update(tr => ({ ...tr, itinerary: tr.itinerary.filter(r => r.id !== sheet.id) }));
     }
     setSheet(sheet && sheet.back ? { kind: "day", iso: sheet.back } : null);
   };

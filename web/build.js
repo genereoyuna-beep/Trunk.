@@ -6,6 +6,8 @@ const out = process.argv[2] || path.resolve(__dirname, '../app/index.html');
 const S = (f) => fs.readFileSync(path.join(__dirname, f), 'utf8');
 const src = ['src/trunk-config.js', 'src/places.js', 'shared/model.js', 'shared/phrase-data.js', 'shared/world-data.js', 'shared/map.jsx', 'src/store.js', 'shared/app.jsx', 'shared/extras.jsx', 'shared/phrases.jsx', 'shared/shiori.jsx', 'shared/consult.jsx', 'src/trunk.jsx'].map(S).join('\n');
 const code = Babel.transform(src, { presets: ['react'] }).code.replace(/<\/script/gi, '<\\/script');
+// 中身から作る版の印。変わったときだけ、開いている画面に「新しいバージョンがあります」を出す
+const BUILD = require('crypto').createHash('sha1').update(code + S('shared/style.css')).digest('hex').slice(0, 10);
 const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -47,12 +49,17 @@ ${S('shared/style.css')}
 <script>
 ${code}
 </script>
+<script>
+// 新しい版が出ていたら知らせる（ブラウザが前のページを覚えていて、更新がすぐ届かないことがあるため）
+(function(){var B="${BUILD}",shown=false;function check(){if(shown||document.hidden)return;fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(v){if(!v||!v.build||v.build===B||shown)return;shown=true;var d=document.createElement("div");d.setAttribute("role","status");d.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:90;background:#15202B;color:#F3F4F1;padding:10px 14px;border-radius:12px;font-size:13px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:calc(100% - 32px)";d.innerHTML='<span>新しいバージョンがあります</span><button style="border:0;background:#F3F4F1;color:#15202B;border-radius:8px;padding:6px 10px;font-weight:600;white-space:nowrap">更新する</button>';d.querySelector("button").onclick=function(){location.reload()};document.body.appendChild(d)}).catch(function(){})}document.addEventListener("visibilitychange",check);setInterval(check,300000);setTimeout(check,20000)})();
+</script>
 </body>
 </html>
 `;
 if (/genereoyuna|@gmail\.com/i.test(html)) { console.error('個人のメールアドレスが含まれています。中止します'); process.exit(1); }
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, html);
+fs.writeFileSync(path.join(path.dirname(out), 'version.json'), JSON.stringify({ build: BUILD }));
 // ホーム画面に追加したとき、アプリのように全画面で開くための設定（アプリと同じフォルダに置く）
 fs.writeFileSync(path.join(path.dirname(out), 'manifest.webmanifest'), JSON.stringify({
   name: 'Trunk.', short_name: 'Trunk.', lang: 'ja', start_url: './', scope: './', display: 'standalone',

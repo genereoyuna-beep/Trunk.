@@ -109,10 +109,25 @@ async function notifyFeedback(req, env) {
   return new Response("ok");
 }
 
+// 新しい人が登録したら知らせる（名前やメールアドレスは送らない。人数と日時だけ）
+async function notifySignup(req, env) {
+  if (!env.NOTIFY_SECRET || !env.NOTIFY_TO || req.headers.get("x-notify-secret") !== env.NOTIFY_SECRET) return new Response("forbidden", { status: 403 });
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(env.NOTIFY_TO)) return new Response("send failed: NOTIFY_TO is not an email address", { status: 500 });
+  const j = await req.json().catch(() => ({}));
+  const total = Number(j.total) || 0;
+  const when = new Date(j.created_at || Date.now()).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+  const text = `Trunk. に新しく1人が登録しました。\n\n登録した人の合計：${total}人\n日時：${when}\n\nくわしくは Google アナリティクスや Supabase で見られます。`;
+  const from = "notify@in.trunk-travelplanner.com";
+  try { await env.MAILER.send(new EmailMessage(from, env.NOTIFY_TO, rawMail(from, env.NOTIFY_TO, `Trunk. に新しいユーザー（合計${total}人）`, text))); }
+  catch (e) { return new Response("send failed: " + (/mail from/i.test(String(e && e.message)) ? "sender" : "other"), { status: 500 }); }
+  return new Response("ok");
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (url.pathname === "/notify/feedback" && req.method === "POST") return notifyFeedback(req, env);
+    if (url.pathname === "/notify/signup" && req.method === "POST") return notifySignup(req, env);
     // 予約メールの転送先を、スマホの連絡先に入れるためのファイル（/vcf/トークン.vcf）。iPhone はアプリの中で作ったファイルを連絡先に渡せないので、ここから配る
     const vc = url.pathname.match(/^\/vcf\/([a-z0-9]{10})\.vcf$/);
     if (vc) {

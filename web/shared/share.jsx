@@ -80,7 +80,7 @@ function ShareHome({ t, goDay }) {
                 <span style={{ minWidth: 0 }}>
                   <span className="mono xs muted">{md(s.startDate)}（{wdOf(s.startDate)}）〜{md(stayEnd(s))} ・ {nightsOf(s)}泊 ・ {splitCity(s.city).main}</span>
                   <span className="t1">{name}</span>
-                  {(h.checkinTime || h.checkoutTime) && !s.noHotel && <span className="t2">チェックイン {h.checkinTime || "—"} ／ チェックアウト {h.checkoutTime || "—"}</span>}
+                  {(h.checkinTime || h.checkoutTime || h.planCheckin || h.planCheckout) && !s.noHotel && <span className="t2">チェックイン {h.checkinTime ? h.checkinTime + "から" : "—"} ／ チェックアウト {h.checkoutTime ? h.checkoutTime + "まで" : "—"}{(h.planCheckin || h.planCheckout) ? `（予定：${[h.planCheckin && "着 " + h.planCheckin, h.planCheckout && "出 " + h.planCheckout].filter(Boolean).join("・")}）` : ""}</span>}
                   {h.address && !s.noHotel && <a className="xs" href={`https://www.google.com/maps?q=${encodeURIComponent(h.address)}`} target="_blank" rel="noopener noreferrer">{h.address}</a>}
                 </span>
                 <Pill st={st} />

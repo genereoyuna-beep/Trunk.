@@ -184,7 +184,8 @@ function StayEditor({ t, id, update, close }) {
   const s = staysOf(t).find(x => x.id === id);
   if (!s) return <p className="empty">この滞在は削除されました。</p>;
   const h = hotelOf(t, s) || {};
-  const setStay = (patch) => update(tr => ({ ...tr, itinerary: normalizeItinerary(tr.itinerary.map(x => x.id === id ? { ...x, ...patch } : x)) }));
+  // 日付や泊数を変えてほかの滞在と重なったら、この滞在を優先して、もう一方を縮める
+  const setStay = (patch) => update(tr => ({ ...tr, itinerary: ("startDate" in patch || "nights" in patch) ? markLegs(fixStayOverlaps(normalizeItinerary(tr.itinerary.map(x => x.id === id ? { ...x, ...patch } : x)), tr.hotels || [], id)) : normalizeItinerary(tr.itinerary.map(x => x.id === id ? { ...x, ...patch } : x)) }));
   const setHotel = (patch) => update(tr => {
     const hs = tr.hotels || [];
     return hs.some(x => x.linkedStayId === id)
@@ -213,8 +214,15 @@ function StayEditor({ t, id, update, close }) {
             <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}), geo: llOf(r) })} placeholder="候補の宿もここに" /></Field>
             <Field label="総額（円）"><NumIn value={h.total} onChange={v => setHotel({ total: v, perNight: Math.round(v / n) })} /></Field>
             <Field label="人数（総額は何人分か）" opt><select value={h.guests || guessGuests(t)} onChange={e => setHotel({ guests: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
-            <Field label="チェックイン" opt><select value={h.checkinTime || ""} onChange={e => setHotel({ checkinTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
-            <Field label="チェックアウト" opt><select value={h.checkoutTime || ""} onChange={e => setHotel({ checkoutTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
+            {/* 宿の決まり（予約ページやメールに書いてある時刻）と、実際に行く予定の時刻は分けて持つ */}
+            <div className="wide xs muted" style={{ marginBottom: -4 }}>宿の決まり（予約ページに書いてある時刻）</div>
+            <Field label="チェックイン（何時から）" opt><select value={h.checkinTime || ""} onChange={e => setHotel({ checkinTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
+            <Field label="チェックアウト（何時まで）" opt><select value={h.checkoutTime || ""} onChange={e => setHotel({ checkoutTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
+            <div className="wide xs muted" style={{ marginBottom: -4 }}>実際に行く予定の時刻（決まっていなければ空のままで大丈夫）</div>
+            <Field label="チェックインする時刻" opt><select value={h.planCheckin || ""} onChange={e => setHotel({ planCheckin: e.target.value })}><option value="">未定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
+            <Field label="チェックアウトする時刻" opt><select value={h.planCheckout || ""} onChange={e => setHotel({ planCheckout: e.target.value })}><option value="">未定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
+            {h.planCheckin && h.checkinTime && h.planCheckin < h.checkinTime && <div className="wide xs" style={{ color: "var(--orange)" }}>チェックインの決まり（{h.checkinTime}から）より早く着く予定です。荷物を預けられるか、アーリーチェックインができるか、宿に確かめておくと安心です。</div>}
+            {h.planCheckout && h.checkoutTime && h.planCheckout > h.checkoutTime && <div className="wide xs" style={{ color: "var(--orange)" }}>チェックアウトの決まり（{h.checkoutTime}まで）より遅い予定です。レイトチェックアウトができるか、宿に確かめておくと安心です。</div>}
             <Field label="予約サイト" opt><SuggestIn value={h.site} onChange={v => setHotel({ site: v })} options={sg.sites} placeholder="Airbnb など" /></Field>
             <Field label="予約番号" opt><TextIn value={h.confirmation} onChange={v => setHotel({ confirmation: v })} /></Field>
             <Field label="無料キャンセル期限" opt><DateIn value={h.cancelDeadline} onChange={v => setHotel({ cancelDeadline: v })} /></Field>
@@ -240,6 +248,8 @@ function TransitEditor({ t, id, update, close }) {
   const set = (patch) => update(tr => ({ ...tr, itinerary: normalizeItinerary(tr.itinerary.map(r => {
     if (r.id !== id) return r;
     const next = { ...r, ...patch };
+    // 飛行機・夜行など遠くへ行く手段に変えたら、「街の中の移動」の印を外す
+    if ("mode" in patch && ["飛行機", "夜行列車", "夜行フェリー"].includes(patch.mode)) delete next.local;
     // 会社名から手段を推測（手段が未定のときだけ）
     if ("airline" in patch && (!r.mode || r.mode === "未定")) { const g = guessMode(patch.airline); if (g) next.mode = g; }
     // 到着が出発より前になったら（夜行・時差）、到着日を翌日に
@@ -347,7 +357,30 @@ function LocalEditor({ t, id, update, close }) {
 }
 
 // ================= ホーム =================
-function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go, openDay, openPhrases, openEmergency, openShiori, openSettings, onExpense, onPlanAI }) {
+// 旅行を作った直後の「はじめの3つ」。終わったものに印がつき、全部終わるか × で閉じると出なくなる
+function StartGuide({ t, onTodo, go, onPlanAI, onShare, onHide }) {
+  const stay = sortItinerary(staysOf(t)).find(s => isISO(s.startDate) && !s.noHotel);
+  const steps = [
+    { done: (t.hotels || []).some(h => String(h.name || "").trim()), title: "泊まる宿を入れる", sub: "決まっていなければ、候補の宿でも大丈夫", act: () => stay ? onTodo({ edit: { kind: "stay", id: stay.id } }) : go("plan") },
+    { done: (t.localTransport || []).length > 0, title: "行きたい所・予定を入れる", sub: onPlanAI ? "AIに旅行全体の案を出してもらうこともできます" : "日ごとの画面の「追加」から", act: onPlanAI || (() => go("plan")) },
+    { done: !!t.startShared, title: "一緒に行く人に送る", sub: "リンクを送るだけ。相手はログインなしで見られます", act: onShare },
+  ];
+  const left = steps.filter(x => !x.done).length;
+  if (!left) return null;
+  return (
+    <section className="card flush divide" style={{ boxShadow: "0 0 0 1.5px var(--blue)" }}>
+      <div className="row between" style={{ padding: "10px 14px", flexWrap: "nowrap" }}><h3>はじめにやること<span className="xs muted" style={{ marginLeft: 8 }}>あと{left}つ</span></h3><button className="iconbtn" aria-label="はじめにやることを閉じる" onClick={onHide}><Icon n="x" s={14} /></button></div>
+      {steps.map((x, i) => (
+        <button key={i} className="todo" onClick={x.act} disabled={x.done} style={x.done ? { opacity: .55 } : undefined}>
+          <span className={"ico " + (x.done ? "blue" : "open")}><Icon n={x.done ? "check" : ["bed", "ticket", "share"][i]} /></span>
+          <span style={{ minWidth: 0 }}><span className="t1" style={x.done ? { textDecoration: "line-through" } : undefined}>{x.title}</span><span className="t2" style={{ whiteSpace: "normal" }}>{x.sub}</span></span>
+          {!x.done && <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>}
+        </button>
+      ))}
+    </section>
+  );
+}
+function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go, openDay, openPhrases, openEmergency, openShiori, openSettings, onExpense, onPlanAI, onShare, onHideGuide }) {
   const r = tripRange(t), today = todayISO();
   const days = r ? dayDiff(today, r.start) : null;
   const sorted = sortItinerary(t.itinerary || []);
@@ -385,6 +418,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
             </>
           )}
         </section>
+        {t.startGuide && !t.startGuideOff && (!r || days > 0) && onShare && <StartGuide t={t} onTodo={onTodo} go={go} onPlanAI={onPlanAI} onShare={onShare} onHide={onHideGuide} />}
         {r && days <= 0 && dayDiff(today, r.end) >= 0 && (
           <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12 }} onClick={() => openDay(today)}>
             <span className="ico blue"><Icon n="clock" /></span>
@@ -392,7 +426,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
             <Icon n="down" s={16} />
           </button>
         )}
-        {r && onPlanAI && today < r.start && (t.localTransport || []).length < 3 && (
+        {r && onPlanAI && today < r.start && (t.localTransport || []).length < 3 && !(t.startGuide && !t.startGuideOff && !(t.localTransport || []).length) && (
           <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12, boxShadow: "0 0 0 1.5px var(--blue)" }} onClick={onPlanAI}>
             <span className="ico blue"><Icon n="star" /></span>
             <span style={{ flex: 1, minWidth: 0 }}><span className="t1">予定の案をAIに出してもらう</span><span className="t2" style={{ whiteSpace: "normal" }}>{(t.scenes || []).length ? `${t.scenes.join("・")}の旅に合わせて、` : ""}いつもの ChatGPT・Claude・Gemini に聞いて、答えをそのまま取り込めます</span></span>
@@ -754,7 +788,12 @@ function dayEvents(t, iso) {
   const ending = stays.find(s => stayEnd(s) === iso), starting = stays.find(s => s.startDate === iso);
   const sleeping = stays.find(s => iso >= s.startDate && iso < stayEnd(s));
   const ev = [];
-  if (ending && !ending.noHotel) { const h = hotelOf(t, ending) || {}; ev.push({ at: [[h.address, h.name]], ll: h.geo || null, k: h.checkoutTime || "10:00", co: !h.checkoutTime, time: h.checkoutTime, icon: "bed", title: "チェックアウト", sub: h.name || `${splitCity(ending.city).main}の宿`, edit: { kind: "stay", id: ending.id } }); }
+  // 宿の時刻：行く予定の時刻（planCheckin / planCheckout）があればそれを、なければ宿の決まりの時刻を薄く出す
+  if (ending && !ending.noHotel) {
+    const h = hotelOf(t, ending) || {}, tm = h.planCheckout || h.checkoutTime;
+    const note = !h.planCheckout && h.checkoutTime ? `${h.checkoutTime}までに（宿の決まり）` : h.planCheckout && h.checkoutTime && h.planCheckout > h.checkoutTime ? `決まりは${h.checkoutTime}まで。レイトチェックアウトを確かめておく` : "";
+    ev.push({ at: [[h.address, h.name]], ll: h.geo || null, k: tm || "10:00", co: !tm, time: tm, rule: !h.planCheckout && !!h.checkoutTime, icon: "bed", title: "チェックアウト", sub: [h.name || `${splitCity(ending.city).main}の宿`, note].filter(Boolean).join(" ・ "), warn: !!(h.planCheckout && h.checkoutTime && h.planCheckout > h.checkoutTime), edit: { kind: "stay", id: ending.id } });
+  }
   transitsOf(t).forEach(x => {
     const from = splitCity(x.fromCity).main, to = splitCity(x.toCity).main, dur = calcDuration(x), st = transitState(x);
     if (!isLeg(x)) {
@@ -781,7 +820,8 @@ function dayEvents(t, iso) {
     const h = hotelOf(t, starting) || {};
     ev.push(starting.noHotel
       ? { at: [[starting.city]], k: h.checkinTime || "18:00", icon: "home", title: `${starting.lodgingLabel || "宿不要"}へ`, sub: splitCity(starting.city).main, edit: { kind: "stay", id: starting.id } }
-      : { at: [[h.address, h.name]], ll: h.geo || null, k: h.checkinTime || "15:00", ci: !h.checkinTime, time: h.checkinTime, icon: "bed", title: "チェックイン", sub: h.name || "宿未定", st: stayState(t, starting), edit: { kind: "stay", id: starting.id }, map: h.address || "" });
+      : { at: [[h.address, h.name]], ll: h.geo || null, k: h.planCheckin || h.checkinTime || "15:00", ci: !(h.planCheckin || h.checkinTime), time: h.planCheckin || h.checkinTime, rule: !h.planCheckin && !!h.checkinTime, icon: "bed", title: "チェックイン",
+          sub: [h.name || "宿未定", !h.planCheckin && h.checkinTime ? `${h.checkinTime}から（宿の決まり）` : h.planCheckin && h.checkinTime && h.planCheckin < h.checkinTime ? `決まりは${h.checkinTime}から。早く着いたら荷物を預けられるか確かめておく` : ""].filter(Boolean).join(" ・ "), warn: !!(h.planCheckin && h.checkinTime && h.planCheckin < h.checkinTime), st: stayState(t, starting), edit: { kind: "stay", id: starting.id }, map: h.address || "" });
   }
   // 時刻のないチェックアウトはその日の最初の出発より前、チェックインは最後の到着より後に置く
   const deps = ev.filter(e => e.dep).map(e => e.k).sort(), arrs = ev.filter(e => e.arr || e.arrK).map(e => e.arr ? e.k : e.arrK).sort();
@@ -903,10 +943,10 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
       {ev.length === 0 && <p className="empty" style={{ padding: "10px 14px" }}>この日の予定はまだありません。</p>}
       {ev.map((e, i) => [(
         <div key={i} className={"bookrow" + (e.mv ? " tl-mv" : "")} style={{ gridTemplateColumns: "56px minmax(0,1fr) auto", cursor: "default", minHeight: e.mv ? 40 : 52, padding: e.mv ? "4px 14px" : "8px 14px", ...(e.mv ? { "--mvc": e.mv } : {}) }}>
-          <span className="mono" style={{ fontSize: e.mv ? 13 : 15, fontWeight: 600, color: !e.time ? "var(--faint)" : e.mv ? "var(--muted)" : "var(--ink)" }}>{e.time ? e.time.slice(0, 5) : "—"}{e.mv && hhmm(e.time).length > 1 && <span className="xs" style={{ display: "block", fontWeight: 500, color: "var(--faint)" }}>〜{hhmm(e.time).pop()}</span>}</span>
+          <span className="mono" title={e.rule ? "宿の決まりの時刻（行く時刻は宿の画面で入れられます）" : undefined} style={{ fontSize: e.mv ? 13 : 15, fontWeight: 600, color: !e.time || e.rule ? "var(--faint)" : e.mv ? "var(--muted)" : "var(--ink)" }}>{e.time ? e.time.slice(0, 5) : "—"}{e.mv && hhmm(e.time).length > 1 && <span className="xs" style={{ display: "block", fontWeight: 500, color: "var(--faint)" }}>〜{hhmm(e.time).pop()}</span>}</span>
           <button className={e.mv ? "tl-mvbox" : ""} style={{ border: 0, background: "none", textAlign: "left", padding: 0, minWidth: 0 }} onClick={() => onEdit(e.edit)}>
             <span className="t1">{e.mv ? <span className="tl-mvico"><Icon n={e.icon} s={13} /></span> : <span style={{ verticalAlign: "-3px", marginRight: 6, display: "inline-flex" }}><Icon n={e.icon} s={16} /></span>}{e.title}</span>
-            {e.sub && <span className="t2" style={{ whiteSpace: "normal" }}>{e.sub}</span>}
+            {e.sub && <span className="t2" style={{ whiteSpace: "normal", ...(e.warn ? { color: "var(--orange)" } : {}) }}>{e.sub}</span>}
             {e.st && isOpenState(e.st) && <span className="pill tone-open" style={{ marginTop: 4 }}><i />{e.st.label}</span>}
           </button>
           {e.map ? <a className="iconbtn" aria-label="地図で開く" href={`https://www.google.com/maps?q=${encodeURIComponent(e.map)}`} target="_blank" rel="noopener noreferrer"><Icon n="pin" /></a> : <span />}
@@ -1134,14 +1174,16 @@ function MailCard({ t, update, inbox, scan, onScan, onPaste, onApply, onDecide }
 function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
   const items = [];
   staysOf(t).forEach(s => { if (s.noHotel) return; const h = hotelOf(t, s); const cm = splitCity(s.city).main; items.push({ type: "stay", date: s.startDate, icon: "bed", title: h && h.name ? h.name : stayTitle(s, "宿"), sub: `${md(s.startDate)}〜${md(stayEnd(s))} ・ ${nightsOf(s)}泊${h && h.name && cm ? " ・ " + cm : ""}`, st: stayState(t, s), price: h ? h.total : 0, people: h ? peopleOf(h) : 1, edit: { kind: "stay", id: s.id } }); });
-  transitsOf(t).forEach(x => items.push({ type: "transit", date: x.departDate, icon: modeIcon(x.mode), title: moveTitle(x), sub: `${md(x.departDate)}${x.departTime ? " " + x.departTime : ""} ・ ${x.mode || "未定"}${x.airline ? " ・ " + x.airline : ""}`, st: transitState(x), price: x.price, people: peopleOf(x), edit: { kind: "transit", id: x.id } }));
+  transitsOf(t).forEach(x => items.push({ type: "transit", town: !isLeg(x) && transitState(x).key === "free", date: x.departDate, icon: modeIcon(x.mode), title: moveTitle(x), sub: `${md(x.departDate)}${x.departTime ? " " + x.departTime : ""} ・ ${x.mode || "未定"}${x.airline ? " ・ " + x.airline : ""}`, st: transitState(x), price: x.price, people: peopleOf(x), edit: { kind: "transit", id: x.id } }));
   (t.localTransport || []).forEach(l => items.push({ type: "local", date: l.date, icon: catIcon(l.category), title: l.desc || l.category, sub: `${md(l.date)}${l.startTime ? " " + l.startTime : ""} ・ ${l.category}`, st: localState(l), price: l.price, people: peopleOf(l), edit: { kind: "local", id: l.id } }));
   const tk = (x) => x.type === "transit" ? (transitsOf(t).find(r => r.id === (x.edit && x.edit.id)) || {}).departTime || "" : x.type === "local" ? ((t.localTransport || []).find(r => r.id === (x.edit && x.edit.id)) || {}).startTime || "" : "";
   items.sort((a, b) => (a.date || "9").localeCompare(b.date || "9") || tk(a).localeCompare(tk(b)));
-  const byState = (k) => items.filter(i => k === "all" ? true : k === "open" ? i.st.tone === "open" : i.st.tone === k);
+  // 予約の要らない街の中の移動（タクシー・徒歩など）は、「その他の条件」で選んだときだけ出す
+  const townN = items.filter(i => i.town).length;
+  const byState = (k) => items.filter(i => (filter.town || !i.town) && (k === "all" ? true : k === "open" ? i.st.tone === "open" : i.st.tone === k));
   const shown = byState(filter.state).filter(i => filter.type === "all" || i.type === filter.type);
   // よく使うのは「すべて」と「未手配」。それ以外の条件は「その他の条件」の中に
-  const moreF = filter.state === "booked" || filter.state === "paid" || filter.type !== "all";
+  const moreF = filter.state === "booked" || filter.state === "paid" || filter.type !== "all" || !!filter.town;
   const [showMore, setShowMore] = useState(false);
   return (
     <div className="stack">
@@ -1150,15 +1192,16 @@ function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
       {mail}
       <div className="chips" aria-label="絞り込み">
         {[["all", "すべて"], ["open", "未手配"]].map(([k, l]) => (
-          <button key={k} className="chip" aria-pressed={filter.state === k && !moreF} onClick={() => setFilter({ ...filter, state: k, type: "all" })}>{l} <b style={k === "open" && byState(k).length && !(filter.state === k && !moreF) ? { color: "var(--orange)" } : undefined}>{byState(k).length}</b></button>
+          <button key={k} className="chip" aria-pressed={filter.state === k && !moreF} onClick={() => setFilter({ ...filter, state: k, type: "all", town: false })}>{l} <b style={k === "open" && byState(k).length && !(filter.state === k && !moreF) ? { color: "var(--orange)" } : undefined}>{byState(k).length}</b></button>
         ))}
-        <button className="chip" aria-pressed={moreF} aria-expanded={showMore} onClick={() => setShowMore(!showMore)}>{moreF ? [filter.state !== "all" && filter.state !== "open" ? { booked: "予約済み", paid: "支払い済み" }[filter.state] : "", filter.type !== "all" ? { stay: "宿", transit: "移動", local: "予定" }[filter.type] : ""].filter(Boolean).join("・") : "その他の条件"}<Icon n="down" s={12} /></button>
+        <button className="chip" aria-pressed={moreF} aria-expanded={showMore} onClick={() => setShowMore(!showMore)}>{moreF ? [filter.state !== "all" && filter.state !== "open" ? { booked: "予約済み", paid: "支払い済み" }[filter.state] : "", filter.type !== "all" ? { stay: "宿", transit: "移動", local: "予定" }[filter.type] : "", filter.town ? "街の中の移動" : ""].filter(Boolean).join("・") : "その他の条件"}<Icon n="down" s={12} /></button>
       </div>
       {showMore && (
         <div className="chips" style={{ marginTop: -6 }}>
           {[["booked", "予約済み"], ["paid", "支払い済み"]].map(([k, l]) => <button key={k} className="chip" aria-pressed={filter.state === k} onClick={() => setFilter({ ...filter, state: filter.state === k ? "all" : k })}>{l} <b>{byState(k).length}</b></button>)}
           <span className="chipsep" aria-hidden="true" />
           {[["stay", "宿"], ["transit", "移動"], ["local", "予定"]].map(([k, l]) => <button key={k} className="chip" aria-pressed={filter.type === k} onClick={() => setFilter({ ...filter, type: filter.type === k ? "all" : k })}>{l}</button>)}
+          {townN > 0 && <button className="chip" aria-pressed={!!filter.town} onClick={() => setFilter({ ...filter, town: !filter.town })}>街の中の移動も出す <b>{townN}</b></button>}
         </div>
       )}
       <div className="card flush divide">
@@ -1419,26 +1462,29 @@ function tripStatusText(data) {
 }
 // 旅行の名前を空にしたときの名前（例：台北 2泊3日）
 const autoTripName = (f) => { const d = splitCity(String(f.dest || "")).main.trim(); if (!d) return ""; const n = Number(f.nights) || 0; return n === 0 ? `${d} 日帰り` : `${d} ${n}泊${n + 1}日`; };
-function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited }) {
-  const [form, setForm] = useState(null);
+// 新しい旅行の入力欄の最初の値
+const blankTripForm = () => ({ dest: "", scenes: [], name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "", people: 1, names: [] });
+// autoOpen：旅行がまだ1つもない人には、ボタンを押さなくても最初から入力欄を開いておく
+function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited, autoOpen }) {
+  const [form, setForm] = useState(() => autoOpen ? blankTripForm() : null);
   const [busyCreate, setBusyCreate] = useState(false);
   const sorted = [...trips].sort((a, b) => { const ra = tripRange(a.data), rb = tripRange(b.data); return (ra ? ra.start : "9") < (rb ? rb.start : "9") ? -1 : 1; });
   return (
     <>
-      <div className="card flush divide">
+      {sorted.length > 0 && <div className="card flush divide">
         {sorted.map(x => { const r = tripRange(x.data); return (
           <button key={x.id} className="triprow" aria-current={x.id === currentId} onClick={() => onPick(x.id)}>
             <span style={{ minWidth: 0 }}><span className="t1" style={{ fontFamily: "var(--f-display)", fontWeight: 700 }}>{x.data.name}</span><span className="t2 mono">{r ? `${r.start.replace(/-/g, ".")} 〜 ${md(r.end)} ・ ${r.days}日間` : "日程未定"}</span></span>
             <span className="row" style={{ gap: 6, flex: "none" }}>{x.joined && <span className="pill tone-none">参加</span>}{x.pass && !x.joined && <span className="pill tone-booked">パス</span>}<span className="pill tone-none">{tripStatusText(x.data)}</span></span>
           </button>); })}
-      </div>
+      </div>}
       {typeof TrunkPlanLine === "function" && trips.length > 0 && <TrunkPlanLine />}
       {limited && !form && <div className="note">{FREE_LIMIT_MSG}</div>}
       {limited && !form && typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
-      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ dest: "", scenes: [], name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "", people: 1, names: [] })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
+      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm(blankTripForm())}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
       {form && (
         <section className="card stack" style={{ gap: 10 }}>
-          <h3>新しい旅行</h3>
+          {!autoOpen && <h3>新しい旅行</h3>}
           <div className="fgrid">
             <Field label="行き先" wide><PlaceIn kind="city" value={form.dest} onChange={v => setForm({ ...form, dest: v })} onPick={(r, it) => setForm({ ...form, dest: it.main })} placeholder="例：台北、ソウル、京都" /></Field>
             <Field label="出発日"><DateIn value={form.start} onChange={v => setForm({ ...form, start: v })} /></Field>
@@ -1455,7 +1501,7 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
             {FEATURES.ai && <Field label="どんな旅行？（書くとClaudeが日程の下書きを作ります・任意）" wide><textarea value={form.idea} onChange={e => setForm({ ...form, idea: e.target.value })} placeholder="例：台北。夜市と温泉が好き。九份にも行きたい。のんびりめ" /></Field>}
           </div>
           {form.idea.trim() && !form.start && <div className="xs" style={{ color: "var(--orange)" }}>下書きを作るには出発日を入れてください</div>}
-          <div className="row"><button className="btn primary" disabled={!(form.name.trim() || form.dest.trim()) || busyCreate} onClick={async () => { setBusyCreate(true); await onCreate(form); setBusyCreate(false); }}>{busyCreate ? "下書きを作っています…" : form.idea.trim() && form.start ? "下書きを作って作成" : "作成する"}</button><button className="btn ghost" onClick={() => setForm(null)}>やめる</button></div>
+          <div className="row"><button className="btn primary" disabled={!(form.name.trim() || form.dest.trim()) || busyCreate} onClick={async () => { setBusyCreate(true); await onCreate(form); setBusyCreate(false); }}>{busyCreate ? "下書きを作っています…" : form.idea.trim() && form.start ? "下書きを作って作成" : "作成する"}</button>{!autoOpen && <button className="btn ghost" onClick={() => setForm(null)}>やめる</button>}</div>
         </section>
       )}
     </>
@@ -1660,11 +1706,12 @@ function App() {
       toast("延期として保存しました（出発後の延期は1つの旅行で1回までです）");
       const m = Store.meta && Store.meta.get(id); if (m) { m.postponed = true; m.startedOn = null; m.plannedEnd = null; }
     }
-    const batch = opsRef.current[id] || [];
+    const batch = [...(opsRef.current[id] || [])]; // 写しを取る（このあと増える変更は次の保存に回す）
     const json = JSON.stringify(data);
     lastSaved.current[id] = json;
     return Store.saveTrip(id, JSON.parse(json), batch).then(saved => {
-      opsRef.current[id] = (opsRef.current[id] || []).slice(batch.length);
+      // この保存に含めた変更だけを外す（保存は順番待ちするので、その間に増えた変更は残す）
+      opsRef.current[id] = (opsRef.current[id] || []).filter(f => !batch.includes(f));
       // 同行者の保存と重なって重ね直したときは、その内容に、まだ保存していない変更を足して画面に出す
       if (saved && JSON.stringify(saved) !== json) {
         lastSaved.current[id] = JSON.stringify(saved);
@@ -1697,7 +1744,7 @@ function App() {
     flushNow();
     const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36);
     const dest = String(form.dest || "").trim(), home = String(form.home || "").trim();
-    let data = { ...emptyTrip(form.name.trim() || autoTripName(form) || "新しい旅行", form.start || "", form.nights), gmailLabel: (form.label || "").trim() };
+    let data = { ...emptyTrip(form.name.trim() || autoTripName(form) || "新しい旅行", form.start || "", form.nights), gmailLabel: (form.label || "").trim(), startGuide: true };
     // 行き先：最初の滞在の都市にする。出発地もあれば、行きと帰りの移動を「未予約」で入れる
     if (dest) data = { ...data, itinerary: data.itinerary.map((x, i) => i === 0 && x.type === "stay" ? { ...x, city: dest } : x) };
     if ((form.scenes || []).length) data = { ...data, scenes: form.scenes };
@@ -1803,10 +1850,14 @@ function App() {
     // 移動の目安から押したときは、画面を開かずにそのまま入れる
     if (o && o.stay) { addStayOn(d, back); return; }
     if (o && o.hideHint) { update(tr => ({ ...tr, moveHintsOff: [...new Set([...(tr.moveHintsOff || []), o.hideHint])] })); return; }
+    // 移動の目安から押したときは、画面を開かずに「街の中の移動」としてそのまま入れる
     if (o && o.quick) {
-      const q = o.quick, same = (tr0.localTransport || []).some(x => x.category === "移動" && x.date === d && x.fromAddress === q.fromAddress && x.toAddress === q.toAddress && (x.startTime || "") === (q.startTime || ""));
+      const q = o.quick, mode = q.mode === "電車" ? "鉄道" : q.mode;
+      const same = transitsOf(tr0).some(x => x.departDate === d && x.fromCity === q.fromAddress && x.toCity === q.toAddress && (x.departTime || "") === (q.startTime || ""));
       if (same) { toast("同じ移動がもう入っています"); return; }
-      update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), { ...l, ...o.quick }] })); toast(`${o.quick.mode}の移動を入れました（目安の時間です）`); return; }
+      const x = { id: uid(), type: "transit", local: true, mode, desc: "", fromCity: q.fromAddress, toCity: q.toAddress, departDate: d, departTime: q.startTime || "", departTZ: 9, arriveDate: d, arriveTime: q.endTime || "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い", needsBooking: false };
+      update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); toast(`${q.mode}の移動を入れました（目安の時間です）`); return;
+    }
     update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l] })); setSheet({ kind: "local", id: l.id, back, fresh: true, opts: o || null, init: JSON.stringify(l) });
   };
 
@@ -1916,10 +1967,10 @@ function App() {
   if (!trips.length) return (
     <div className="main" style={{ paddingTop: 48 }}>
       <div className="card stack">
-        <h1>{FEATURES.appName || "旅行プランナー"}</h1>
-        <p className="muted">行き先と日にちを入れるだけで、旅行の枠ができます。宿・移動・1日の予定・持ち物は、あとから少しずつ足していけます。</p>
+        <h1>どこへ行きますか？</h1>
+        <p className="muted">行き先と日にちを入れるだけで、旅行の枠ができます。宿・移動・1日の予定は、あとから少しずつ足していけます。</p>
+        <TripsSheet trips={[]} currentId={null} onPick={() => {}} onCreate={createTrip} onSettings={null} autoOpen />
         {FEATURES.demoUrl && <a className="small" href={FEATURES.demoUrl}>先に見本の旅行を見てみる →</a>}
-        <TripsSheet trips={[]} currentId={null} onPick={() => {}} onCreate={createTrip} onSettings={null} />
       </div>
       {FEATURES.account && <button className="btn ghost" style={{ marginTop: 16 }} onClick={() => Store.signOut()}>ログアウト</button>}
     </div>
@@ -2005,7 +2056,7 @@ function App() {
         {tab === "home" && typeof TrunkPassBanner === "function" && <TrunkPassBanner onTrips={() => setSheet({ kind: "trips" })} />}
         {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings", section: "share" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
-        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "shift" })} onExpense={() => { setMoneyMode("expense"); setTab("money"); }} onPlanAI={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "plan" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
+        {tab === "home" && <HomeView onShare={() => { update(tr => ({ ...tr, startShared: true })); setSheet({ kind: "settings", section: "share" }); }} onHideGuide={() => update(tr => ({ ...tr, startGuideOff: true }))} t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "shift" })} onExpense={() => { setMoneyMode("expense"); setTab("money"); }} onPlanAI={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "plan" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddStay={addStay} onAddLocal={(d, o) => addLocal(d, undefined, o)} onAddMove={(d, o) => addTransit(d, undefined, o)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => setSheet({ kind: "add" })} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={meName === t.myName ? t : { ...t, myName: meName }} stats={stats} update={update} mode={moneyMode} setMode={setMoneyMode} tripId={tripId} setMe={setMe} />}

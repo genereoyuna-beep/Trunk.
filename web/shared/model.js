@@ -171,7 +171,7 @@ function localToMove(l) {
     id: l.id, type: "transit", mode, desc: l.desc || "", fromCity: l.fromAddress || "", toCity: l.toAddress || "",
     departDate: l.date || "", departTime: l.startTime || "", arriveDate: l.date || "", arriveTime: l.endTime || "",
     airline: "", transitStops: "", cls: "", price: Number(l.price) || 0, people: l.people || 1, miles: false, memo: l.memo || "",
-    status: l.status || "候補", paymentStatus: l.paymentStatus || "未払い", needsBooking: !!l.needsBooking,
+    status: l.status || "候補", paymentStatus: l.paymentStatus || "未払い", needsBooking: !!l.needsBooking, local: true,
   };
 }
 // 旅程の骨組みになる移動（都市から都市へ）か。街の中の移動や、滞在の途中の日帰りは骨組みに入れない
@@ -180,7 +180,8 @@ function markLegs(list) {
   return (list || []).map(r => {
     if (r.type !== "transit") return r;
     const inside = isISO(r.departDate) && stays.some(s => s.startDate < r.departDate && r.departDate < stayEnd(s));
-    const leg = !SHORT_MODES.includes(r.mode) && !inside;
+    // local：目安から入れた移動など、はじめから「街の中の移動」と分かっているもの
+    const leg = !SHORT_MODES.includes(r.mode) && !inside && !r.local;
     return r.leg === leg ? r : { ...r, leg };
   });
 }
@@ -233,7 +234,8 @@ function normalizeItinerary(list) {
 
 // 滞在の日付が重なっていたら直す（宿が入っている滞在の日付を優先し、もう一方をずらす・縮める）。
 // あわせて、同じ都市の滞在のあいだに自動で入った「手段未定」の移動（何も入っていないもの）を外す
-function fixStayOverlaps(list, hotels) {
+// prefer：いま編集している滞在の id（その滞在の日付を優先する）
+function fixStayOverlaps(list, hotels, prefer) {
   const hasH = (s) => !s.noHotel && hotels.some(h => h.linkedStayId === s.id && (h.name || h.address || Number(h.total) > 0));
   let items = list.map(r => r);
   const stays = () => items.filter(r => r.type !== "transit" && isISO(r.startDate)).sort((a, b) => a.startDate.localeCompare(b.startDate) || (hasH(b) ? 1 : 0) - (hasH(a) ? 1 : 0));
@@ -243,7 +245,7 @@ function fixStayOverlaps(list, hotels) {
     for (let i = 0; i < st.length - 1 && !changed; i++) {
       const a = st[i], b = st[i + 1], aEnd = stayEnd(a), bEnd = stayEnd(b);
       if (b.startDate >= aEnd) continue;
-      const keepA = hasH(a) || !hasH(b);
+      const keepA = a.id === prefer ? true : b.id === prefer ? false : hasH(a) || !hasH(b);
       // 宿が入っている方はそのまま。もう一方は、重ならない所だけ残す（残りがなく宿もなければ外す）
       const loser = keepA ? b : a, winner = keepA ? a : b, wEnd = stayEnd(winner), lEnd = stayEnd(loser);
       let ns = null;
@@ -592,15 +594,16 @@ function buildProposal(e, t, yenAmount) {
         }
         if (!isISO(e.checkin_date)) return tr;
         const ns = { id: newStayId, type: "stay", city: e.city || e.name || "新しい滞在", startDate: e.checkin_date, nights: isISO(e.checkout_date) ? Math.max(1, dayDiff(e.checkin_date, e.checkout_date)) : 1, memo: "", status: "未確定", noHotel: false };
-        return { ...tr, itinerary: normalizeItinerary([...tr.itinerary, ns]), hotels: [...(tr.hotels || []), { id: uid(), linkedStayId: ns.id, city: ns.city, guests: 1, total: 0, status: "候補", paymentStatus: "未払い", ...patch }] };
+        return { ...tr, itinerary: fixStayOverlaps(normalizeItinerary([...tr.itinerary, ns]), tr.hotels || [], ns.id), hotels: [...(tr.hotels || []), { id: uid(), linkedStayId: ns.id, city: ns.city, guests: 1, total: 0, status: "候補", paymentStatus: "未払い", ...patch }] };
       },
     };
   }
   if (e.kind === "transport") {
-    const trs = transitsOf(t);
+    // 当てはめるのは都市の間の移動だけ（街の中のタクシーや徒歩に、航空券や列車のメールが入らないように）
+    const trs = transitsOf(t), legs = trs.filter(isLeg);
     const x = trs.find(r => r.id === e.matched_item_id)
-      || trs.find(r => r.departDate === e.depart_date && (looselySame(r.fromCity, e.from_place) || looselySame(r.toCity, e.to_place)))
-      || trs.find(r => r.departDate === e.depart_date && r.mode === e.transport_mode);
+      || legs.find(r => r.departDate === e.depart_date && (looselySame(r.fromCity, e.from_place) || looselySame(r.toCity, e.to_place)))
+      || legs.find(r => r.departDate === e.depart_date && r.mode === e.transport_mode);
     if (x) {
       const patch = cancelled ? { status: "候補" } : compact({ airline: e.carrier, departTime: e.depart_time, arriveDate: e.arrive_date, arriveTime: e.arrive_time, cls: e.seat_class, price: yenAmount, status: statusFor(x.status), paymentStatus: paymentOf(e.paid), mode: x.mode === "未定" && MODES.includes(e.transport_mode) ? e.transport_mode : "" });
       return {

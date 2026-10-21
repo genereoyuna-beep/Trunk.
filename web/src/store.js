@@ -36,10 +36,21 @@ const Store = {
   },
   // ops：前回の保存からこの端末で加えた変更（関数）。ほかの人の保存と重なったら、最新の内容に重ね直して保存し直す。
   // 重ね直したときは、その内容を返す（アプリが画面に反映する）
-  async saveTrip(id, data, ops) {
+  // 同じ旅行の保存は1つずつ順番に行う（前の保存が終わる前に次を送ると、古い版番号のまま送って自分の保存どうしでぶつかるため）
+  saveTrip(id, data, ops) {
     this.cache.set(id, data); this.emit();
     this.inFlight.add(id);
-    try {
+    this.saveQueue = this.saveQueue || new Map();
+    const q = this.saveQueue.get(id) || { n: 0, last: Promise.resolve() };
+    q.n++;
+    const run = q.last.catch(() => {}).then(() => this._saveOnce(id, data, ops));
+    q.last = run;
+    this.saveQueue.set(id, q);
+    const done = () => { if (--q.n === 0) { this.saveQueue.delete(id); this.inFlight.delete(id); } };
+    return run.then(v => { done(); return v; }, e => { done(); throw e; });
+  },
+  async _saveOnce(id, data, ops) {
+    {
       for (let i = 0; i < 4; i++) {
         const m = this.meta.get(id);
         // 緊急時の情報は旅行の中身に入れない（本人だけの trip_private に保存する）
@@ -52,7 +63,7 @@ const Store = {
         }
         const msg = error.message || "";
         if (/trip_too_large|trip_count_limit/.test(msg)) throw { code: "too_large", msg: /trip_count_limit/.test(msg) ? "旅行は1人300件までです。終わった旅行を整理してください。" : "この旅行は大きすぎて保存できません。写真のような大きなデータを貼り付けていないか確かめてください。" };
-        if (/trip_limit/.test(msg)) { this.inFlight.delete(id); await this.load().catch(() => {}); throw { code: "trip_limit" }; }
+        if (/trip_limit/.test(msg)) { const keep = this.inFlight.has(id); this.inFlight.delete(id); await this.load().catch(() => {}); if (keep) this.inFlight.add(id); throw { code: "trip_limit" }; }
         if (/gone/.test(msg)) { this.cache.delete(id); this.meta.delete(id); this.emit(); throw { code: "gone" }; }
         if (!/conflict|duplicate key/.test(msg)) throw error;
         // ほかの人が先に保存していた：最新を読み、自分の変更を重ね直す
@@ -65,7 +76,7 @@ const Store = {
         this.cache.set(id, data);
       }
       throw { code: "conflict" };
-    } finally { this.inFlight.delete(id); }
+    }
   },
   async deleteTrip(id) {
     const joined = this.isJoined(id);

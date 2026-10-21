@@ -111,8 +111,9 @@
    "status": "予約済み",
    "paymentStatus": "支払い済み",
    "checkinTime": "15:00",
-   "checkoutTime": "08:30",
-   "site": "Booking.com"
+   "checkoutTime": "11:00",
+   "site": "Booking.com",
+   "planCheckout": "08:30"
   },
   {
    "id": "h2",

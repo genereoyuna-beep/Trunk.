@@ -218,7 +218,7 @@ function shioriUnits(t, opt) {
           {!s.noHotel && (h.address || h.checkinTime || h.confirmation || h.site) && (
             <div className="sh-kv">
               {h.address && <><span>住所</span><span>{h.address}</span></>}
-              {(h.checkinTime || h.checkoutTime) && <><span>時間</span><span className="mono">IN {h.checkinTime || "—"} ／ OUT {h.checkoutTime || "—"}</span></>}
+              {(h.checkinTime || h.checkoutTime || h.planCheckin || h.planCheckout) && <><span>時間</span><span className="mono">IN {h.checkinTime ? h.checkinTime + "〜" : "—"} ／ OUT 〜{h.checkoutTime || "—"}{(h.planCheckin || h.planCheckout) && <span style={{ fontFamily: "inherit" }}>（予定：{[h.planCheckin && `着 ${h.planCheckin}`, h.planCheckout && `出 ${h.planCheckout}`].filter(Boolean).join("・")}）</span>}</span></>}
               {(h.site || h.confirmation) && <><span>予約</span><span>{[h.site, h.confirmation && `番号 ${h.confirmation}`].filter(Boolean).join(" ・ ")}</span></>}
             </div>
           )}

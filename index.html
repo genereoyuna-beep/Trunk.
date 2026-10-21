@@ -92,6 +92,16 @@ header.scrolled{border-bottom-color:var(--line)}
 .ev .t{font-family:var(--f-mono);font-weight:600;font-size:11.5px}
 .ev .dot{width:9px;height:9px;border-radius:5px;border:2px solid var(--ink);margin-top:4px}
 .ev .dot.mv{border-color:var(--blue);background:var(--blue)}
+/* 移動は予定と予定をつなぐ点線として（アプリと同じ見せ方） */
+.ev.mv{padding:4px 0;border-bottom-style:dashed}
+.ev.mv .t{color:var(--muted);font-weight:500}
+.ev.mv .dot{border:0;background:none;width:9px;height:100%;margin:0;border-left:2px dashed var(--blue);margin-left:3px;border-radius:0}
+.ev.mv > div{color:var(--muted);font-size:.92em}
+.ev.hint{padding:3px 0;border-bottom-style:dashed}
+.ev.hint .dot{border:0;background:none;border-left:2px dashed var(--line);border-radius:0;height:100%;margin:0 0 0 3px}
+.ev.hint .chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.ev.hint .chips small{display:inline;color:var(--faint,#9aa1a8);font-size:10px;margin-right:2px}
+.ev.hint .chips span{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:10px;border:1px dashed var(--line);color:var(--muted);font-size:10.5px;background:var(--surface)}
 .ev small{display:block;color:var(--muted);font-size:10.5px}
 .ev .pill{margin-top:3px}
 .pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;padding:1px 8px;border-radius:999px;white-space:nowrap}
@@ -255,7 +265,11 @@ section{padding:72px 0}
 
 /* abroad */
 .tiles{display:grid;gap:12px}
-@media(min-width:760px){.tiles{grid-template-columns:repeat(3,1fr);gap:16px}}
+@media(min-width:760px){.tiles{grid-template-columns:repeat(2,1fr);gap:16px}}
+@media(min-width:1080px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.entry{background:var(--sunk);border-radius:10px;padding:10px 12px;font-family:var(--f-mono);font-size:11px;line-height:1.7;color:var(--ink)}
+.entry b{display:block;letter-spacing:.12em;font-size:10.5px;margin-bottom:2px}
+.entry span{color:var(--muted)}
 .tile{background:var(--surface);border-radius:16px;padding:20px;border:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
 .tile h3{font-size:17px}
 .tile p{font-size:13.5px;color:var(--muted)}
@@ -444,7 +458,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <div class="daytabs"><span>DAY 1</span><span class="on">DAY 2</span><span>DAY 3</span><span>DAY 4</span></div>
         <div class="tl">
           <div class="ev"><span class="t">09:00</span><i class="dot"></i><div>景福宮<small>韓服レンタルは前日予約</small></div></div>
-          <div class="ev"><span class="t">11:40</span><i class="dot mv"></i><div>地下鉄 3号線 → 鍾路3街<small>約15分</small></div></div>
+          <div class="ev mv"><span class="t">11:40</span><i class="dot mv"></i><div>地下鉄 3号線 → 鍾路3街<small>約15分</small></div></div>
           <div class="ev"><span class="t">12:00</span><i class="dot"></i><div>広蔵市場でお昼<small>ピンデトク、麻薬キンパ</small></div></div>
           <div class="ev"><span class="t">15:00</span><i class="dot"></i><div>聖水洞のカフェ巡り</div></div>
           <div class="ev"><span class="t">19:00</span><i class="dot"></i><div>明洞で夕食<span class="pill booked">予約済み</span></div></div>
@@ -524,14 +538,15 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <div class="eyebrow">02 · Day timeline</div>
         <h3>1日の動きが、<br>時刻表みたいに見える。</h3>
         <p>数日の旅行ほど、1日の流れが大切です。予定と移動を時刻順に並べ、その日泊まる宿まで1画面に収めます。</p>
-        <ul><li>移動の所要時間も入れて、無理のない計画に</li><li>海外の時差は自動で入力。日本時間との差も表示</li><li>スポット名を入れると住所が候補に出る</li></ul>
+        <ul><li>予定と予定の間に「徒歩 約15分・電車 約10分」の目安。押せば移動として入る</li><li>移動の時間が足りないときは、その場で知らせる</li><li>海外の時差は自動で入力。日本時間との差も表示</li><li>スポット名を入れると住所が候補に出る</li></ul>
       </div>
       <div class="panel bigtl" aria-hidden="true">
         <div class="dayhead"><div class="no"><small>DAY</small><b>1</b></div><div class="mid"><small>2026.12.04 THU</small><b>東京 → ソウル</b></div></div>
         <div class="ev"><span class="t">06:30</span><i class="dot"></i><div>羽田空港 第3ターミナル<small>オンラインチェックイン済み</small></div><span class="yen"></span></div>
-        <div class="ev"><span class="t">08:55</span><i class="dot mv"></i><div>羽田 → 仁川<small>2時間30分 · 座席 32A</small></div><span class="yen">¥28,400</span></div>
-        <div class="ev"><span class="t">12:10</span><i class="dot mv"></i><div>空港鉄道 AREX → ソウル駅<small>約45分</small></div><span class="yen">₩9,500</span></div>
+        <div class="ev mv"><span class="t">08:55</span><i class="dot mv"></i><div>羽田 → 仁川<small>2時間30分 · 座席 32A</small></div><span class="yen">¥28,400</span></div>
+        <div class="ev mv"><span class="t">12:10</span><i class="dot mv"></i><div>空港鉄道 AREX → ソウル駅<small>約45分</small></div><span class="yen">₩9,500</span></div>
         <div class="ev"><span class="t">15:00</span><i class="dot"></i><div>明洞のホテルにチェックイン<span class="pill booked">予約済み</span></div><span class="yen"></span></div>
+        <div class="ev hint"><span class="t"></span><i class="dot"></i><div class="chips"><small>目安</small><span>徒歩 約5分</span><span>経路 ↗</span></div><span class="yen"></span></div>
         <div class="ev"><span class="t">18:30</span><i class="dot"></i><div>サムギョプサルで夕食<small>3人で予約</small></div><span class="yen">₩45,000</span></div>
         <div class="tz"><b>UTC+9</b>ソウルは日本と同じ時刻です</div>
       </div>
@@ -573,7 +588,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <div class="eyebrow">03 · Travel booklet</div>
       <h3 style="color:#F3F4F1">しおりは、<br>搭乗券のデザインで。</h3>
       <p style="color:#C9D0D7">入力した旅程から、表紙・ルートマップ・旅程表・日ごとの予定・宿と移動の一覧まで、A5サイズのしおりを自動でつくります。PDFで保存して、印刷もそのままどうぞ。</p>
-      <div class="shiori-note"><span class="tag">表紙</span><span class="tag">ルートマップ</span><span class="tag">旅程表</span><span class="tag">日ごとの予定</span><span class="tag">宿・移動</span><span class="tag">持ち物</span><span class="tag">フレーズ集</span></div>
+      <div class="shiori-note"><span class="tag">表紙</span><span class="tag">ルートマップ</span><span class="tag">旅程表</span><span class="tag">日ごとの予定</span><span class="tag">宿・移動</span><span class="tag">持ち物</span><span class="tag">フレーズ集</span><span class="tag">入国審査用（英語）</span></div>
     </div>
     <div class="pages rv" aria-hidden="true">
       <div class="pg">
@@ -622,7 +637,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <div class="eyebrow">04 · Route map</div>
       <h3>どこを回るか、<br>地図でひと目に。</h3>
       <p>泊まる街と移動を、自動で地図に描きます。周遊旅行でも、街の順番と泊数がすぐにわかります。</p>
-      <ul><li>宿泊地は黒い点、飛行機は青い点線</li><li>しおりにもそのまま入ります</li></ul>
+      <ul><li>宿泊地は黒い点、飛行機は青い点線</li><li>別の都市への移動を入れると、滞在が自動で分かれます</li><li>しおりにもそのまま入ります</li></ul>
     </div>
     <div class="mapbox rv" aria-hidden="true">
       <svg viewBox="0 0 560 360" width="100%">
@@ -692,7 +707,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
     <div class="sec-head rv">
       <div class="eyebrow">06 · Overseas</div>
       <h2>海外旅行の<br>「ちょっと困る」も。</h2>
-      <p>時差、言葉、お金の計算。海外ならではの面倒を、旅程と一緒に片づけます。</p>
+      <p>時差、言葉、入国審査、お金の計算。海外ならではの面倒を、旅程と一緒に片づけます。</p>
     </div>
     <div class="tiles">
       <div class="tile rv">
@@ -704,6 +719,11 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
         <h3>現地のフレーズ集</h3>
         <p>行き先の言葉で、あいさつや買い物・食事の定番フレーズを。しおりにも載せられます。</p>
         <div class="phr" aria-hidden="true"><span>ありがとう</span><span>감사합니다</span><span>これをください</span><span>이거 주세요</span><span>いくらですか？</span><span>얼마예요?</span></div>
+      </div>
+      <div class="tile rv">
+        <h3>入国審査の紙も、しおりから</h3>
+        <p>名前・便名・宿の英語の住所を1枚にまとめて印刷。足りない項目は、アプリが教えてくれます。</p>
+        <div class="entry" aria-hidden="true"><b>TRAVEL ITINERARY</b><span>Name</span> YAMADA HANAKO<br><span>Flight</span> KE2708 HND→ICN<br><span>Stay</span> Myeongdong Hotel, Seoul</div>
       </div>
       <div class="tile rv">
         <h3>立て替えと精算</h3>
@@ -721,7 +741,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <div class="eyebrow">07 · Ask AI</div>
       <h3>いつもの AI に、<br>旅程ごと相談。</h3>
       <p>ChatGPT・Claude・Gemini に、旅程をまとめた相談文つきでワンタップ。返ってきた答えを貼り付ければ、予定や持ち物の候補として取り込めます。</p>
-      <ul><li>この日の予定・旅程の見直し・持ち物・自由な質問</li><li>LINE グループの会話を貼り付けて、行きたい場所や持ち物を候補に</li><li>あなた自身の AI を使うので、追加の料金はかかりません</li><li>パスポートなどの個人情報は、相談文に入りません</li></ul>
+      <ul><li>行き先と旅のシーン（グルメ・のんびりなど）を伝えて、旅行全体の予定の案をもらう</li><li>この日の予定・旅程の見直し・持ち物・自由な質問</li><li>LINE グループの会話を貼り付けて、行きたい場所や持ち物を候補に</li><li>あなた自身の AI を使うので、追加の料金はかかりません</li><li>パスポートなどの個人情報は、相談文に入りません</li></ul>
     </div>
     <div class="panel rv" aria-hidden="true">
       <div class="ai-topics">
@@ -748,7 +768,7 @@ footer{padding:36px 0 44px;font-size:12.5px;color:var(--muted)}
       <h2>はじめ方は、3ステップ。</h2>
     </div>
     <div class="steps">
-      <div class="step rv"><div class="no">STEP 01</div><h3>旅行をつくる</h3><p>行き先と日付を入れるだけ。日ごとの枠が自動でできあがります。</p></div>
+      <div class="step rv"><div class="no">STEP 01</div><h3>旅行をつくる</h3><p>行き先と日付を入れるだけ。どこから出発するかも入れると、行きと帰りの移動まで入ります。</p></div>
       <div class="step rv"><div class="no">STEP 02</div><h3>宿と移動、予定を入れる</h3><p>決まったものから順に。未手配のものは橙色で残るので、あとから埋めれば大丈夫です。</p></div>
       <div class="step rv"><div class="no">STEP 03</div><h3>しおりにして、共有する</h3><p>リンクを同行者に送れば準備完了。PDFのしおりは印刷して持って行けます。</p></div>
     </div>

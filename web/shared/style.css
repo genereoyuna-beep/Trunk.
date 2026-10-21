@@ -390,3 +390,9 @@ details > summary{cursor:pointer}
 .hero .route2{margin-top:16px;font-size:22px;font-weight:700;line-height:1.3;letter-spacing:.02em}
 .bookrow.tl-arr .t1{font-size:13px;font-weight:500;color:var(--muted)}
 .bookrow.tl-arr .t2{font-size:11px}
+.tl-move{display:flex;align-items:flex-start;gap:8px;padding:2px 14px 2px 31px;position:relative;z-index:1}
+.tl-move-body{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;min-width:0;padding-left:28px}
+.tl-move-chip{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:12px;border:1px dashed var(--line);background:var(--surface);color:var(--muted);font-size:11px;text-decoration:none;cursor:pointer}
+.tl-move-chip:hover{color:var(--blue);border-color:var(--blue);border-style:solid}
+.tl-move-warn{flex-basis:100%;font-size:11px;color:var(--orange)}
+.tl-move-lbl{font-size:10px;color:var(--faint)}

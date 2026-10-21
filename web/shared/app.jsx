@@ -799,6 +799,19 @@ function betweenTime(a, b) {
   if (x != null && x + 60 < 24 * 60) return fromMin(Math.ceil((x + 60) / 15) * 15);
   return "";
 }
+// 2点の距離から、移動にかかる時間のだいたいの目安を出す（道は直線の1.3倍として計算。5分単位）
+function moveEstimates(a, b) {
+  const R = 6371, rad = (x) => x * Math.PI / 180;
+  const dLat = rad(b[0] - a[0]), dLng = rad(b[1] - a[1]);
+  const km = 2 * R * Math.asin(Math.sqrt(Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(dLng / 2) ** 2)) * 1.3;
+  const r5 = (m) => Math.max(5, Math.round(m / 5) * 5);
+  const out = [];
+  if (km <= 2.5) out.push({ mode: "徒歩", icon: "route", min: r5(km / 4.5 * 60) });
+  if (km >= 1.2) out.push({ mode: "電車", icon: "train", min: r5(10 + km / 30 * 60) });
+  if (km >= 0.8 && km <= 40) out.push({ mode: "タクシー", icon: "car", min: r5(5 + km / 22 * 60) });
+  return { km, out };
+}
+const hhmm = (s) => { const m = String(s || "").match(/\d{1,2}:\d{2}/g); return m ? m : []; };
 function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
   const { ev, sleeping, night } = dayEvents(t, iso);
   // 予定と予定の間の「＋」。押すと、時刻と前後の場所が入った追加の画面が開く（予定／移動は画面の上で切り替える）
@@ -808,6 +821,29 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
     // 場所は見出し（「○○ 発 → △△」など）ではなく、その予定・移動の本当の場所から取る。前は「終わったあとにいる所」、後ろは「始まる所」
     const placeOf = (e, last) => { if (!e) return ""; const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; return String((grp && grp.find(Boolean)) || e.map || "").trim(); };
     const opts = { time: betweenTime(a && a.time, b && b.time), from: placeOf(a, true), to: placeOf(b, false) };
+    // 前後の場所の位置が分かれば、移動の目安を出す（どちらかがすでに移動なら出さない）
+    const isMove = (e) => e && ((e.edit && e.edit.kind === "transit") || e.icon === "route");
+    const geoOf = (e, last) => { const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; for (const n of (grp || [])) { const ll = n && geoFor(n, t.geo); if (ll) return { name: String(n).trim(), ll }; } return null; };
+    const pa = b && !isMove(a) && !isMove(b) && geoOf(a, true), pb = pa && geoOf(b, false);
+    const est = pa && pb && pa.name !== pb.name ? moveEstimates(pa.ll, pb.ll) : null;
+    if (est && est.out.length) {
+      const endA = hhmm(a.time).pop(), startB = hhmm(b.time)[0];
+      const gapMin = endA && startB ? toMin(startB) - toMin(endA) : null;
+      const best = Math.min(...est.out.map(o => o.min));
+      const add = (o) => { const st = endA || ""; onInsert("local", { quick: { category: "移動", desc: `${pa.name} → ${pb.name}`, mode: o.mode, fromAddress: pa.name, toAddress: pb.name, startTime: st, endTime: st ? fromMin(Math.min(24 * 60 - 1, toMin(st) + o.min)) : "" } }); };
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${pa.ll.join(",")}&destination=${pb.ll.join(",")}&travelmode=transit`;
+      return (
+        <div key={"g" + i} className="tl-move">
+          <button className="tl-gap" style={{ margin: 0, width: "auto", padding: 0 }} aria-label={`${a.title} と ${b.title} の間に追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>
+          <span className="tl-move-body">
+            <span className="tl-move-lbl">目安</span>
+            {est.out.map(o => <button key={o.mode} className="tl-move-chip" title={`${o.mode}の移動として追加`} onClick={() => add(o)}><Icon n={o.icon} s={12} />{o.mode} 約{o.min}分</button>)}
+            <a className="tl-move-chip" href={url} target="_blank" rel="noopener noreferrer">経路<Icon n="ext" s={11} /></a>
+            {gapMin != null && gapMin >= 0 && gapMin < best && <span className="tl-move-warn">移動に約{best}分かかりますが、間は{gapMin}分です</span>}
+          </span>
+        </div>
+      );
+    }
     return <button key={"g" + i} className={"tl-gap" + (b ? "" : " last")} aria-label={b ? `${a.title} と ${b.title} の間に追加` : `${a.title} のあとに追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>;
   };
   return (
@@ -1687,6 +1723,8 @@ function App() {
     const d = isISO(date) ? date : r ? r.start : todayISO();
     const stay = staysOf(tr0).find(s => s.startDate && d >= s.startDate && d < stayEnd(s));
     const l = { id: uid(), linkedStayId: stay ? stay.id : null, category: "観光", desc: "", address: "", fromAddress: "", toAddress: "", date: d, startTime: (o && o.time) || "", endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: "", paymentStatus: "未払い", status: "候補" };
+    // 移動の目安から押したときは、画面を開かずにそのまま入れる
+    if (o && o.quick) { update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), { ...l, ...o.quick }] })); toast(`${o.quick.mode}の移動を入れました（目安の時間です）`); return; }
     update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l] })); setSheet({ kind: "local", id: l.id, back, fresh: true, opts: o || null, init: JSON.stringify(l) });
   };
 

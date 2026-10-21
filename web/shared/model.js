@@ -201,12 +201,13 @@ const stayEnd = (s) => addDays(s.startDate, Math.max(1, nightsOf(s)));
 const hotelOf = (t, s) => (t.hotels || []).find(h => h.linkedStayId === s.id);
 const dateKey = (r) => (r.type === "transit" ? r.departDate : r.startDate) || "9999-12-31";
 
-// 日付順（同じ日なら移動→滞在）
+// 日付順（同じ日なら移動→滞在。移動どうしは出発の時刻順）
 function sortItinerary(list) {
   return list.map((r, i) => [r, i]).sort((a, b) => {
     const ka = dateKey(a[0]), kb = dateKey(b[0]);
     if (ka !== kb) return ka < kb ? -1 : 1;
     if (a[0].type !== b[0].type) return a[0].type === "transit" ? -1 : 1;
+    if (a[0].type === "transit" && (a[0].departTime || "") !== (b[0].departTime || "")) return (a[0].departTime || "99") < (b[0].departTime || "99") ? -1 : 1;
     return a[1] - b[1];
   }).map(x => x[0]);
 }
@@ -229,6 +230,14 @@ function normalizeItinerary(list) {
   return markLegs(sortItinerary(out));
 }
 
+// 旅の出発地と最後に着く所。都市間の移動だけを時刻順に見る（街の中のタクシーや徒歩は使わない）
+function tripEnds(t) {
+  const legs = transitsOf(t).filter(x => isLeg(x) && !SHORT_MODES.includes(x.mode) && isISO(x.departDate)).sort((a, b) => (a.departDate + (a.departTime || "")).localeCompare(b.departDate + (b.departTime || "")));
+  const st = sortItinerary(staysOf(t)).filter(s => isISO(s.startDate));
+  const s0 = st.length ? st[0].startDate : "", s1 = st.length ? st[st.length - 1].startDate : "";
+  const firstLeg = legs.find(x => !s0 || x.departDate <= s0) || null, lastLeg = [...legs].reverse().find(x => !s1 || x.departDate >= s1) || null;
+  return { from: firstLeg ? firstLeg.fromCity : st.length ? st[0].city : "", to: lastLeg ? lastLeg.toCity : st.length ? st[st.length - 1].city : "", firstLeg, lastLeg };
+}
 // 滞在の途中で別の都市へ移ったら、その日から滞在を分ける（「都市・宿」を自分で足さなくても都市が変わるように）
 // 同じ日に元の都市へ戻る移動があれば日帰りとみなして分けない。分けたら、分けた都市の名前を返す
 const townOf = (c) => String(splitCity(c).main || "").split(/[・(（]/)[0].trim();

@@ -105,14 +105,13 @@ function shioriUnits(t, opt) {
   const H = (key, title, sub, en) => U.push({ key, keepNext: true, el: <div className="sh-h2"><span className="sh-h2t"><span className="sh-stamp">{en}</span>{title}</span>{sub && <small className="mono">{sub}</small>}</div> });
   // 表紙（1ページまるごと）
   const route = uniq(sortItinerary(staysOf(t)).filter(s => s.city).map(s => splitCity(s.city).main));
-  const sorted = sortItinerary(t.itinerary || []);
-  const startPlace = sorted.length ? (sorted[0].type === "transit" ? sorted[0].fromCity : sorted[0].city) : "";
-  const lastRow = sorted[sorted.length - 1];
-  const endPlace = lastRow ? (lastRow.type === "transit" ? lastRow.toCity : lastRow.city) : "";
+  // 出発地と最後に着く所は、都市間の移動だけで決める（街の中のタクシーや徒歩は使わない）
+  const ends = tripEnds(t);
+  const startPlace = ends.from, endPlace = ends.to;
   const round = startPlace && splitCity(startPlace).main === splitCity(endPlace).main;
   const toPlace = round ? (route[0] || endPlace) : endPlace;
   // 往復なら、行きの便の到着空港のコードを使う（例：ソウル → ICN）
-  const firstMove = sorted.find(x => x.type === "transit");
+  const firstMove = ends.firstLeg;
   const fromCode = codeFor(startPlace);
   const toCode = (round && firstMove && codeFor(firstMove.toCity)) || codeFor(toPlace);
   const BigPlace = ({ code, name }) => code ? <b className="mono">{code}</b> : <b className="tk-bigname">{splitCity(name).main || "—"}</b>;

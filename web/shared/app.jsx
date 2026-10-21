@@ -339,7 +339,7 @@ function LocalEditor({ t, id, update, close }) {
 }
 
 // ================= ホーム =================
-function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go, openDay, openPhrases, openEmergency, openShiori, openSettings, onExpense }) {
+function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go, openDay, openPhrases, openEmergency, openShiori, openSettings, onExpense, onPlanAI }) {
   const r = tripRange(t), today = todayISO();
   const days = r ? dayDiff(today, r.start) : null;
   const sorted = sortItinerary(t.itinerary || []);
@@ -372,6 +372,13 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
             <span className="ico blue"><Icon n="clock" /></span>
             <span style={{ flex: 1, minWidth: 0 }}><span className="t1">今日の予定</span><span className="t2">{md(today)}（{wdOf(today)}）の動きを時刻順に見る</span></span>
             <Icon n="down" s={16} />
+          </button>
+        )}
+        {r && onPlanAI && today < r.start && (t.localTransport || []).length < 3 && (
+          <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12, boxShadow: "0 0 0 1.5px var(--blue)" }} onClick={onPlanAI}>
+            <span className="ico blue"><Icon n="star" /></span>
+            <span style={{ flex: 1, minWidth: 0 }}><span className="t1">予定の案をAIに出してもらう</span><span className="t2" style={{ whiteSpace: "normal" }}>{(t.scenes || []).length ? `${t.scenes.join("・")}の旅に合わせて、` : ""}いつもの ChatGPT・Claude・Gemini に聞いて、答えをそのまま取り込めます</span></span>
+            <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>
           </button>
         )}
         {r && onExpense && today >= r.start && today <= r.end && (
@@ -1276,7 +1283,7 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
       {typeof TrunkPlanLine === "function" && trips.length > 0 && <TrunkPlanLine />}
       {limited && !form && <div className="note">{FREE_LIMIT_MSG}</div>}
       {limited && !form && typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
-      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ dest: "", name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "", people: 1, names: [] })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
+      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ dest: "", scenes: [], name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "", people: 1, names: [] })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
       {form && (
         <section className="card stack" style={{ gap: 10 }}>
           <h3>新しい旅行</h3>
@@ -1289,6 +1296,9 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
             {form.home.trim() && form.dest.trim() && form.start && <div className="xs muted wide" style={{ marginTop: -4 }}>行きと帰りの移動を「未予約」で入れておきます。</div>}
             <Field label="人数" opt><select value={form.people || 1} onChange={e => setForm({ ...form, people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
             {(form.people || 1) > 1 && <Field label="名前（割り勘や持ち物に使います）" opt wide><div className="stack" style={{ gap: 6 }}>{Array.from({ length: form.people }, (_, i) => <TextIn key={i} value={(form.names || [])[i] || ""} onChange={v => { const n = [...(form.names || [])]; n[i] = v; setForm({ ...form, names: n }); }} placeholder={i === 0 ? "自分" : `同行者${i}`} />)}</div></Field>}
+            <div className="field opt wide"><span>どんな旅にしたい？<em className="opt-tag">任意</em></span>
+              <div className="chips">{TRIP_SCENES.map(k => { const on = (form.scenes || []).includes(k); return <button key={k} type="button" className="chip" aria-pressed={on} onClick={() => setForm(f => ({ ...f, scenes: (f.scenes || []).includes(k) ? f.scenes.filter(x => x !== k) : [...(f.scenes || []), k] }))}>{k}</button>; })}</div>
+            </div>
             <Field label="旅行の名前" opt wide><TextIn value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder={autoTripName(form) || "空なら行き先と日数から付けます"} /></Field>
             {FEATURES.ai && <Field label="どんな旅行？（書くとClaudeが日程の下書きを作ります・任意）" wide><textarea value={form.idea} onChange={e => setForm({ ...form, idea: e.target.value })} placeholder="例：台北。夜市と温泉が好き。九份にも行きたい。のんびりめ" /></Field>}
           </div>
@@ -1538,6 +1548,7 @@ function App() {
     let data = { ...emptyTrip(form.name.trim() || autoTripName(form) || "新しい旅行", form.start || "", form.nights), gmailLabel: (form.label || "").trim() };
     // 行き先：最初の滞在の都市にする。出発地もあれば、行きと帰りの移動を「未予約」で入れる
     if (dest) data = { ...data, itinerary: data.itinerary.map((x, i) => i === 0 && x.type === "stay" ? { ...x, city: dest } : x) };
+    if ((form.scenes || []).length) data = { ...data, scenes: form.scenes };
     if (dest && home && form.start) {
       const last = addDays(form.start, Number(form.nights) || 0);
       const mv = (from, to, d) => ({ id: uid(), type: "transit", mode: "未定", desc: "", fromCity: from, toCity: to, departDate: d, departTime: "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い", needsBooking: true });
@@ -1811,7 +1822,7 @@ function App() {
         {tab === "home" && typeof TrunkPassBanner === "function" && <TrunkPassBanner onTrips={() => setSheet({ kind: "trips" })} />}
         {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings", section: "share" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
-        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "shift" })} onExpense={() => { setMoneyMode("expense"); setTab("money"); }} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
+        {tab === "home" && <HomeView t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "shift" })} onExpense={() => { setMoneyMode("expense"); setTab("money"); }} onPlanAI={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "plan" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
         {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddLocal={(d, o) => addLocal(d, undefined, o)} onAddMove={(d, o) => addTransit(d, undefined, o)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => setSheet({ kind: "add" })} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={meName === t.myName ? t : { ...t, myName: meName }} stats={stats} update={update} mode={moneyMode} setMode={setMoneyMode} tripId={tripId} setMe={setMe} />}

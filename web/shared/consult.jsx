@@ -7,7 +7,10 @@ const CONSULT_AIS = [
   { key: "claude", label: "Claude", url: (q) => `https://claude.ai/new?q=${q}`, home: "https://claude.ai/new" },
   { key: "gemini", label: "Gemini", url: null, home: "https://gemini.google.com/app" },
 ];
+// 旅のタイプ（旅行を作るときと、予定の相談で使う）
+const TRIP_SCENES = ["観光・街歩き", "グルメ", "買い物", "自然・景色", "温泉・のんびり", "体験・アクティビティ", "家族・子ども連れ", "友だちと", "ひとり旅", "記念日"];
 const CONSULT_TOPICS = [
+  { key: "plan", label: "旅行全体の予定を作ってもらう", sub: "旅のタイプに合わせて、日ごとの予定の案を出してもらい、取り込めます" },
   { key: "day", label: "この日の予定", sub: "観光・食事の候補を出してもらい、取り込めます" },
   { key: "line", label: "LINEのトークから候補を作る", sub: "グループの会話を貼り付けると、行きたい場所や持ち物を拾って取り込めます" },
   { key: "trip", label: "旅程全体の見直し", sub: "無理や抜けがないか見てもらう" },
@@ -39,6 +42,12 @@ function consultPrompt(t, topic, iso, wish, lang) {
     const { ev, head: where, sleeping } = dayEvents(t, iso);
     return head + `\n## 相談したいこと\n${md(iso)}（${wdOf(iso)}曜日）の過ごし方を提案してください。\n場所: ${where}${sleeping ? `（${splitCity(sleeping.city).main}に宿泊）` : ""}\nすでに決まっている予定: ${ev.length ? ev.map(e => `${e.time || "時刻未定"} ${e.title}`).join(" / ") : "なし"}\n希望: ${wish || "特になし"}\n決まっている予定や移動と時刻が重ならないように、3〜6件を時刻順に。`
       + fmt(`{"date":"${iso}","items":[{"time":"HH:MM","end_time":"HH:MM","title":"予定の名前","category":"観光|食事|買い物|ツアー|入場券|その他体験","address":"場所（施設名や地区名）","price_jpy":1人あたりの費用の目安（円・整数）,"needs_booking":事前予約が必要ならtrue,"note":"ひとこと"}]}`);
+  }
+  if (topic === "plan") {
+    const r = tripRange(t);
+    const scenes = (t.scenes || []).join("・");
+    return head + `\n## 相談したいこと\nこの旅行の日ごとの予定の案を作ってください。${scenes ? `旅のタイプ: ${scenes}。` : ""}すでに決まっている移動や予定と重ならないように、移動時間も考えて、1日あたり3〜5件にしてください。${r ? `期間は ${r.start} から ${r.end} です。` : ""}\n希望: ${wish || "特になし"}`
+      + fmt(`{"places":[{"date":"YYYY-MM-DD","time":"HH:MM","title":"予定の名前","category":"観光|食事|買い物|ツアー|入場券|その他体験","address":"場所（施設名や地区名）","note":"ひとこと"}]}`);
   }
   if (topic === "line") {
     const r = tripRange(t);
@@ -87,7 +96,7 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
   const [plang, setPlang] = useState((missing[0] || {}).lang || "");
   const topics = CONSULT_TOPICS.filter(o => o.key !== "phrase" || missing.length);
   const prompt = consultPrompt(t, topic, iso, wish.trim(), plang);
-  const canImport = topic === "day" || topic === "pack" || topic === "phrase" || topic === "line";
+  const canImport = topic === "day" || topic === "pack" || topic === "phrase" || topic === "line" || topic === "plan";
   // claude.ai のアーティファクトのように枠の中で動いているときは、開いたタブにも制限が残って AI のページが表示されない。
   // そのときは開かずに、相談文をコピーして案内だけ出す
   const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
@@ -141,7 +150,7 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
           const d = isISO(o.date) && r0 && o.date >= r0.start && o.date <= r0.end ? o.date : "";
           const stay = d ? staysOf(tr).find(s => s.startDate && d >= s.startDate && d < stayEnd(s)) : null;
           return { id: uid(), linkedStayId: stay ? stay.id : null, category: LOCAL_CATS.includes(o.category) ? o.category : "観光", desc: String(o.title).slice(0, 80), address: String(o.address || ""), fromAddress: "", toAddress: "",
-            date: d, startTime: HHMM(o.time), endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: [o.note, "（LINEの会話から）"].filter(Boolean).join(" "), paymentStatus: "未払い", status: "候補" };
+            date: d, startTime: HHMM(o.time), endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: [o.note, topic === "plan" ? "（AIに相談）" : "（LINEの会話から）"].filter(Boolean).join(" "), paymentStatus: "未払い", status: "候補" };
         });
         const packing = { ...(tr.packing || {}) };
         packs.forEach(o => {
@@ -150,7 +159,7 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
         });
         return { ...tr, localTransport: [...(tr.localTransport || []), ...rows], packing };
       });
-      done(`LINEの会話から、予定${places.length}件・持ち物${packs.length}件を候補として追加しました`);
+      done(topic === "plan" ? `AIの案から、予定${places.length}件を候補として追加しました` : `LINEの会話から、予定${places.length}件・持ち物${packs.length}件を候補として追加しました`);
       return;
     }
     if (parsed.kind === "day") {
@@ -194,6 +203,12 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
         <Field label="LINE の会話を貼り付け"><textarea value={wish} onChange={e => setWish(e.target.value)} placeholder={"2026/10/16(金)\n21:03\tあおい\t2日目は水原の華城に行きたい！\n21:05\tけんた\t変換プラグ持っていくね"} style={{ minHeight: 140 }} /></Field>
         {wish.length > LINE_MAX && <div className="xs muted">長いので、新しい方から約2万文字を使います。</div>}
       </>}
+      {topic === "plan" && (
+        <div className="stack" style={{ gap: 6 }}>
+          <span className="small muted">どんな旅にしたい？（いくつでも）</span>
+          <div className="chips">{TRIP_SCENES.map(k => { const on = (t.scenes || []).includes(k); return <button key={k} className="chip" aria-pressed={on} onClick={() => update(tr => ({ ...tr, scenes: on ? (tr.scenes || []).filter(x => x !== k) : [...(tr.scenes || []), k] }))}>{k}</button>; })}</div>
+        </div>
+      )}
       {topic !== "phrase" && topic !== "line" && <Field label={topic === "free" ? "聞きたいこと" : "希望・補足（任意）"}><textarea value={wish} onChange={e => setWish(e.target.value)} placeholder={topic === "free" ? "例：2日目の夜にソウルでおすすめの過ごし方は？" : topic === "day" ? "例：子連れ。歩くのは少なめで、夜は焼肉" : "例：予算を抑えたい"} /></Field>}
       <div className="formsec">AIを選んで開く</div>
       <div className="row">{CONSULT_AIS.map(ai => <button key={ai.key} className="btn" onClick={() => open(ai)}>{ai.label}で相談{ai.url ? "" : "（貼り付け）"}</button>)}</div>

@@ -164,8 +164,8 @@ function TrunkViewShare({ tripId, name }) {
   const fmt = (iso) => { const d = new Date(iso); return (d.getMonth() + 1) + "/" + d.getDate(); };
   return (
     <section className="stack" style={{ gap: 10 }}>
-      <div className="formsec">見せるだけの共有リンク</div>
-      <div className="note">リンクを開いた人は、ログインなしで旅程・しおり・地図を見られます（編集はできません）。緊急時の情報と支出の記録は見えません。いつ開いても最新の旅程です。</div>
+      <div className="formsec">見るだけ（相手はログイン不要）</div>
+      <div className="xs muted">旅程・しおり・地図を見られます。緊急時の情報と支出は見えません。</div>
       {sh === undefined ? <div className="small muted">読み込み中…</div> : !url ? (
         <button className="btn block" disabled={st === "busy"} onClick={() => run(async () => { await Store.startShare(tripId); track("share_create", { type: "view" }); })}>{sh ? "共有リンクをもう一度使う" : "共有リンクを作る"}</button>
       ) : (
@@ -276,8 +276,8 @@ function TrunkShareSection({ t, tripId }) {
   const until = link ? new Date(link.expires_at) : null;
   return (
     <section className="stack" style={{ gap: 10 }}>
-      {owner ? <TrunkViewShare tripId={tripId} name={t && t.name} /> : <><div className="formsec">見せるだけの共有リンク</div><div className="small muted">共有リンクは、旅行を作った人が出せます。</div></>}
-      <div className="formsec">一緒に編集する人</div>
+      {owner ? <TrunkViewShare tripId={tripId} name={t && t.name} /> : <><div className="formsec">見るだけ（相手はログイン不要）</div><div className="small muted">共有リンクは、旅行を作った人が出せます。</div></>}
+      <div className="formsec">一緒に編集（相手は Google でログイン）</div>
       {people === null ? <div className="small muted">読み込み中…</div> : (
         <div className="stack" style={{ gap: 6 }}>
           {people.map(p => (
@@ -288,7 +288,7 @@ function TrunkShareSection({ t, tripId }) {
           ))}
         </div>
       )}
-      <div className="note">招待リンクを送ると、相手は Google でログインしてこの旅行に参加し、一緒に編集できます（無料）。持ち物リストは人ごとに分かれます。参加した旅行は、相手の無料の枠には数えません。</div>
+      <div className="xs muted">参加は無料で、相手の無料の枠にも数えません。持ち物リストは人ごとに分かれます。</div>
       {!link ? <button className="btn block" disabled={st === "busy"} onClick={() => make(false)}>招待リンクを作る</button> : (
         <div className="stack" style={{ gap: 8 }}>
           <div className="mono small" style={{ wordBreak: "break-all", background: "var(--sunk)", borderRadius: 10, padding: "8px 10px" }}>{url}</div>
@@ -382,7 +382,7 @@ function TrunkMailCard({ t, update, toast, trips, tripId, onPick, onCreate, onEd
   };
   if (!st.ready) return null;
   if (!st.paid) return (
-    <details className="card small" style={{ padding: "10px 14px" }}>
+    <details className="card small" style={{ padding: "10px 14px", order: 99 }}>
       <summary style={{ cursor: "pointer" }}><b>予約メールを転送して取り込む</b><span className="muted">（パスの機能）</span></summary>
       <div className="stack" style={{ gap: 8, marginTop: 8 }}>
         <p className="muted" style={{ margin: 0 }}>予約の確認メールを転送するだけで、宿や移動を読み取って旅程に反映できます。旅行パス・3か月パスを使っているときに使えます。</p>

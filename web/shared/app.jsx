@@ -355,7 +355,12 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
   const routeLabel = (() => {
     // 空港名は外して都市だけ（「東京・羽田(HND)」→「東京」）
     const town = (x) => String(x || "").split(/[・(（]/)[0].trim();
-    const home = sorted.length && sorted[0].type === "transit" ? town(firstPlace) : "";
+    // 出発地と最後に着く所は、都市間の移動（街の中のタクシーや徒歩は除く）を時刻順に見て決める
+    const legs = transitsOf(t).filter(x => isLeg(x) && !SHORT_MODES.includes(x.mode) && isISO(x.departDate)).sort((a, b) => (a.departDate + (a.departTime || "")).localeCompare(b.departDate + (b.departTime || "")));
+    const st0 = staysOf(t).filter(s => isISO(s.startDate)).map(s => s.startDate).sort();
+    const firstLeg = legs.find(x => !st0.length || x.departDate <= st0[0]), lastLeg = [...legs].reverse().find(x => !st0.length || x.departDate >= st0[st0.length - 1]);
+    const home = firstLeg ? town(firstLeg.fromCity) : "";
+    const lastPlace = lastLeg ? lastLeg.toCity : "";
     const cs = uniq(staysOf(t).map(s => town(splitCity(s.city).main)).filter(c => c && c !== home));
     const dest = cs.length > 2 ? `${cs[0]}ほか${cs.length - 1}都市` : cs.join("・");
     if (!home) return dest || t.name;

@@ -839,7 +839,10 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
     // 予定は「場所」が入っていればそれだけで探す（予定の名前に残った古い位置を使わないように）
     const namesOf = (e, last) => { const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; const ns = (grp || []).map(n => String(n || "").trim()).filter(n => n && !/未定/.test(n)); return e.edit && e.edit.kind === "local" && String((grp || [])[0] || "").trim() ? ns.slice(0, 1) : ns; };
     const geoOf = (e, last) => { if (e.ll) return { name: namesOf(e, last)[0] || e.title, ll: e.ll }; for (const n of namesOf(e, last)) { const ll = geoNear(n, t.geo); if (ll) return { name: n, ll }; } return null; };
-    const both = b && !isMove(a) && !isMove(b);
+    // × で閉じた目安は出さない（場所が変わればまた出る）
+    const hideKey = b ? `${namesOf(a, true)[0] || a.title}>${namesOf(b, false)[0] || b.title}` : "";
+    const both = b && !isMove(a) && !isMove(b) && !(t.moveHintsOff || []).includes(hideKey);
+    const closeBtn = <button className="tl-move-x" aria-label="この目安を閉じる" title="閉じる" onClick={() => onInsert("local", { hideHint: hideKey })}><Icon n="x" s={11} /></button>;
     const pa = both && geoOf(a, true), pb = both && geoOf(b, false);
     const est = pa && pb && pa.name !== pb.name ? moveEstimates(pa.ll, pb.ll) : null;
     // 位置が分からない場所があれば、押したときだけ Google で調べる（1日の回数に限りがあるので自動では調べない）
@@ -859,7 +862,7 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
       return (
         <div key={"g" + i} className="tl-move">
           <button className="tl-gap" style={{ margin: 0, width: "auto", padding: 0 }} aria-label={`${a.title} と ${b.title} の間に追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>
-          <span className="tl-move-body"><button className="tl-move-chip" disabled={locating != null} onClick={look}>{locating === i ? "調べています…" : "移動の目安を出す"}</button></span>
+          <span className="tl-move-body"><button className="tl-move-chip" disabled={locating != null} onClick={look}>{locating === i ? "調べています…" : "移動の目安を出す"}</button>{closeBtn}</span>
         </div>
       );
     }
@@ -876,6 +879,7 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
             <span className="tl-move-lbl" title={`${pa.name} → ${pb.name}`}>目安（約{est.km < 10 ? est.km.toFixed(1) : Math.round(est.km)}km）</span>
             {est.out.map(o => <button key={o.mode} className="tl-move-chip" title={`${o.mode}の移動として追加`} onClick={() => add(o)}><Icon n={o.icon} s={12} />{o.mode} 約{o.min}分</button>)}
             <a className="tl-move-chip" href={url} target="_blank" rel="noopener noreferrer">経路<Icon n="ext" s={11} /></a>
+            {closeBtn}
             {gapMin != null && gapMin >= 0 && gapMin < best && <span className="tl-move-warn">移動に約{best}分かかりますが、間は{gapMin}分です</span>}
           </span>
         </div>
@@ -1761,6 +1765,7 @@ function App() {
     const stay = staysOf(tr0).find(s => s.startDate && d >= s.startDate && d < stayEnd(s));
     const l = { id: uid(), linkedStayId: stay ? stay.id : null, category: "観光", desc: "", address: "", fromAddress: "", toAddress: "", date: d, startTime: (o && o.time) || "", endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: "", paymentStatus: "未払い", status: "候補" };
     // 移動の目安から押したときは、画面を開かずにそのまま入れる
+    if (o && o.hideHint) { update(tr => ({ ...tr, moveHintsOff: [...new Set([...(tr.moveHintsOff || []), o.hideHint])] })); return; }
     if (o && o.quick) { update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), { ...l, ...o.quick }] })); toast(`${o.quick.mode}の移動を入れました（目安の時間です）`); return; }
     update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l] })); setSheet({ kind: "local", id: l.id, back, fresh: true, opts: o || null, init: JSON.stringify(l) });
   };

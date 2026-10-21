@@ -396,3 +396,5 @@ details > summary{cursor:pointer}
 .tl-move-chip:hover{color:var(--blue);border-color:var(--blue);border-style:solid}
 .tl-move-warn{flex-basis:100%;font-size:11px;color:var(--orange)}
 .tl-move-lbl{font-size:10px;color:var(--faint)}
+.tl-move-x{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:0;border-radius:12px;background:none;color:var(--faint);cursor:pointer}
+.tl-move-x:hover{color:var(--ink);background:var(--sunk)}

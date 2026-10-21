@@ -800,7 +800,7 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
     // 場所は見出し（「○○ 発 → △△」など）ではなく、その予定・移動の本当の場所から取る。前は「終わったあとにいる所」、後ろは「始まる所」
     const placeOf = (e, last) => { if (!e) return ""; const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; return String((grp && grp.find(Boolean)) || e.map || "").trim(); };
     const opts = { time: betweenTime(a && a.time, b && b.time), from: placeOf(a, true), to: placeOf(b, false) };
-    return <button key={"g" + i} className="tl-gap" aria-label={b ? `${a.title} と ${b.title} の間に追加` : `${a.title} のあとに追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>;
+    return <button key={"g" + i} className={"tl-gap" + (b ? "" : " last")} aria-label={b ? `${a.title} と ${b.title} の間に追加` : `${a.title} のあとに追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>;
   };
   return (
     <>

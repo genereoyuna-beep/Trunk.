@@ -359,6 +359,7 @@ details > summary{cursor:pointer}
 /* 日ごとの予定の間の「＋」（間に予定・移動を足す） */
 .tl-gap{display:flex;align-items:center;justify-content:flex-start;width:100%;height:14px;margin:-7px 0;padding:0 0 0 31px;border:0;background:none;position:relative;z-index:1;cursor:pointer}
 .tl-gap span{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:11px;background:var(--surface);border:1px solid var(--line);color:var(--muted);opacity:.55;transition:opacity .15s}
+.tl-gap.last{height:30px;margin:0 0 4px}
 .tl-gap:hover span,.tl-gap:focus-visible span{opacity:1;color:var(--blue);border-color:var(--blue)}
 .tl-gap.open{height:auto;margin:0;padding:8px 14px;gap:8px;justify-content:flex-start;background:var(--sunk);cursor:default;flex-wrap:wrap}
 

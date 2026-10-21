@@ -364,6 +364,10 @@ function budgetActual(b, stats, mine, t) {
 // ================= 今やること =================
 function buildTodos(t, inboxCount) {
   const todos = [];
+  // 海外旅行で出発の30日前から：入国審査用のページ（しおりの最後）に足りないものがあれば出す
+  const er = tripRange(t), eDays = er ? dayDiff(todayISO(), er.start) : null;
+  const eMiss = typeof entryChecks === "function" && eDays != null && eDays >= 0 && eDays <= 30 && (t.shioriParts || {}).en !== false ? entryChecks(t) : [];
+  if (eMiss.length) todos.push({ icon: "check", title: "入国審査用のページを整える", sub: eMiss[0].split("：")[0] + (eMiss.length > 1 ? ` ほか${eMiss.length - 1}件` : ""), tag: `あと${eMiss.length}件`, edit: { kind: "shiori" } });
   if (inboxCount > 0) todos.push({ icon: "mail", title: "予約メールを確認する", sub: `取り込み候補が${inboxCount}件あります`, tag: `${inboxCount}件`, go: { tab: "book" } });
   const tr = transitsOf(t);
   const flights = tr.filter(x => x.mode === "飛行機" && transitState(x).tone === "open");

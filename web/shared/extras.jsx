@@ -280,6 +280,7 @@ function EmergencyView({ t, update, canEdit }) {
           <h3>自分の情報</h3>
           <div className="xs muted">ここに入れた情報はこの旅行の「しおり（PDF）」に入ります。共有ページには入りません。</div>
           <div className="fgrid">
+            <Field label="名前（ローマ字・パスポートと同じ）" wide><TextIn value={em.nameEn} onChange={v => set({ nameEn: v.toUpperCase() })} placeholder="例：YAMADA HANAKO" autoComplete="off" /></Field>
             <Field label="パスポート番号"><TextIn value={em.passportNo} onChange={v => set({ passportNo: v })} autoComplete="off" /></Field>
             <Field label="パスポートの有効期限"><DateIn value={em.passportExp} onChange={v => set({ passportExp: v })} /></Field>
             <Field label="海外旅行保険の会社"><TextIn value={em.insurer} onChange={v => set({ insurer: v })} /></Field>

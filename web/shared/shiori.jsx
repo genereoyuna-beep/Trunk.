@@ -34,9 +34,71 @@ function Barcode({ seed, w = 150, h = 34 }) {
 const MODE_ART = { "飛行機": "plane", "鉄道": "train", "夜行列車": "train", "バス": "bus", "フェリー": "ship", "夜行フェリー": "ship", "車": "car" };
 
 // しおりに入れるもの（表紙はいつも入れる）。日ごとの地図だけ、最初は入れない
-const SHIORI_PARTS = [["map", "ルートマップ", true], ["ov", "旅程表", true], ["ec", "出発前の手続き", true], ["days", "日ごとの予定", true], ["daymap", "日ごとの地図", false], ["st", "泊まるところ", true], ["tr", "交通", true], ["cs", "費用の目安", true], ["pk", "持ち物", true], ["em", "緊急時の情報", true], ["ph", "フレーズ集", true], ["mm", "メモ欄", true]];
+const SHIORI_PARTS = [["map", "ルートマップ", true], ["ov", "旅程表", true], ["ec", "出発前の手続き", true], ["days", "日ごとの予定", true], ["daymap", "日ごとの地図", false], ["st", "泊まるところ", true], ["tr", "交通", true], ["cs", "費用の目安", true], ["pk", "持ち物", true], ["em", "緊急時の情報", true], ["ph", "フレーズ集", true], ["mm", "メモ欄", true], ["en", "入国審査用（英語）", true]];
 const shioriOn = (t, k) => { const v = (t.shioriParts || {})[k]; return v === undefined ? (SHIORI_PARTS.find(p => p[0] === k) || [])[2] !== false : !!v; };
-function shioriUnits(t) {
+
+// ===== 入国審査用のページ（英語）：泊まる所・行きと帰りの便・滞在期間・目的を1枚にまとめる =====
+const COUNTRY_EN = { "台湾": "Taiwan", "韓国": "Republic of Korea", "香港": "Hong Kong", "マカオ": "Macau", "中国": "China", "タイ": "Thailand", "シンガポール": "Singapore", "マレーシア": "Malaysia",
+  "ベトナム": "Vietnam", "フィリピン": "Philippines", "インドネシア": "Indonesia", "インド": "India", "UAE": "United Arab Emirates", "カタール": "Qatar", "トルコ": "Türkiye", "アメリカ（ハワイ）": "USA (Hawaii)",
+  "グアム": "Guam (USA)", "サイパン": "Saipan (USA)", "アメリカ": "USA", "カナダ": "Canada", "オーストラリア": "Australia", "イギリス": "United Kingdom", "アイルランド": "Ireland", "ポルトガル": "Portugal",
+  "フランス": "France", "ベルギー": "Belgium", "オランダ": "Netherlands", "ルクセンブルク": "Luxembourg", "ドイツ": "Germany", "スイス": "Switzerland", "オーストリア": "Austria", "チェコ": "Czech Republic",
+  "スロバキア": "Slovakia", "ハンガリー": "Hungary", "ポーランド": "Poland", "デンマーク": "Denmark", "スウェーデン": "Sweden", "スペイン": "Spain", "イタリア": "Italy", "ギリシャ": "Greece", "クロアチア": "Croatia",
+  "フィンランド": "Finland", "ノルウェー": "Norway", "ニュージーランド": "New Zealand", "メキシコ": "Mexico", "モンゴル": "Mongolia", "カンボジア": "Cambodia", "ラオス": "Laos", "ミャンマー": "Myanmar", "ネパール": "Nepal" };
+const hasJa = (v) => /[\u3040-\u30ff\u3400-\u9fff]/.test(String(v || ""));
+const entryFlights = (t) => sortItinerary(transitsOf(t)).filter(x => x.mode === "飛行機");
+function entryStays(t) { return sortItinerary(staysOf(t)).filter(s => isISO(s.startDate) && !s.noHotel).map(s => ({ s, h: hotelOf(t, s) || {} })); }
+// 入国審査用のページに足りないもの（海外旅行のときだけ）
+function entryChecks(t) {
+  if (!tripCountries(t).length) return [];
+  const out = [], em = t.emergency || {};
+  const fl = entryFlights(t);
+  if (!em.nameEn) out.push("名前（ローマ字）：緊急時の情報の「自分の情報」で入れる");
+  if (!fl.length) out.push("飛行機の便：行きと帰りの便を入れる");
+  else {
+    if (fl.length < 2) out.push("帰りの便：帰りの航空券を入れる（入国審査でよく聞かれます）");
+    if (fl.some(x => !String(x.airline || "").trim())) out.push("便名：飛行機の「会社・便名」を入れる（例：KE2708）");
+  }
+  entryStays(t).forEach(({ s, h }) => {
+    const c = `${splitCity(s.city).main || "滞在"}（${md(s.startDate)}〜）`;
+    if (!h.name) out.push(`${c}の宿：宿泊先名を入れる`);
+    else if (!h.address) out.push(`${c}の宿：住所を入れる（予約サイトの英語の住所がおすすめ）`);
+    else if (hasJa(h.address)) out.push(`${c}の宿：住所が日本語です。英語の住所にすると伝わりやすくなります`);
+  });
+  return out;
+}
+function EntryPage({ t }) {
+  const em = t.emergency || {}, r = tripRange(t), fl = entryFlights(t), stays = entryStays(t);
+  const nights = r ? r.days - 1 : 0;
+  const countries = uniq(tripCountries(t).map(c => COUNTRY_EN[c.country] || c.country));
+  const row = (k, v) => <div className="en-row"><span>{k}</span><b>{v || "—"}</b></div>;
+  return (
+    <div className="en-page">
+      <div className="en-head"><b>TRAVEL ITINERARY</b><span>For immigration / 入国審査用</span></div>
+      {row("Name", em.nameEn)}
+      {em.passportNo && row("Passport No.", em.passportNo)}
+      {row("Purpose of visit", "Tourism")}
+      {row("Destination", countries.join(", "))}
+      {row("Period of stay", r ? `${fullDate(r.start)} – ${fullDate(r.end)} (${nights} night${nights === 1 ? "" : "s"})` : "")}
+      <div className="en-sec">FLIGHTS</div>
+      {fl.length ? fl.map(x => (
+        <div key={x.id} className="en-item">
+          <b className="mono">{fullDate(x.departDate)}{x.departTime ? ` ${x.departTime}` : ""}</b>
+          <span>{[x.airline, `${codeFor(x.fromCity) || placeLabel(x.fromCity)} → ${codeFor(x.toCity) || placeLabel(x.toCity)}`, x.arriveTime && `arr. ${x.arriveTime}`].filter(Boolean).join("  ・  ")}</span>
+        </div>
+      )) : <div className="en-item"><span>—</span></div>}
+      <div className="en-sec">ACCOMMODATION</div>
+      {stays.length ? stays.map(({ s, h }) => (
+        <div key={s.id} className="en-item">
+          <b className="mono">{fullDate(s.startDate)} – {fullDate(stayEnd(s))}</b>
+          <span>{h.name || "—"}{h.address ? <><br />{h.address}</> : null}{h.confirmation ? <><br />Booking No. {h.confirmation}</> : null}</span>
+        </div>
+      )) : <div className="en-item"><span>—</span></div>}
+      <div className="en-foot">This itinerary was prepared by the traveler with Trunk. (trunk-travelplanner.com)</div>
+    </div>
+  );
+}
+
+function shioriUnits(t, opt) {
   const U = [];
   const on = (k) => shioriOn(t, k);
   const r = tripRange(t);
@@ -246,6 +308,8 @@ function shioriUnits(t) {
       <Barcode seed={t.name} w={110} h={30} />
     </div>
   ) });
+  // 入国審査用のページ（海外旅行で、アプリの中で見るしおりだけ。共有ページには入れない）。いちばん最後に置いて、切り取って持てるように
+  if (opt && opt.entry && on("en") && tripCountries(t).length) U.push({ key: "entry", page: true, el: <EntryPage t={t} /> });
   return U;
 }
 
@@ -287,8 +351,8 @@ function ShioriPage({ t, n, total, children }) {
   );
 }
 
-function Shiori({ t, exportRef }) {
-  const units = useMemo(() => shioriUnits(t), [t]);
+function Shiori({ t, exportRef, entry }) {
+  const units = useMemo(() => shioriUnits(t, { entry }), [t, entry]);
   const { measureRef, pages } = usePagination(units);
   const wrapRef = useRef(null);
   const [scale, setScale] = useState(0.6);
@@ -385,7 +449,13 @@ function ShioriView({ t, canExport, update }) {
           </select>
         </label>
       )}
-      <Shiori t={t} exportRef={canExport ? exportRef : null} />
+      {update && shioriOn(t, "en") && entryChecks(t).length > 0 && (
+        <div className="note stack" style={{ gap: 4 }}>
+          <b className="small">入国審査用のページに、まだ足りないもの</b>
+          {entryChecks(t).map((c, i) => <span key={i} className="xs">・{c}</span>)}
+        </div>
+      )}
+      <Shiori t={t} exportRef={canExport ? exportRef : null} entry={!!update} />
     </div>
   );
 }

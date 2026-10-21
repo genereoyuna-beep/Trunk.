@@ -1761,7 +1761,7 @@ function App() {
   }) : update;
   const sugg = buildSuggestions([t, ...trips.filter(x => x.id !== tripId).map(x => x.data)]);
   const stats = tripStats(t);
-  const todos = buildTodos(t, inbox.length + extInbox);
+  const todos = buildTodos(priv ? { ...t, emergency: priv } : t, inbox.length + extInbox);
   // 精算の「自分」：Trunk. では、ログインしている人ごとに、結びつけた参加者が自分になる（memberLinks）。なければ旅行の myName
   const meName = typeof trunkMyName === "function" ? trunkMyName(t, tripId) : (t.myName || "");
   const setMe = (name) => update(tr => typeof trunkSetMe === "function" ? trunkSetMe(tr, name) : ({ ...tr, myName: name }));

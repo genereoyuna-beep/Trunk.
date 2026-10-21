@@ -125,6 +125,19 @@ function CurrencyCard({ t, update }) {
 }
 
 // ---- 支出 ----
+// 誰の分か：選んでいる人は ✓ つき、外した人は薄い枠。「全員」で全員に戻す
+function SplitChips({ people, value, onChange }) {
+  const all = people.every(p => value.includes(p));
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <span className="small muted">誰の分か（押すと外れます）</span>
+      <div className="chips split-chips">
+        <button className="chip" aria-pressed={all} onClick={() => onChange([...people])}>{all && <Icon n="check" s={12} />}全員</button>
+        {people.map(p => { const on = value.includes(p); return <button key={p} className="chip" aria-pressed={on} disabled={on && value.length === 1} onClick={() => onChange(on ? value.filter(x => x !== p) : people.filter(x => x === p || value.includes(x)))}>{on && <Icon n="check" s={12} />}{p}</button>; })}
+      </div>
+    </div>
+  );
+}
 function ExpenseView({ t, update }) {
   const people = t.participants || [];
   const curs = ["JPY", ...tripCurrencies(t)];
@@ -135,6 +148,7 @@ function ExpenseView({ t, update }) {
   // 予算の項目（手入力の項目だけ）。選ぶと、その項目の実費は支出の合計になる
   const budgetSel = (value, onChange) => bRows.length > 0 && <Field label="予算の項目"><select value={value || ""} onChange={ev => onChange(ev.target.value)}><option value="">予算に入れない</option>{bRows.map(b => <option key={b.id} value={String(b.id)}>{b.category || "（名前なし）"}</option>)}</select></Field>;
   const [f, setF] = useState(blank);
+  const [more, setMore] = useState(false);
   const list = [...(t.expenses || [])].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   const total = list.reduce((a, e) => a + toJPY(t, e.amount, e.currency), 0);
   const noRate = uniq(list.filter(e => !hasRate(t, e.currency)).map(e => e.currency));
@@ -160,19 +174,16 @@ function ExpenseView({ t, update }) {
         <h3>支出を記録</h3>
         <div className="fgrid">
           <Field label="内容" wide><TextIn value={f.title} onChange={v => setF({ ...f, title: v })} placeholder="例：ランチ、地下鉄、お土産" /></Field>
-          <Field label="金額"><input type="number" inputMode="decimal" value={f.amount} onChange={e => setF({ ...f, amount: e.target.value })} /></Field>
-          <Field label="通貨"><select value={f.currency} onChange={e => setF({ ...f, currency: e.target.value })}>{curs.map(c => <option key={c} value={c}>{c}（{CUR_NAME[c] || c}）</option>)}</select></Field>
-          <Field label="日付"><DateIn value={f.date} onChange={v => setF({ ...f, date: v })} /></Field>
-          <Field label="種類"><select value={f.category} onChange={e => setF({ ...f, category: e.target.value, budgetId: budgetLinkGuess(t, e.target.value) })}>{EXP_CATS.map(c => <option key={c}>{c}</option>)}</select></Field>
-          {budgetSel(f.budgetId, v => setF({ ...f, budgetId: v }))}
+          <Field label="金額" wide={people.length === 0}><div className="row" style={{ flexWrap: "nowrap", gap: 6 }}><input type="number" inputMode="decimal" style={{ flex: 1, minWidth: 0 }} value={f.amount} onChange={e => setF({ ...f, amount: e.target.value })} /><select aria-label="通貨" style={{ width: 74, flex: "none", paddingRight: 4 }} value={f.currency} onChange={e => setF({ ...f, currency: e.target.value })}>{curs.map(c => <option key={c} value={c}>{c}</option>)}</select></div></Field>
           {people.length > 0 && <Field label="払った人"><select value={f.payer} onChange={e => setF({ ...f, payer: e.target.value })}>{people.map(p => <option key={p}>{p}</option>)}</select></Field>}
+          {more && <>
+            <Field label="日付"><DateIn value={f.date} onChange={v => setF({ ...f, date: v })} /></Field>
+            <Field label="種類"><select value={f.category} onChange={e => setF({ ...f, category: e.target.value, budgetId: budgetLinkGuess(t, e.target.value) })}>{EXP_CATS.map(c => <option key={c}>{c}</option>)}</select></Field>
+            {budgetSel(f.budgetId, v => setF({ ...f, budgetId: v }))}
+          </>}
         </div>
-        {people.length > 1 && (
-          <div className="stack" style={{ gap: 6 }}>
-            <span className="small muted">誰の分か（割り勘する人）</span>
-            <div className="chips">{people.map(p => <button key={p} className="chip" aria-pressed={f.split.includes(p)} onClick={() => setF({ ...f, split: f.split.includes(p) ? f.split.filter(x => x !== p) : [...f.split, p] })}>{p}</button>)}</div>
-          </div>
-        )}
+        {more && people.length > 1 && <SplitChips people={people} value={f.split} onChange={v => setF({ ...f, split: v })} />}
+        {!more && <button className="linkbtn small" style={{ alignSelf: "flex-start" }} onClick={() => setMore(true)}>{md(f.date)} ・ {f.category}{people.length > 1 ? ` ・ ${people.every(p => f.split.includes(p)) ? "全員の分" : f.split.join("・") + "の分"}` : ""} ・ <u>日付・種類・誰の分かを変える</u></button>}
         {f.amount && f.currency !== "JPY" && <div className="small muted mono">{hasRate(t, f.currency) ? `≒ ${yen(toJPY(t, f.amount, f.currency))}` : "この通貨のレートが未入力です（下の「通貨の換算」で入れられます）"}</div>}
         <button className="btn primary" disabled={!f.title.trim() || !(Number(f.amount) > 0)} onClick={add}>記録する</button>
         {people.length === 0 && <div className="xs muted">「精算」で参加者を登録すると、払った人と割り勘の相手を選べます。</div>}
@@ -224,12 +235,7 @@ function ExpenseView({ t, update }) {
                       {!e.src && budgetSel(e.budgetId, v => setE({ budgetId: v }))}
                       {people.length > 0 && <Field label="払った人"><select value={people.includes(e.payer) ? e.payer : ""} onChange={ev => setE({ payer: ev.target.value })}>{!people.includes(e.payer) && <option value="">選ぶ</option>}{people.map(p => <option key={p}>{p}</option>)}</select></Field>}
                     </div>
-                    {people.length > 1 && (
-                      <div className="stack" style={{ gap: 6 }}>
-                        <span className="small muted">誰の分か（割り勘する人）</span>
-                        <div className="chips">{people.map(p => { const on = sp.includes(p); return <button key={p} className="chip" aria-pressed={on} disabled={on && sp.length === 1} onClick={() => setE({ split: on ? sp.filter(x => x !== p) : [...sp, p] })}>{p}</button>; })}</div>
-                      </div>
-                    )}
+                    {people.length > 1 && <SplitChips people={people} value={sp} onChange={v => setE({ split: v })} />}
                     <div className="row"><button className="btn small" onClick={() => setEditId(null)}>閉じる</button></div>
                   </div>
                 )}

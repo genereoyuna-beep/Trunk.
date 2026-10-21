@@ -1069,6 +1069,12 @@ function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
 function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
   const [allView, setAllView] = useState(false);
   const [newName, setNewName] = useState("");
+  // 何も選んでいないときは、旅行の前は予算、旅行中・旅行のあとは支出を開く
+  const tr0 = tripRange(t);
+  mode = mode || (tr0 && todayISO() >= tr0.start ? "expense" : "budget");
+  // 予算の項目：名前を直す・消すのは「直す」を押したときだけ。予算の金額は「＋予算」を押したら出す
+  const [editRow, setEditRow] = useState(null);
+  const [openTarget, setOpenTarget] = useState({});
   const participants = t.participants || [];
   const my = useMemo(() => myShare(t), [t]);
   const mine = allView ? null : my;
@@ -1113,18 +1119,26 @@ function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
             <div className="field"><span>{!mine ? "全員分の合計" : "1人分の見込み"}</span><div className="mono" style={{ fontSize: 22, fontWeight: 600, padding: "4px 0" }}>{yen(totalA)}</div></div>
           </div>
           <div className="bar" style={{ height: 10 }}><span style={{ width: `${Math.min(100, t.totalBudget ? totalA / t.totalBudget * 100 : 0)}%`, background: t.totalBudget && totalA > t.totalBudget ? "var(--danger)" : "var(--ink)" }} /></div>
-          <Toggle checked={allView} onChange={setAllView}>全員分の合計で見る</Toggle>
+          <div className="seg" role="tablist" aria-label="金額の見方" style={{ alignSelf: "flex-start" }}><button role="tab" aria-selected={!allView} onClick={() => setAllView(false)}>1人分</button><button role="tab" aria-selected={allView} onClick={() => setAllView(true)}>全員分</button></div>
           <div className="note">宿や移動の金額を、それぞれ何人分かで割って1人分を出しています。食費などは「支出」に記録すると、ここに入ります。</div>
         </section>
         <section className="card budget2">
           {rows.map(r => { const tg = Number(r.target) || 0, diff = tg - r.actualV; return (
             <div key={r.id} className="brow2">
-              <div className="brow2-h">
-                <input className="input" aria-label="項目名" value={r.category} onChange={e => setB(r.id, { category: e.target.value })} />
-                <button className="iconbtn" aria-label={`${r.category}を削除`} onClick={() => update(tr => ({ ...tr, budget: tr.budget.filter(b => b.id !== r.id) }))}><Icon n="x" s={16} /></button>
-              </div>
+              {editRow === r.id || !r.category ? (
+                <div className="brow2-h">
+                  <input className="input" aria-label="項目名" placeholder="項目の名前（例：お土産）" autoFocus={editRow === r.id} value={r.category} onChange={e => setB(r.id, { category: e.target.value })} onKeyDown={e => e.key === "Enter" && setEditRow(null)} />
+                  <button className="btn small" onClick={() => setEditRow(null)}>決定</button>
+                  <button className="btn small ghost" style={{ color: "var(--danger)" }} onClick={() => { if (confirm(`「${r.category || "この項目"}」を予算から消しますか？`)) { update(tr => ({ ...tr, budget: tr.budget.filter(b => b.id !== r.id) })); setEditRow(null); } }}>消す</button>
+                </div>
+              ) : (
+                <div className="brow2-h">
+                  <b style={{ flex: 1, minWidth: 0, fontSize: 15 }}>{r.category}</b>
+                  <button className="iconbtn" aria-label={`${r.category}の名前を直す・消す`} title="名前を直す・消す" onClick={() => setEditRow(r.id)}><Icon n="pencil" s={14} /></button>
+                </div>
+              )}
               <div className="brow2-g">
-                <label><span>予算</span><NumIn value={Number(r.target) ? r.target : ""} onChange={v => setB(r.id, { target: v })} className="input" aria-label={`${r.category}の予算`} /></label>
+                <label><span>予算</span>{tg || openTarget[r.id] ? <NumIn value={tg ? r.target : ""} onChange={v => setB(r.id, { target: v })} className="input" aria-label={`${r.category}の予算`} /> : <button className="btn small ghost" style={{ justifyContent: "flex-start", padding: "8px 0", color: "var(--blue)" }} onClick={() => setOpenTarget({ ...openTarget, [r.id]: true })}><Icon n="plus" s={12} />予算を入れる</button>}</label>
                 <label><span>{r.auto ? "見込み（自動）" : r.linkedN ? `支出から（${r.linkedN}件）` : "実費"}</span>{r.auto || r.linkedN ? <b className="mono">{yen(r.actualV)}</b> : <NumIn value={r.actual} onChange={v => setB(r.id, { actual: v })} className="input" aria-label={`${r.category}の実費`} />}</label>
                 <div><span>差額</span><b className={"mono" + (tg && diff < 0 ? " over" : "")}>{tg ? (diff < 0 ? `${yen(-diff)} 超過` : `残り ${yen(diff)}`) : "—"}</b></div>
               </div>
@@ -1134,7 +1148,7 @@ function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
             <div><span>{partial ? "その項目の見込み" : "見込みの合計"}</span><b className="mono">{yen(partial ? totalAT : totalA)}</b></div>
             <div><span>差額</span><b className={"mono" + (totalT && totalT - (partial ? totalAT : totalA) < 0 ? " over" : "")}>{totalT ? (totalT - (partial ? totalAT : totalA) < 0 ? `${yen((partial ? totalAT : totalA) - totalT)} 超過` : `残り ${yen(totalT - (partial ? totalAT : totalA))}`) : "—"}</b></div>
           </div></div>
-          <button className="btn small" style={{ marginTop: 10 }} onClick={() => update(tr => ({ ...tr, budget: [...(tr.budget || []), { id: uid(), category: "", target: 0, auto: false, actual: 0 }] }))}><Icon n="plus" s={14} />項目を追加</button>
+          <button className="btn small" style={{ marginTop: 10 }} onClick={() => { const id = uid(); update(tr => ({ ...tr, budget: [...(tr.budget || []), { id, category: "", target: 0, auto: false, actual: 0 }] })); setEditRow(id); }}><Icon n="plus" s={14} />項目を追加</button>
         </section>
       </>}
       {mode === "split" && <>
@@ -1178,8 +1192,28 @@ function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
 // ================= 持ち物 =================
 function PackView({ t, update }) {
   const [bag, setBag] = useState("すべて");
-  const [adding, setAdding] = useState({});
+  const [adding, setAdding] = useState("");
+  const [addCat, setAddCat] = useState("");
   const [newCat, setNewCat] = useState("");
+  // 消すのは、左にスワイプか長押しで出る「消す」から。消したあとは少しのあいだ「元に戻す」を出す
+  const [rev, setRev] = useState(null);
+  const [undo, setUndo] = useState(null);
+  const touch = useRef(null), undoT = useRef(null);
+  const swipeProps = (id) => ({
+    onPointerDown: (e) => { const tm = setTimeout(() => { setRev(id); if (touch.current) touch.current.long = true; }, 550); touch.current = { x: e.clientX, y: e.clientY, tm, id }; },
+    onPointerMove: (e) => { const c = touch.current; if (!c || c.id !== id) return; const dx = e.clientX - c.x, dy = e.clientY - c.y; if (Math.abs(dx) > 8 || Math.abs(dy) > 8) clearTimeout(c.tm); if (dx < -40 && Math.abs(dy) < 30) setRev(id); if (dx > 40 && rev === id) setRev(null); },
+    onPointerUp: () => { const c = touch.current; if (c) clearTimeout(c.tm); },
+    onPointerCancel: () => { const c = touch.current; if (c) clearTimeout(c.tm); },
+    onContextMenu: (e) => { e.preventDefault(); setRev(id); },
+    // 長押しのあとに指を離したとき、チェックが切り替わらないようにする
+    onClickCapture: (e) => { const c = touch.current; if (c && c.long && c.id === id) { e.preventDefault(); e.stopPropagation(); c.long = false; } },
+  });
+  const removeItem = (cat, i) => {
+    const idx = (packing[cat] || []).findIndex(x => x.id === i.id);
+    setItems(cat, xs => xs.filter(x => x.id !== i.id)); setRev(null);
+    clearTimeout(undoT.current); setUndo({ cat, item: i, idx }); undoT.current = setTimeout(() => setUndo(null), 5000);
+  };
+  const undoRemove = () => { const u = undo; if (!u) return; setItems(u.cat, xs => xs.some(x => x.id === u.item.id) ? xs : [...xs.slice(0, u.idx), u.item, ...xs.slice(u.idx)]); setUndo(null); };
   const [bagEdit, setBagEdit] = useState(null); // null / { mode: "add" | "rename", name, from }
   const packing = t.packing || {};
   const all = Object.values(packing).flat();
@@ -1188,7 +1222,9 @@ function PackView({ t, update }) {
   const sel = bags.includes(bag) || bag === "未定" ? bag : "すべて";
   const setItems = (cat, fn) => update(tr => ({ ...tr, packing: { ...tr.packing, [cat]: fn(tr.packing[cat] || []) } }));
   const mapAll = (tr, fn) => Object.fromEntries(Object.entries(tr.packing || {}).map(([c, xs]) => [c, xs.map(fn)]));
-  const addItem = (cat) => { const n = (adding[cat] || "").trim(); if (!n) return; setItems(cat, items => [...items, { id: uid(), name: n, checked: false, bag: bags.includes(sel) ? sel : "" }]); setAdding({ ...adding, [cat]: "" }); };
+  const cats = Object.keys(packing);
+  const curCat = cats.includes(addCat) ? addCat : cats[0] || "";
+  const addItem = () => { const n = adding.trim(); if (!n || !curCat) return; setItems(curCat, items => [...items, { id: uid(), name: n, checked: false, bag: bags.includes(sel) ? sel : "" }]); setAdding(""); };
   const saveBag = () => {
     const n = (bagEdit.name || "").trim();
     if (!n || (bags.includes(n) && n !== bagEdit.from)) { setBagEdit(null); return; }
@@ -1205,6 +1241,13 @@ function PackView({ t, update }) {
         {bags.length > 0 && ["すべて", ...bags, "未定"].map(b => <button key={b} className="chip" aria-pressed={sel === b} onClick={() => setBag(b)}>{b === "未定" ? "かばん未定" : b}</button>)}
         <button className="chip" onClick={() => setBagEdit({ mode: "add", name: "" })}><Icon n="plus" s={12} />{bags.length ? "かばん" : "かばんごとに分ける"}</button>
       </div>
+      {cats.length > 0 && (
+        <div className="row" style={{ flexWrap: "nowrap", gap: 6 }}>
+          <input className="input" style={{ flex: 1, minWidth: 0 }} aria-label="持ち物を追加" placeholder="持ち物を追加" value={adding} onChange={e => setAdding(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.nativeEvent.isComposing && addItem()} />
+          <select className="input" aria-label="入れるカテゴリ" style={{ width: "auto", flex: "none", maxWidth: 110 }} value={curCat} onChange={e => setAddCat(e.target.value)}>{cats.map(c => <option key={c}>{c}</option>)}</select>
+          <button className="btn" disabled={!adding.trim()} onClick={addItem}>追加</button>
+        </div>
+      )}
       {bagEdit && (
         <div className="row" style={{ flexWrap: "nowrap" }}>
           <input className="input" autoFocus aria-label="かばんの名前" placeholder="例：キャリーケース、機内持ち込み" value={bagEdit.name} onChange={e => setBagEdit({ ...bagEdit, name: e.target.value })} onKeyDown={e => e.key === "Enter" && saveBag()} />
@@ -1223,18 +1266,15 @@ function PackView({ t, update }) {
         return (
           <section key={cat} className="card flush divide">
             <div className="row between" style={{ padding: "10px 14px" }}><h3>{cat}</h3><span className="mono xs muted">{items.filter(i => i.checked).length}/{items.length}</span></div>
+            {!shown.length && <p className="xs muted" style={{ padding: "10px 14px", margin: 0 }}>まだありません。上の欄で「{cat}」を選んで追加できます。</p>}
             {shown.map(i => (
-              <div key={i.id} className={"packitem" + (i.checked ? " done" : "")}>
+              <div key={i.id} className={"packitem" + (i.checked ? " done" : "") + (rev === i.id ? " rev" : "")} {...swipeProps(i.id)}>
                 <input type="checkbox" aria-label={i.name} checked={!!i.checked} onChange={e => setItems(cat, xs => xs.map(x => x.id === i.id ? { ...x, checked: e.target.checked } : x))} />
                 <span className="nm" style={{ minWidth: 0 }}>{i.name}</span>
                 {bags.length > 0 ? <select className="input" aria-label="入れるかばん" style={{ width: "auto", fontSize: 12, padding: "4px 6px" }} value={bags.includes(i.bag) ? i.bag : ""} onChange={e => setItems(cat, xs => xs.map(x => x.id === i.id ? { ...x, bag: e.target.value } : x))}><option value="">未定</option>{bags.map(b => <option key={b}>{b}</option>)}</select> : <span />}
-                <button className="iconbtn" aria-label={`${i.name}を削除`} onClick={() => setItems(cat, xs => xs.filter(x => x.id !== i.id))}><Icon n="x" s={16} /></button>
+                {rev === i.id ? <span className="row" style={{ flexWrap: "nowrap", gap: 4 }}><button className="btn small" style={{ background: "var(--danger)", borderColor: "var(--danger)", color: "#fff" }} onClick={() => removeItem(cat, i)}>消す</button><button className="btn small ghost" onClick={() => setRev(null)}>やめる</button></span> : <span />}
               </div>
             ))}
-            <div className="row" style={{ padding: "8px 12px", flexWrap: "nowrap" }}>
-              <input className="input" aria-label={`${cat}に追加`} placeholder="追加する" value={adding[cat] || ""} onChange={e => setAdding({ ...adding, [cat]: e.target.value })} onKeyDown={e => e.key === "Enter" && addItem(cat)} />
-              <button className="btn small" onClick={() => addItem(cat)}>追加</button>
-            </div>
           </section>
         );
       })}
@@ -1248,6 +1288,8 @@ function PackView({ t, update }) {
           </section>
         );
       })()}
+      {all.length > 0 && <div className="xs muted" style={{ textAlign: "center" }}>消すときは、左にスワイプか長押し</div>}
+      {undo && <div className="toast" role="status" style={{ display: "flex", gap: 12, alignItems: "center" }}>「{undo.item.name}」を消しました<button style={{ border: 0, background: "none", color: "#9CC3FF", fontWeight: 600, padding: 0, whiteSpace: "nowrap" }} onClick={undoRemove}>元に戻す</button></div>}
       <div className="row" style={{ flexWrap: "nowrap" }}>
         <input className="input" aria-label="新しいカテゴリ" placeholder="カテゴリを追加（例：お土産）" value={newCat} onChange={e => setNewCat(e.target.value)} />
         <button className="btn" onClick={() => { const c = newCat.trim(); if (!c || packing[c]) return; update(tr => ({ ...tr, packing: { ...tr.packing, [c]: [] } })); setNewCat(""); }}>追加</button>
@@ -1400,7 +1442,7 @@ function App() {
   const [sheet, setSheet] = useState(DEMO.sheet ? { kind: DEMO.sheet } : null);
   const [menu, setMenu] = useState(false);
   const [menuData, setMenuData] = useState(false);
-  const [moneyMode, setMoneyMode] = useState("budget");
+  const [moneyMode, setMoneyMode] = useState(null);
   // 「…」メニューは Escape キーでも閉じる
   useEffect(() => { if (!menu) return; const f = (e) => { if (e.key === "Escape") { setMenu(false); setMenuData(false); } }; document.addEventListener("keydown", f); return () => document.removeEventListener("keydown", f); }, [menu]);
   const [toastMsg, setToastMsg] = useState("");

@@ -106,7 +106,7 @@ await check("予算：支出を食費に入れると実費に出る", async () =
     btn('支出').click(); await w(500); const sec=[...document.querySelectorAll('section')].find(s=>s.innerText.startsWith('支出を記録'));
     const ins=sec.querySelectorAll('input'); setV(ins[0],'ランチ'); setV(ins[1],'3000'); const sel=sec.querySelector('select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(sel,'JPY'); sel.dispatchEvent(new Event('change',{bubbles:true})); await w(200);
     btn('記録する').click(); await w(400); btn('予算').click(); await w(400);
-    const row=[...document.querySelectorAll('.brow2')].find(r=>r.querySelector('input') && r.querySelector('input').value==='食費'); return row ? row.innerText : 'no row';`);
+    const row=[...document.querySelectorAll('.brow2')].find(r=>{const b=r.querySelector('.brow2-h b'); return b && b.innerText==='食費';}); return row ? row.innerText : 'no row';`);
   if (!/支出から（1件）/.test(r) || !/¥1,000/.test(r)) throw new Error(r.replace(/\n/g, " ").slice(0, 120));
 });
 await check("LP・ガイド・記事が開く", async () => {

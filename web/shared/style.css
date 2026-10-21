@@ -181,6 +181,8 @@ a.btn.ghost{color:var(--muted)}
 /* ---- 持ち物 ---- */
 .packitem{display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 12px;min-height:48px}
 .packitem input[type=checkbox]{width:20px;height:20px;accent-color:var(--ink)}
+.packitem{touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.packitem.rev{background:#FFF4F2}
 .packitem.done .nm{color:var(--faint);text-decoration:line-through}
 
 /* ---- 入力 ---- */
@@ -381,3 +383,7 @@ details > summary{cursor:pointer}
 .en-item{display:grid;grid-template-columns:118px minmax(0,1fr);gap:8px;padding:5px 0;border-bottom:1px dashed #DADDD6;font-size:11.5px;line-height:1.5}
 .en-item b{font-size:10.5px;font-weight:600}
 .en-foot{margin-top:auto;font-size:9.5px;color:#8A939C}
+
+.linkbtn{border:0;background:none;padding:0;color:var(--muted);text-align:left;cursor:pointer;line-height:1.6}
+.linkbtn u{color:var(--blue);text-decoration:none}
+.split-chips .chip[aria-pressed="false"]{border-style:dashed;color:var(--faint)}

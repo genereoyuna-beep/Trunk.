@@ -361,3 +361,9 @@ details > summary{cursor:pointer}
 .tl-gap span{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:11px;background:var(--surface);border:1px solid var(--line);color:var(--muted);opacity:.55;transition:opacity .15s}
 .tl-gap:hover span,.tl-gap:focus-visible span{opacity:1;color:var(--blue);border-color:var(--blue)}
 .tl-gap.open{height:auto;margin:0;padding:8px 14px;gap:8px;justify-content:flex-start;background:var(--sunk);cursor:default;flex-wrap:wrap}
+
+/* 任意の欄：見出しを薄く、枠を点線に（入れなくてもよいことが一目でわかるように） */
+.field.opt>span{color:var(--faint)}
+.opt-tag{font-style:normal;font-size:10px;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--sunk);color:var(--muted);vertical-align:1px}
+.field.opt input,.field.opt select,.field.opt textarea,.field.opt .btn{border-style:dashed;background:transparent}
+.field.opt input:focus,.field.opt select:focus,.field.opt textarea:focus{border-style:solid;background:var(--surface)}

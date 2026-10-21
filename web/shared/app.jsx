@@ -40,8 +40,9 @@ const NAV = [["home", "ホーム", "home"], ["plan", "旅程", "cal"], ["book", 
 const TABS = NAV.map(n => n[0]);
 
 // ================= 入力の部品 =================
-function Field({ label, wide, children }) {
-  return <label className={"field" + (wide ? " wide" : "")}><span>{label}</span>{children}</label>;
+// opt：入れなくてよい欄。見出しを薄く、枠を点線にして「任意」と出す
+function Field({ label, wide, opt, children }) {
+  return <label className={"field" + (wide ? " wide" : "") + (opt ? " opt" : "")}><span>{label}{opt && <em className="opt-tag">任意</em>}</span>{children}</label>;
 }
 function TextIn({ value, onChange, ...p }) { return <input type="text" value={value ?? ""} onChange={e => onChange(e.target.value)} {...p} />; }
 const SuggestCtx = React.createContext({ cities: [], usedCarriers: [], sites: BOOKING_SITES, addresses: [], descs: [] });
@@ -189,11 +190,11 @@ function StayEditor({ t, id, update, close }) {
         <Field label="都市" wide><PlaceIn kind="city" value={s.city} onChange={v => setStay({ city: v })} onPick={(r, it) => setStay({ city: it.main })} options={sg.cities} placeholder="例：プラハ" /></Field>
         <Field label="到着日（泊まり始め）"><DateIn value={s.startDate} onChange={v => setStay({ startDate: v })} /></Field>
         <Field label="泊数"><select value={nightsOf(s)} onChange={e => setStay({ nights: Number(e.target.value) })}>{Array.from({ length: 31 }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り（0泊）" : `${i}泊`}</option>)}</select></Field>
-        <Field label="メモ" wide><textarea value={s.memo || ""} onChange={e => setStay({ memo: e.target.value })} /></Field>
+        <Field label="メモ" opt wide><textarea value={s.memo || ""} onChange={e => setStay({ memo: e.target.value })} /></Field>
       </div>
       <Toggle checked={s.noHotel} onChange={v => setStay({ noHotel: v, lodgingLabel: v ? (s.lodgingLabel || "宿不要") : s.lodgingLabel })}>宿の手配はいらない（家族・友人宅など）</Toggle>
       {s.noHotel ? (
-        <Field label="宿の代わりに表示する言葉"><TextIn value={s.lodgingLabel} onChange={v => setStay({ lodgingLabel: v })} placeholder="例：実家・友人宅" /></Field>
+        <Field label="宿の代わりに表示する言葉" opt><TextIn value={s.lodgingLabel} onChange={v => setStay({ lodgingLabel: v })} placeholder="例：実家・友人宅" /></Field>
       ) : (
         <>
           <div className="formsec">宿</div>
@@ -202,14 +203,14 @@ function StayEditor({ t, id, update, close }) {
           <div className="fgrid">
             <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}) })} placeholder="候補の宿もここに" /></Field>
             <Field label="総額（円）"><NumIn value={h.total} onChange={v => setHotel({ total: v, perNight: Math.round(v / n) })} /></Field>
-            <Field label="人数（総額は何人分か）"><select value={h.guests || guessGuests(t)} onChange={e => setHotel({ guests: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
-            <Field label="チェックイン"><select value={h.checkinTime || ""} onChange={e => setHotel({ checkinTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
-            <Field label="チェックアウト"><select value={h.checkoutTime || ""} onChange={e => setHotel({ checkoutTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
-            <Field label="予約サイト"><SuggestIn value={h.site} onChange={v => setHotel({ site: v })} options={sg.sites} placeholder="Airbnb など" /></Field>
-            <Field label="予約番号"><TextIn value={h.confirmation} onChange={v => setHotel({ confirmation: v })} /></Field>
-            <Field label="無料キャンセル期限"><DateIn value={h.cancelDeadline} onChange={v => setHotel({ cancelDeadline: v })} /></Field>
-            <Field label="予約ページのURL"><TextIn value={h.url} onChange={v => setHotel({ url: v })} inputMode="url" /></Field>
-            <Field label="住所" wide><PlaceIn value={h.address} onChange={v => setHotel({ address: v })} onPick={(r, it) => setHotel({ address: r.address || it.main })} /></Field>
+            <Field label="人数（総額は何人分か）" opt><select value={h.guests || guessGuests(t)} onChange={e => setHotel({ guests: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
+            <Field label="チェックイン" opt><select value={h.checkinTime || ""} onChange={e => setHotel({ checkinTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
+            <Field label="チェックアウト" opt><select value={h.checkoutTime || ""} onChange={e => setHotel({ checkoutTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
+            <Field label="予約サイト" opt><SuggestIn value={h.site} onChange={v => setHotel({ site: v })} options={sg.sites} placeholder="Airbnb など" /></Field>
+            <Field label="予約番号" opt><TextIn value={h.confirmation} onChange={v => setHotel({ confirmation: v })} /></Field>
+            <Field label="無料キャンセル期限" opt><DateIn value={h.cancelDeadline} onChange={v => setHotel({ cancelDeadline: v })} /></Field>
+            <Field label="予約ページのURL" opt><TextIn value={h.url} onChange={v => setHotel({ url: v })} inputMode="url" /></Field>
+            <Field label="住所" opt wide><PlaceIn value={h.address} onChange={v => setHotel({ address: v })} onPick={(r, it) => setHotel({ address: r.address || it.main })} /></Field>
           </div>
           <div className="row">
             {safeUrl(h.url) && <a className="btn small" href={safeUrl(h.url)} target="_blank" rel="noopener noreferrer"><Icon n="ext" s={14} />予約ページ</a>}
@@ -254,8 +255,8 @@ function TransitEditor({ t, id, update, close }) {
         <Field label="出発地"><PlaceIn value={x.fromCity} onChange={v => set({ fromCity: v })} onPick={(r, it) => set({ fromCity: r.name || it.main })} options={[...placeOpts, ...sg.addresses]} /></Field>
         <Field label="到着地"><PlaceIn value={x.toCity} onChange={v => set({ toCity: v })} onPick={(r, it) => set({ toCity: r.name || it.main })} options={[near[1], near[0], ...AIRPORTS, ...sg.cities, ...sg.addresses]} /></Field>
         <Field label="手段"><select value={x.mode || "未定"} onChange={e => set({ mode: e.target.value })}>{MODES.map(m => <option key={m}>{m}</option>)}</select></Field>
-        <Field label="内容（任意）"><TextIn value={x.desc} onChange={v => set({ desc: v })} placeholder="例：空港リムジンバス" /></Field>
-        {!short && <Field label="会社・便名" wide><SuggestIn value={x.airline} onChange={v => set({ airline: v })} options={[...(CARRIERS[mode] || Object.values(CARRIERS).flat()), ...sg.usedCarriers]} placeholder="例：Eurostar 9132" /></Field>}
+        <Field label="内容" opt><TextIn value={x.desc} onChange={v => set({ desc: v })} placeholder="例：空港リムジンバス" /></Field>
+        {!short && <Field label="会社・便名" opt wide><SuggestIn value={x.airline} onChange={v => set({ airline: v })} options={[...(CARRIERS[mode] || Object.values(CARRIERS).flat()), ...sg.usedCarriers]} placeholder="例：Eurostar 9132" /></Field>}
         <Field label="出発日"><DateIn value={x.departDate} onChange={v => set({ departDate: v, arriveDate: x.arriveDate && x.arriveDate >= v ? x.arriveDate : v })} /></Field>
         <Field label="出発時刻"><TimeIn value={x.departTime} onChange={v => set({ departTime: v })} /></Field>
         <Field label="到着日"><DateIn value={x.arriveDate} onChange={v => set({ arriveDate: v })} /></Field>
@@ -272,11 +273,11 @@ function TransitEditor({ t, id, update, close }) {
               <span className="xs" style={{ color: tzSource(x, side).startsWith("都市名") ? "var(--orange)" : "var(--muted)" }}>{tzSource(x, side)}</span>
             </div>
           );
-        }) : <div className="field wide"><span>時差</span><button className="btn small" style={{ justifySelf: "start" }} onClick={() => setShowTZ(true)}>なし（{fmtTZ(effTZ(x, "depart"))}）・直す</button></div>}
-        {!short && <Field label="クラス・席"><SuggestIn value={x.cls} onChange={v => set({ cls: v })} options={CLASSES[mode] || CLASSES["飛行機"]} /></Field>}
-        {!short && <Field label="経由"><PlaceIn value={x.transitStops} onChange={v => set({ transitStops: v })} onPick={(r, it) => set({ transitStops: r.name || it.main })} /></Field>}
-        <Field label="金額（円）"><NumIn value={x.price} onChange={v => set({ price: v })} /></Field>
-        <Field label="人数（金額は何人分か）"><select value={x.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
+        }) : <div className="field wide opt"><span>時差<em className="opt-tag">任意</em></span><button className="btn small" style={{ justifySelf: "start" }} onClick={() => setShowTZ(true)}>なし（{fmtTZ(effTZ(x, "depart"))}）・直す</button></div>}
+        {!short && <Field label="クラス・席" opt><SuggestIn value={x.cls} onChange={v => set({ cls: v })} options={CLASSES[mode] || CLASSES["飛行機"]} /></Field>}
+        {!short && <Field label="経由" opt><PlaceIn value={x.transitStops} onChange={v => set({ transitStops: v })} onPick={(r, it) => set({ transitStops: r.name || it.main })} /></Field>}
+        <Field label="金額（円）" opt><NumIn value={x.price} onChange={v => set({ price: v })} /></Field>
+        <Field label="人数（金額は何人分か）" opt><select value={x.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
         <div className="field"><span>所要時間</span><div className="mono" style={{ padding: "9px 0" }}>{dur || "—"}</div></div>
       </div>
       {FEATURES.ai && isLeg(x) && <><div className="formsec" /><TransitSuggest t={t} x={x} set={set} /></>}
@@ -284,7 +285,7 @@ function TransitEditor({ t, id, update, close }) {
       <Toggle checked={needs || booked} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
       {(needs || booked) && <BookingStatus status={x.status} paid={x.paymentStatus} onStatus={v => set({ status: v })} onPaid={v => set({ paymentStatus: v })} />}
       {typeof FEATURES !== "undefined" && typeof FEATURES.transportSearch === "function" && needs && !booked && x.mode !== "飛行機" && inEurope(geoFor(x.fromCity, t.geo)) && inEurope(geoFor(x.toCity, t.geo)) && <AffLink href={FEATURES.transportSearch()} label="Omioで鉄道・バスを探す" copy={[splitCity(x.fromCity).main, splitCity(x.toCity).main].join(" → ") + (x.departDate ? " " + md(x.departDate) : "")} />}
-      <Field label="メモ"><textarea value={x.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
+      <Field label="メモ" opt><textarea value={x.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
       <div className="formsec" />
       <DeleteButton label="この移動を削除" onDelete={remove} />
     </>
@@ -313,23 +314,23 @@ function LocalEditor({ t, id, update, close }) {
         <Field label="日付"><DateIn value={l.date} onChange={v => set({ date: v })} /></Field>
         <Field label="内容" wide><SuggestIn value={l.desc} onChange={v => { const g = catTouched ? "" : guessCategory(v); set(g ? { desc: v, category: g } : { desc: v }); }} options={sg.descs} placeholder="例：サグラダ・ファミリア入場" /></Field>
         <Field label="開始"><TimeIn value={l.startTime} onChange={v => set({ startTime: v })} /></Field>
-        <Field label="終了"><TimeIn value={l.endTime} onChange={v => set({ endTime: v })} /></Field>
+        <Field label="終了" opt><TimeIn value={l.endTime} onChange={v => set({ endTime: v })} /></Field>
         {isMove ? (
           <>
             <Field label="出発地"><PlaceIn value={l.fromAddress} onChange={v => set({ fromAddress: v })} onPick={(r, it) => set({ fromAddress: r.name || it.main })} options={[...sg.addresses, ...AIRPORTS, ...sg.cities]} /></Field>
             <Field label="到着地"><PlaceIn value={l.toAddress} onChange={v => set({ toAddress: v })} onPick={(r, it) => set({ toAddress: r.name || it.main })} options={[...sg.addresses, ...AIRPORTS, ...sg.cities]} /></Field>
-            <Field label="乗り物"><SuggestIn value={l.mode} onChange={v => set({ mode: v })} options={["電車", "地下鉄", "バス", "タクシー", "Uber", "徒歩", "船", "レンタカー", "送迎"]} /></Field>
+            <Field label="乗り物" opt><SuggestIn value={l.mode} onChange={v => set({ mode: v })} options={["電車", "地下鉄", "バス", "タクシー", "Uber", "徒歩", "船", "レンタカー", "送迎"]} /></Field>
           </>
         ) : (
-          <Field label="場所・住所" wide><PlaceIn value={l.address} onChange={v => set({ address: v })} onPick={(r, it) => set({ address: r.name || it.main })} options={[...sg.addresses, ...sg.cities]} /></Field>
+          <Field label="場所・住所" opt wide><PlaceIn value={l.address} onChange={v => set({ address: v })} onPick={(r, it) => set({ address: r.name || it.main })} options={[...sg.addresses, ...sg.cities]} /></Field>
         )}
-        <Field label="金額（円）"><NumIn value={l.price} onChange={v => set({ price: v })} /></Field>
-        <Field label="人数（金額は何人分か）"><select value={l.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
+        <Field label="金額（円）" opt><NumIn value={l.price} onChange={v => set({ price: v })} /></Field>
+        <Field label="人数（金額は何人分か）" opt><select value={l.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
       </div>
       <Toggle checked={l.needsBooking} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
       <BookingStatus status={l.status || "候補"} paid={l.paymentStatus} onStatus={v => set({ status: v })} onPaid={v => set({ paymentStatus: v })} />
       {typeof FEATURES !== "undefined" && typeof FEATURES.activitySearch === "function" && !isBooked(l.status) && (["ツアー", "入場券", "その他体験"].includes(l.category) || (l.category === "観光" && l.needsBooking)) && (() => { const kw = String(l.address || l.desc || "").replace(/[（(].*?[）)]/g, "").trim(); return kw && <AffLink href={FEATURES.activitySearch(kw)} label={`Klookで「${kw.slice(0, 16)}」を探す`} />; })()}
-      <Field label="メモ"><textarea value={l.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
+      <Field label="メモ" opt><textarea value={l.memo || ""} onChange={e => set({ memo: e.target.value })} /></Field>
       <div className="formsec" />
       <DeleteButton label="この予定を削除" onDelete={remove} />
     </>

@@ -646,8 +646,7 @@ function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
               </span>
               <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
                 {onSuggest && <button className="btn small" onClick={() => onSuggest(d)}>{FEATURES.ai ? "提案" : "AIに相談"}</button>}
-                <button className="btn small" onClick={() => onAddLocal(d)}><Icon n="plus" s={14} />予定</button>
-                {onAddMove && <button className="btn small" onClick={() => onAddMove(d)}><Icon n="plus" s={14} />移動</button>}
+                <button className="btn small" onClick={() => onAddLocal(d)}><Icon n="plus" s={14} />追加</button>
               </span>
             </div>
             <DayTimeline t={t} iso={d} onEdit={onEdit} onInsert={(k, o) => k === "move" ? onAddMove(d, o) : onAddLocal(d, o)} />
@@ -779,21 +778,12 @@ function betweenTime(a, b) {
 }
 function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
   const { ev, sleeping, night } = dayEvents(t, iso);
-  const [open, setOpen] = useState(null);
-  // 予定と予定の間の「＋」。押すと「予定」「移動」を選べて、時刻と前後の場所が入った状態で開く
+  // 予定と予定の間の「＋」。押すと、時刻と前後の場所が入った追加の画面が開く（予定／移動は画面の上で切り替える）
   const gap = (i) => {
     if (!onInsert) return null;
     const a = ev[i], b = ev[i + 1];
     const opts = { time: betweenTime(a && a.time, b && b.time), from: a ? (a.map || a.title || "") : "", to: b ? (b.map || b.title || "") : "" };
-    return open === i ? (
-      <div key={"g" + i} className="tl-gap open">
-        <button className="btn small" onClick={() => { setOpen(null); onInsert("local", opts); }}><Icon n="plus" s={14} />予定{opts.time ? `（${opts.time}）` : ""}</button>
-        <button className="btn small" onClick={() => { setOpen(null); onInsert("move", opts); }}><Icon n="route" s={14} />移動</button>
-        <button className="btn small ghost" onClick={() => setOpen(null)}>やめる</button>
-      </div>
-    ) : (
-      <button key={"g" + i} className="tl-gap" aria-label={b ? `${a.title} と ${b.title} の間に追加` : `${a.title} のあとに追加`} onClick={() => setOpen(i)}><span><Icon n="plus" s={12} /></span></button>
-    );
+    return <button key={"g" + i} className="tl-gap" aria-label={b ? `${a.title} と ${b.title} の間に追加` : `${a.title} のあとに追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>;
   };
   return (
     <>
@@ -837,8 +827,7 @@ function DayDetail({ t, iso, setIso, onEdit, onAddLocal, onAddMove, onSuggest })
       <div className="card flush divide"><DayTimeline t={t} iso={iso} onEdit={onEdit} onInsert={(k, o) => k === "move" ? onAddMove(iso, o) : onAddLocal(iso, o)} /></div>
       <DayMap t={t} iso={iso} />
       <div className="row" style={{ flexWrap: "nowrap" }}>
-        <button className="btn block" style={{ flex: 1 }} onClick={() => onAddLocal(iso)}><Icon n="plus" s={16} />予定を追加</button>
-        {onAddMove && <button className="btn block" style={{ flex: 1 }} onClick={() => onAddMove(iso)}><Icon n="plus" s={16} />移動を追加</button>}
+        <button className="btn block" style={{ flex: 1 }} onClick={() => onAddLocal(iso)}><Icon n="plus" s={16} />予定・移動を追加</button>
         {onSuggest && <button className="btn block" style={{ flex: 1 }} onClick={() => onSuggest(iso)}>予定を提案してもらう</button>}
       </div>
       {sleeping && sleeping.memo && <div className="note" style={{ whiteSpace: "pre-wrap" }}>{sleeping.memo}</div>}
@@ -1585,14 +1574,30 @@ function App() {
     const onDay = isISO(date), d = onDay ? date : last ? stayEnd(last) : todayISO();
     const here = onDay ? stays.find(s => d >= s.startDate && d < stayEnd(s)) : null;
     const x = { id: uid(), type: "transit", mode: onDay ? "未定" : "飛行機", desc: "", fromCity: o && o.from ? o.from : onDay ? (here ? here.city : "") : last ? last.city : "", toCity: (o && o.to) || "", departDate: d, departTime: (o && o.time) || "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い" };
-    update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); setSheet({ kind: "transit", id: x.id, back, init: JSON.stringify(x) });
+    update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); setSheet({ kind: "transit", id: x.id, back, init: JSON.stringify(x), fresh: !!onDay, opts: o || null });
+  };
+  // 追加したばかりの予定と移動を切り替える。入れた日付・時刻・場所は引き継ぐ
+  const switchNew = (to) => {
+    if (!sheet || !sheet.fresh || sheet.kind === to) return;
+    const tr0 = draftRef.current, o = sheet.opts || {};
+    if (to === "transit") {
+      const l = (tr0.localTransport || []).find(x => x.id === sheet.id);
+      if (!l) return;
+      update(tr => ({ ...tr, localTransport: (tr.localTransport || []).filter(x => x.id !== l.id) }));
+      addTransit(l.date, sheet.back, { time: l.startTime || o.time || "", from: o.from || "", to: o.to || l.address || "" });
+    } else {
+      const x = (tr0.itinerary || []).find(r => r.id === sheet.id);
+      if (!x) return;
+      update(tr => ({ ...tr, itinerary: tr.itinerary.filter(r => r.id !== x.id) }));
+      addLocal(x.departDate, sheet.back, { time: x.departTime || o.time || "", from: o.from, to: o.to });
+    }
   };
   const addLocal = (date, back, o) => {
     const tr0 = draftRef.current, r = tripRange(tr0);
     const d = isISO(date) ? date : r ? r.start : todayISO();
     const stay = staysOf(tr0).find(s => s.startDate && d >= s.startDate && d < stayEnd(s));
     const l = { id: uid(), linkedStayId: stay ? stay.id : null, category: "観光", desc: "", address: "", fromAddress: "", toAddress: "", date: d, startTime: (o && o.time) || "", endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: "", paymentStatus: "未払い", status: "候補" };
-    update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l] })); setSheet({ kind: "local", id: l.id, back });
+    update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l] })); setSheet({ kind: "local", id: l.id, back, fresh: true, opts: o || null, init: JSON.stringify(l) });
   };
 
   // 予約メール
@@ -1743,7 +1748,10 @@ function App() {
     // 何も入力せずに閉じた予定は残さない
     if (sheet && sheet.kind === "local") {
       const l = (draftRef.current.localTransport || []).find(x => x.id === sheet.id);
-      if (l && !String(l.desc || "").trim() && !l.startTime && !Number(l.price) && !String(l.memo || "").trim()) update(tr => ({ ...tr, localTransport: tr.localTransport.filter(x => x.id !== sheet.id) }));
+      const lk = ["desc", "address", "category", "date", "startTime", "endTime", "price", "memo", "status", "paymentStatus", "needsBooking"];
+      const lpick = (o) => JSON.stringify(lk.map(k => o[k] == null ? "" : String(o[k])));
+      const untouched = l && sheet.init && lpick(l) === lpick(JSON.parse(sheet.init));
+      if (l && (untouched || (!String(l.desc || "").trim() && !l.startTime && !Number(l.price) && !String(l.memo || "").trim()))) update(tr => ({ ...tr, localTransport: tr.localTransport.filter(x => x.id !== sheet.id) }));
     }
     // 追加したまま何も変えずに閉じた移動も残さない（「＋」で前後の場所や時刻が入っていても、触っていなければ消す）
     if (sheet && sheet.kind === "transit" && sheet.init) {
@@ -1820,6 +1828,12 @@ function App() {
           {sheet.kind === "suggest" && <DaySuggest t={t} iso={sheet.iso} update={update} done={(n) => { toast(`${n}件の予定を追加しました`); closeSheet(); }} />}
           {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d, o) => addLocal(d, d, o)} onAddMove={(d, o) => addTransit(d, d, o)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d, back: d })} />}
           {sheet.kind === "stay" && <StayEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
+          {sheet.fresh && (sheet.kind === "local" || sheet.kind === "transit") && (
+            <div className="seg" role="tablist" aria-label="追加するもの" style={{ marginBottom: 12 }}>
+              <button role="tab" aria-selected={sheet.kind === "local"} onClick={() => switchNew("local")}>予定</button>
+              <button role="tab" aria-selected={sheet.kind === "transit"} onClick={() => switchNew("transit")}>移動</button>
+            </div>
+          )}
           {sheet.kind === "transit" && <TransitEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
           {sheet.kind === "local" && <LocalEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
           {sheet.kind === "add" && (

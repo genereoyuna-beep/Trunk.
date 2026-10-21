@@ -29,6 +29,29 @@ const Places = {
     const r = await xs[0].pick();
     return r && r.lat != null && r.lng != null ? r : null;
   },
+  // 宿の英語の住所を調べる（入国審査用ページのため）。候補の1件目を英語で読み直す
+  async locateEn(q) {
+    const v = String(q || "").trim();
+    if (v.length < 2 || this.broken) return null;
+    await this.load();
+    const P = google.maps.places;
+    if (P.AutocompleteSuggestion && P.Place) {
+      try {
+        const { suggestions } = await P.AutocompleteSuggestion.fetchAutocompleteSuggestions({ input: v, sessionToken: this.session(), language: "en" });
+        const p = (suggestions || []).map(x => x.placePrediction).find(Boolean);
+        if (!p) return null;
+        const place = new P.Place({ id: p.placeId, requestedLanguage: "en" });
+        await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
+        this.token = null;
+        return place.formattedAddress ? { name: place.displayName || "", address: place.formattedAddress } : null;
+      } catch (e) { /* 下の従来の方法で試す */ }
+    }
+    const svc = this._svc || (this._svc = new P.AutocompleteService());
+    const preds = await new Promise(ok => svc.getPlacePredictions({ input: v, sessionToken: this.session(), language: "en" }, (r) => ok(r || [])));
+    if (!preds.length) return null;
+    const ps = this._ps || (this._ps = new P.PlacesService(document.createElement("div")));
+    return new Promise(ok => ps.getDetails({ placeId: preds[0].place_id, fields: ["name", "formatted_address"], sessionToken: this.session(), language: "en" }, (d) => { this.token = null; ok(d && d.formatted_address ? { name: d.name || "", address: d.formatted_address } : null); }));
+  },
   // kind: "city"（都市）／それ以外（施設・住所）
   async _suggest(input, kind) {
     const q = String(input || "").trim();

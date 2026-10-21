@@ -14,6 +14,8 @@ window.__demo = { view: DQ.get("view"), book: DQ.get("book"), sheet: DQ.get("she
   Store.watchTrips = (cb) => { listener = cb; emit(); return () => {}; };
   Store.saveTrip = async (id, data) => { const isNew = !trips.has(id); trips.set(id, data); if (isNew) emit(); return data; };
   Store.loadPrivate = async () => ({}); Store.savePrivate = async () => {};
+  // 見本では英語の住所を Google に調べに行かない（見る人が多いと、1日の回数を使い切ってしまうため）
+  if (typeof Places !== "undefined") Places.locateEn = async () => null;
   Store.loadPasses = async () => {}; Store.people = async () => []; Store.share = async () => null;
   // 予約メールの取り込み（?mail=1 で使える状態と見本のメールを出す）
   const MAILDEMO = new URLSearchParams(location.search).get("mail") === "1";

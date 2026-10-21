@@ -68,7 +68,7 @@ function entryChecks(t) {
     const c = `${splitCity(s.city).main || "滞在"}（${md(s.startDate)}〜）`;
     if (!h.name) out.push(`${c}の宿：宿泊先名を入れる`);
     else if (!h.address) out.push(`${c}の宿：住所を入れる（予約サイトの英語の住所がおすすめ）`);
-    else if (hasJa(enAddress(h.address))) out.push(`${c}の宿：住所が日本語です。英語の住所にすると伝わりやすくなります`);
+    else if (hasJa(enAddress(h.addressEn || h.address))) out.push(`${c}の宿：住所が日本語です。英語の住所にすると伝わりやすくなります`);
   });
   return out;
 }
@@ -96,7 +96,7 @@ function EntryPage({ t }) {
       {stays.length ? stays.map(({ s, h }) => (
         <div key={s.id} className="en-item">
           <b className="mono">{fullDate(s.startDate)} – {fullDate(stayEnd(s))}</b>
-          <span>{h.name || "—"}{h.address ? <><br />{enAddress(h.address)}</> : null}{h.confirmation ? <><br />Booking No. {h.confirmation}</> : null}</span>
+          <span>{h.name || "—"}{h.addressEn || h.address ? <><br />{enAddress(h.addressEn || h.address)}</> : null}{h.confirmation ? <><br />Booking No. {h.confirmation}</> : null}</span>
         </div>
       )) : <div className="en-item"><span>—</span></div>}
       <div className="en-foot">This itinerary was prepared by the traveler with Trunk. (trunk-travelplanner.com)</div>
@@ -419,6 +419,23 @@ async function shioriToPDF(container, onProgress) {
 function ShioriView({ t, canExport, update }) {
   const exportRef = useRef(null);
   const [st, setSt] = useState("");
+  // 入国審査用ページのため、日本語の住所の宿は英語の住所を調べて「英語の住所」に入れる（1つの宿につき1回だけ。元の住所は変えない）
+  useEffect(() => {
+    if (!update || typeof Places === "undefined" || (t.shioriParts || {}).en === false) return;
+    const need = entryStays(t).map(x => x.h).filter(h => h && h.id && h.address && !h.addressEn && !h.addressEnTried && hasJa(enAddress(h.address)));
+    if (!need.length) return;
+    (async () => {
+      for (const h of need) {
+        let r = null;
+        try { r = await Places.locateEn([h.name, splitCity(h.city || "").main].filter(Boolean).join(" ") || h.address); } catch (e) {}
+        // 「Seoul, South Korea」のような大まかな住所は使わない（番地の数字があって、3つ以上に区切れるものだけ）
+        const ok = (x) => x && x.address && !hasJa(x.address) && /\d/.test(x.address) && x.address.split(",").length >= 3;
+        if (!ok(r)) { try { r = await Places.locateEn(h.address); } catch (e) {} }
+        const en = ok(r) ? r.address : "";
+        update(tr => ({ ...tr, hotels: (tr.hotels || []).map(x => x.id === h.id ? { ...x, addressEnTried: true, ...(en ? { addressEn: en } : {}) } : x) }));
+      }
+    })();
+  }, []);
   const save = async () => {
     if (!exportRef.current) return;
     setSt("PDFを作っています…");

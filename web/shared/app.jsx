@@ -260,7 +260,8 @@ function StayEditor({ t, id, update, close }) {
             <Field label="予約番号" opt><TextIn value={h.confirmation} onChange={v => setHotel({ confirmation: v })} /></Field>
             <Field label="無料キャンセル期限" opt><DateIn value={h.cancelDeadline} onChange={v => setHotel({ cancelDeadline: v })} /></Field>
             <Field label="予約ページのURL" opt><TextIn value={h.url} onChange={v => setHotel({ url: v })} inputMode="url" /></Field>
-            <Field label="住所" opt wide><PlaceIn value={h.address} onChange={v => setHotel({ address: v, geo: null })} onPick={(r, it) => setHotel({ address: r.address || it.main, geo: llOf(r) })} /></Field>
+            <Field label="住所" opt wide><PlaceIn value={h.address} onChange={v => setHotel({ address: v, geo: null, addressEnTried: false })} onPick={(r, it) => setHotel({ address: r.address || it.main, geo: llOf(r), addressEnTried: false })} /></Field>
+            {(h.addressEn || /[\u3040-\u30ff\u3400-\u9fff]/.test(String(h.address || ""))) && <Field label="英語の住所（入国審査用ページに載せます）" opt wide><TextIn value={h.addressEn || ""} onChange={v => setHotel({ addressEn: v })} placeholder="空なら、しおりを開いたときに自動で調べます" /></Field>}
           </div>
           <div className="row">
             {safeUrl(h.url) && <a className="btn small" href={safeUrl(h.url)} target="_blank" rel="noopener noreferrer"><Icon n="ext" s={14} />予約ページ</a>}

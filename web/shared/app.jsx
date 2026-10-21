@@ -363,7 +363,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
                 <svg width="40" height="12" viewBox="0 0 40 12" fill="none" stroke="#B9C2CC" strokeWidth="1.5" aria-hidden="true"><path d="M0 6h36M31 1l5 5-5 5" /></svg>
                 <div style={{ textAlign: "right" }}><small>{lastPlace} 着</small>{dot(r.end)}</div>
               </div>
-              <div className="small" style={{ marginTop: 12, color: "#B9C2CC" }}>{r.days}日間 ・ {stats.cities}都市</div>
+              <div className="small" style={{ marginTop: 12, color: "#B9C2CC" }}>{r.days}日間{stats.cities ? ` ・ ${stats.cities}都市` : ""}</div>
             </>
           )}
         </section>
@@ -413,7 +413,13 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
         )}
       </div>
       <div className="stack h-c">
-        <section>
+        {!(t.totalBudget || mine.total) ? (
+          <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12 }} onClick={() => go("money")}>
+            <span className="ico" style={{ background: "var(--sunk)", color: "var(--ink)" }}><Icon n="wallet" /></span>
+            <span style={{ flex: 1, minWidth: 0 }}><span className="t1">お金</span><span className="t2" style={{ whiteSpace: "normal" }}>宿や移動に金額を入れると、1人分の見込みがここに出ます。予算も決められます</span></span>
+            <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>
+          </button>
+        ) : <section>
           <div className="sechead"><h2>お金</h2><span className="small muted">予算（1人分） <b className="mono" style={{ color: "var(--ink)" }}>{yen(t.totalBudget)}</b></span></div>
           <button className="card" style={{ width: "100%", textAlign: "left", border: 0 }} onClick={() => go("money")}>
             <div className="row between"><span className="small muted">今の見込み（1人分）</span><span className="mono" style={{ fontSize: 22, fontWeight: 600 }}>{yen(mine.total)}</span></div>
@@ -430,7 +436,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
               {mine.paid !== null && <>支払い済み <b className="mono" style={{ color: "var(--ink)" }}>{yen(mine.paid)}</b> ・ </>}全員分の合計 <span className="mono">{yen(stats.estimate)}</span>
             </div>
           </button>
-        </section>
+        </section>}
       </div>
       <div className="stack h-b">
         <section>
@@ -1101,7 +1107,7 @@ function MoneyView({ t, stats, update, mode, setMode, tripId, setMe }) {
           </div>
           <div className="bar" style={{ height: 10 }}><span style={{ width: `${Math.min(100, t.totalBudget ? totalA / t.totalBudget * 100 : 0)}%`, background: t.totalBudget && totalA > t.totalBudget ? "var(--danger)" : "var(--ink)" }} /></div>
           <Toggle checked={allView} onChange={setAllView}>全員分の合計で見る</Toggle>
-          <div className="note">宿・移動・現地の金額を、それぞれの「人数（何人分の金額か）」で割って1人分を出しています。人数は各予定の編集画面で変えられます。食費などは「支出」で予算の項目を選んで記録すると、実費に自動で入ります。</div>
+          <div className="note">宿や移動の金額を、それぞれ何人分かで割って1人分を出しています。食費などは「支出」に記録すると、ここに入ります。</div>
         </section>
         <section className="card budget2">
           {rows.map(r => { const tg = Number(r.target) || 0, diff = tg - r.actualV; return (
@@ -1252,6 +1258,8 @@ function tripStatusText(data) {
   if (dayDiff(today, r.end) >= 0) return "旅行中";
   return "終了";
 }
+// 旅行の名前を空にしたときの名前（例：台北 2泊3日）
+const autoTripName = (f) => { const d = splitCity(String(f.dest || "")).main.trim(); if (!d) return ""; const n = Number(f.nights) || 0; return n === 0 ? `${d} 日帰り` : `${d} ${n}泊${n + 1}日`; };
 function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited }) {
   const [form, setForm] = useState(null);
   const [busyCreate, setBusyCreate] = useState(false);
@@ -1265,25 +1273,27 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited })
             <span className="row" style={{ gap: 6, flex: "none" }}>{x.joined && <span className="pill tone-none">参加</span>}{x.pass && !x.joined && <span className="pill tone-booked">パス</span>}<span className="pill tone-none">{tripStatusText(x.data)}</span></span>
           </button>); })}
       </div>
-      {typeof TrunkPlanLine === "function" && <TrunkPlanLine />}
+      {typeof TrunkPlanLine === "function" && trips.length > 0 && <TrunkPlanLine />}
       {limited && !form && <div className="note">{FREE_LIMIT_MSG}</div>}
       {limited && !form && typeof TrunkBuyPass === "function" && <TrunkBuyPass />}
-      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "", people: 1, names: [] })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
+      {!form && <div className="row"><button className="btn primary" disabled={limited} onClick={() => setForm({ dest: "", name: "", start: "", nights: 2, label: "", home: FEATURES.homeAirport || "", idea: "", people: 1, names: [] })}><Icon n="plus" s={16} />新しい旅行</button>{onSettings && <button className="btn" onClick={onSettings}>この旅行の設定</button>}</div>}
       {form && (
         <section className="card stack" style={{ gap: 10 }}>
           <h3>新しい旅行</h3>
           <div className="fgrid">
-            <Field label="旅行の名前" wide><TextIn value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="例：台湾 2027 春" /></Field>
-            <Field label="出発日（あとで変えられます）"><DateIn value={form.start} onChange={v => setForm({ ...form, start: v })} /></Field>
+            <Field label="行き先" wide><PlaceIn kind="city" value={form.dest} onChange={v => setForm({ ...form, dest: v })} onPick={(r, it) => setForm({ ...form, dest: it.main })} placeholder="例：台北、ソウル、京都" /></Field>
+            <Field label="出発日"><DateIn value={form.start} onChange={v => setForm({ ...form, start: v })} /></Field>
             <Field label="泊数"><select value={form.nights} onChange={e => setForm({ ...form, nights: Number(e.target.value) })}>{Array.from({ length: 31 }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り" : `${i}泊`}</option>)}</select></Field>
             {FEATURES.mail && <Field label="Gmailのラベル（任意）"><TextIn value={form.label} onChange={v => setForm({ ...form, label: v })} placeholder="例：2027 TAIWAN" /></Field>}
-            <Field label="出発地"><PlaceIn value={form.home} onChange={v => setForm({ ...form, home: v })} onPick={(r, it) => setForm({ ...form, home: r.name || it.main })} options={AIRPORTS} placeholder="例：羽田空港(HND)" /></Field>
-            <Field label="人数（あとで変えられます）"><select value={form.people || 1} onChange={e => setForm({ ...form, people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
-            {(form.people || 1) > 1 && <Field label="名前（任意・割り勘や持ち物に使います）" wide><div className="stack" style={{ gap: 6 }}>{Array.from({ length: form.people }, (_, i) => <TextIn key={i} value={(form.names || [])[i] || ""} onChange={v => { const n = [...(form.names || [])]; n[i] = v; setForm({ ...form, names: n }); }} placeholder={i === 0 ? "自分" : `同行者${i}`} />)}</div></Field>}
+            <Field label="どこから出発？" opt wide><PlaceIn value={form.home} onChange={v => setForm({ ...form, home: v })} onPick={(r, it) => setForm({ ...form, home: r.name || it.main })} options={AIRPORTS} placeholder="例：羽田空港(HND)、東京駅" /></Field>
+            {form.home.trim() && form.dest.trim() && form.start && <div className="xs muted wide" style={{ marginTop: -4 }}>行きと帰りの移動を「未予約」で入れておきます。</div>}
+            <Field label="人数" opt><select value={form.people || 1} onChange={e => setForm({ ...form, people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
+            {(form.people || 1) > 1 && <Field label="名前（割り勘や持ち物に使います）" opt wide><div className="stack" style={{ gap: 6 }}>{Array.from({ length: form.people }, (_, i) => <TextIn key={i} value={(form.names || [])[i] || ""} onChange={v => { const n = [...(form.names || [])]; n[i] = v; setForm({ ...form, names: n }); }} placeholder={i === 0 ? "自分" : `同行者${i}`} />)}</div></Field>}
+            <Field label="旅行の名前" opt wide><TextIn value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder={autoTripName(form) || "空なら行き先と日数から付けます"} /></Field>
             {FEATURES.ai && <Field label="どんな旅行？（書くとClaudeが日程の下書きを作ります・任意）" wide><textarea value={form.idea} onChange={e => setForm({ ...form, idea: e.target.value })} placeholder="例：台北。夜市と温泉が好き。九份にも行きたい。のんびりめ" /></Field>}
           </div>
           {form.idea.trim() && !form.start && <div className="xs" style={{ color: "var(--orange)" }}>下書きを作るには出発日を入れてください</div>}
-          <div className="row"><button className="btn primary" disabled={!form.name.trim() || busyCreate} onClick={async () => { setBusyCreate(true); await onCreate(form); setBusyCreate(false); }}>{busyCreate ? "下書きを作っています…" : form.idea.trim() && form.start ? "下書きを作って作成" : "作成する"}</button><button className="btn ghost" onClick={() => setForm(null)}>やめる</button></div>
+          <div className="row"><button className="btn primary" disabled={!(form.name.trim() || form.dest.trim()) || busyCreate} onClick={async () => { setBusyCreate(true); await onCreate(form); setBusyCreate(false); }}>{busyCreate ? "下書きを作っています…" : form.idea.trim() && form.start ? "下書きを作って作成" : "作成する"}</button><button className="btn ghost" onClick={() => setForm(null)}>やめる</button></div>
         </section>
       )}
     </>
@@ -1524,7 +1534,15 @@ function App() {
     if (atLimit) { toast("無料版では旅行は1つずつです"); return; }
     flushNow();
     const id = FEATURES.newId ? FEATURES.newId() : "t-" + Date.now().toString(36);
-    let data = { ...emptyTrip(form.name.trim(), form.start || "", form.nights), gmailLabel: form.label.trim() };
+    const dest = String(form.dest || "").trim(), home = String(form.home || "").trim();
+    let data = { ...emptyTrip(form.name.trim() || autoTripName(form) || "新しい旅行", form.start || "", form.nights), gmailLabel: (form.label || "").trim() };
+    // 行き先：最初の滞在の都市にする。出発地もあれば、行きと帰りの移動を「未予約」で入れる
+    if (dest) data = { ...data, itinerary: data.itinerary.map((x, i) => i === 0 && x.type === "stay" ? { ...x, city: dest } : x) };
+    if (dest && home && form.start) {
+      const last = addDays(form.start, Number(form.nights) || 0);
+      const mv = (from, to, d) => ({ id: uid(), type: "transit", mode: "未定", desc: "", fromCity: from, toCity: to, departDate: d, departTime: "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い", needsBooking: true });
+      data = { ...data, itinerary: normalizeItinerary([...data.itinerary, mv(home, dest, form.start), mv(dest, home, last)]) };
+    }
     // 人数と名前：2人以上なら参加者を作る（名前がなければ「自分」「同行者1」…）。最初の人が自分
     if ((form.people || 1) > 1) {
       const names = Array.from({ length: form.people }, (_, i) => String((form.names || [])[i] || "").trim() || (i === 0 ? "自分" : `同行者${i}`));
@@ -1544,7 +1562,7 @@ function App() {
     }
     await Store.saveTrip(id, data).catch(() => {});
     track("trip_create", { source: drafted ? "ai_draft" : "blank", people: form.people || 1 });
-    rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab("plan"); toast(drafted ? "日程の下書きを入れて旅行を作りました" : form.idea && form.idea.trim() ? "旅行を作りました（下書きは作れませんでした）" : "旅行を作りました");
+    rememberTrip(id); idRef.current = null; setTripId(id); setSheet(null); setTab(drafted ? "plan" : "home"); toast(drafted ? "日程の下書きを入れて旅行を作りました" : form.idea && form.idea.trim() ? "旅行を作りました（下書きは作れませんでした）" : "旅行を作りました");
   };
   const copyTrip = async () => {
     flushNow();
@@ -1711,7 +1729,8 @@ function App() {
     <div className="main" style={{ paddingTop: 48 }}>
       <div className="card stack">
         <h1>{FEATURES.appName || "旅行プランナー"}</h1>
-        <p className="muted">旅行ごとに、日程・宿・移動・予算・持ち物をまとめて管理します。最初の旅行を作ってください。</p>
+        <p className="muted">行き先と日にちを入れるだけで、旅行の枠ができます。宿・移動・1日の予定・持ち物は、あとから少しずつ足していけます。</p>
+        {FEATURES.demoUrl && <a className="small" href={FEATURES.demoUrl}>先に見本の旅行を見てみる →</a>}
         <TripsSheet trips={[]} currentId={null} onPick={() => {}} onCreate={createTrip} onSettings={null} />
       </div>
       {FEATURES.account && <button className="btn ghost" style={{ marginTop: 16 }} onClick={() => Store.signOut()}>ログアウト</button>}

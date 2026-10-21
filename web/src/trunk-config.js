@@ -48,3 +48,6 @@ FEATURES.articleFor = (t) => {
   if (/京都/.test(cities)) return A("kyoto-1n2d", "京都1泊2日のモデルコース（定番をめぐる）");
   return A("packing-list", "旅行の持ち物リスト（国内・海外）");
 };
+
+// 初めての人向け：旅行がまだないときに「見本の旅行を見てみる」を出す
+FEATURES.demoUrl = "/demo/#home";

@@ -6,7 +6,9 @@ const trunk = S('src/trunk.jsx').replace('ReactDOM.createRoot(document.getElemen
 const src = [S('src/trunk-config.js'), S('src/places.js'), ...['shared/model.js', 'shared/phrase-data.js', 'shared/world-data.js', 'shared/map.jsx', 'src/store.js', 'shared/app.jsx', 'shared/extras.jsx', 'shared/phrases.jsx', 'shared/shiori.jsx', 'shared/consult.jsx'].map(S), trunk, S('src/demo-root.jsx')].join('\n');
 const code = Babel.transform(src, { presets: ['react'] }).code.replace(/<\/script/gi, '<\\/script');
 const app = fs.readFileSync(path.join(__dirname, '../app/index.html'), 'utf8');
-const html = app.slice(0, app.lastIndexOf('<script>')) + '<script>\n' + code + '\n</script>\n</body>\n</html>\n';
+// アプリ本体のスクリプト（#root のすぐ後）から後ろを、見本用に差し替える（「新しいバージョン」の知らせは見本では出さない）
+const cut = app.indexOf('<script>', app.indexOf('<div id="root">'));
+const html = app.slice(0, cut) + '<script>\n' + code + '\n</script>\n</body>\n</html>\n';
 // 手元の確認用（preview/demo）と、サイトに出す見本（/demo/。ログインせずに触れる）の2つを作る
 const trip = path.resolve(__dirname, '../marketing/threads/demo-seoul.json');
 const pub = html

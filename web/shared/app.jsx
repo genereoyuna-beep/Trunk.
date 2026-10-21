@@ -255,7 +255,7 @@ function TransitEditor({ t, id, update, close }) {
         <Field label="到着地"><PlaceIn value={x.toCity} onChange={v => set({ toCity: v })} onPick={(r, it) => set({ toCity: r.name || it.main })} options={[near[1], near[0], ...AIRPORTS, ...sg.cities, ...sg.addresses]} /></Field>
         <Field label="手段"><select value={x.mode || "未定"} onChange={e => set({ mode: e.target.value })}>{MODES.map(m => <option key={m}>{m}</option>)}</select></Field>
         <Field label="内容（任意）"><TextIn value={x.desc} onChange={v => set({ desc: v })} placeholder="例：空港リムジンバス" /></Field>
-        {!short && <Field label="会社・便名"><SuggestIn value={x.airline} onChange={v => set({ airline: v })} options={[...(CARRIERS[mode] || Object.values(CARRIERS).flat()), ...sg.usedCarriers]} placeholder="例：Eurostar 9132" /></Field>}
+        {!short && <Field label="会社・便名" wide><SuggestIn value={x.airline} onChange={v => set({ airline: v })} options={[...(CARRIERS[mode] || Object.values(CARRIERS).flat()), ...sg.usedCarriers]} placeholder="例：Eurostar 9132" /></Field>}
         <Field label="出発日"><DateIn value={x.departDate} onChange={v => set({ departDate: v, arriveDate: x.arriveDate && x.arriveDate >= v ? x.arriveDate : v })} /></Field>
         <Field label="出発時刻"><TimeIn value={x.departTime} onChange={v => set({ departTime: v })} /></Field>
         <Field label="到着日"><DateIn value={x.arriveDate} onChange={v => set({ arriveDate: v })} /></Field>
@@ -272,7 +272,7 @@ function TransitEditor({ t, id, update, close }) {
               <span className="xs" style={{ color: tzSource(x, side).startsWith("都市名") ? "var(--orange)" : "var(--muted)" }}>{tzSource(x, side)}</span>
             </div>
           );
-        }) : <div className="field"><span>時差</span><button className="btn small" style={{ justifySelf: "start" }} onClick={() => setShowTZ(true)}>なし（{fmtTZ(effTZ(x, "depart"))}）・直す</button></div>}
+        }) : <div className="field wide"><span>時差</span><button className="btn small" style={{ justifySelf: "start" }} onClick={() => setShowTZ(true)}>なし（{fmtTZ(effTZ(x, "depart"))}）・直す</button></div>}
         {!short && <Field label="クラス・席"><SuggestIn value={x.cls} onChange={v => set({ cls: v })} options={CLASSES[mode] || CLASSES["飛行機"]} /></Field>}
         {!short && <Field label="経由"><PlaceIn value={x.transitStops} onChange={v => set({ transitStops: v })} onPick={(r, it) => set({ transitStops: r.name || it.main })} /></Field>}
         <Field label="金額（円）"><NumIn value={x.price} onChange={v => set({ price: v })} /></Field>
@@ -782,7 +782,9 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
   const gap = (i) => {
     if (!onInsert) return null;
     const a = ev[i], b = ev[i + 1];
-    const opts = { time: betweenTime(a && a.time, b && b.time), from: a ? (a.map || a.title || "") : "", to: b ? (b.map || b.title || "") : "" };
+    // 場所は見出し（「○○ 発 → △△」など）ではなく、その予定・移動の本当の場所から取る。前は「終わったあとにいる所」、後ろは「始まる所」
+    const placeOf = (e, last) => { if (!e) return ""; const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; return String((grp && grp.find(Boolean)) || e.map || "").trim(); };
+    const opts = { time: betweenTime(a && a.time, b && b.time), from: placeOf(a, true), to: placeOf(b, false) };
     return <button key={"g" + i} className="tl-gap" aria-label={b ? `${a.title} と ${b.title} の間に追加` : `${a.title} のあとに追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>;
   };
   return (

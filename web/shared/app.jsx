@@ -55,6 +55,8 @@ function SuggestIn({ value, onChange, options, ...p }) {
 // 場所の入力：Trunk. では、旅行の中の場所（都市・空港など）と Google の候補を一緒に出す。ないとき（アーティファクト版）は今までどおり
 // Google の候補で選んだ場所の位置（緯度・経度）を、地図のために旅行へ保存する
 const GeoCtx = React.createContext(null);
+// 候補から選んだ場所の位置（予定や宿そのものに持たせる。手で打ち替えたら消す）
+const llOf = (r) => r && r.lat != null && r.lng != null ? [Math.round(r.lat * 1e4) / 1e4, Math.round(r.lng * 1e4) / 1e4] : null;
 function PlaceIn({ value, onChange, onPick, kind, options, placeholder }) {
   const saveGeo = React.useContext(GeoCtx);
   const [items, setItems] = useState([]);
@@ -202,7 +204,7 @@ function StayEditor({ t, id, update, close }) {
           <BookingStatus status={h.status || "候補"} paid={h.paymentStatus} openLabel="未手配" onStatus={v => setHotel({ status: v })} onPaid={v => setHotel({ paymentStatus: v })} />
           {typeof FEATURES !== "undefined" && typeof FEATURES.hotelSearch === "function" && !isBooked(h.status) && s.city && <AffLink href={FEATURES.hotelSearch(splitCity(s.city).main)} label={`アゴダで${splitCity(s.city).main}の宿を探す`} />}
           <div className="fgrid">
-            <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}) })} placeholder="候補の宿もここに" /></Field>
+            <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}), geo: llOf(r) })} placeholder="候補の宿もここに" /></Field>
             <Field label="総額（円）"><NumIn value={h.total} onChange={v => setHotel({ total: v, perNight: Math.round(v / n) })} /></Field>
             <Field label="人数（総額は何人分か）" opt><select value={h.guests || guessGuests(t)} onChange={e => setHotel({ guests: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
             <Field label="チェックイン" opt><select value={h.checkinTime || ""} onChange={e => setHotel({ checkinTime: e.target.value })}><option value="">未設定</option>{TIME_OPTIONS.map(x => <option key={x}>{x}</option>)}</select></Field>
@@ -211,7 +213,7 @@ function StayEditor({ t, id, update, close }) {
             <Field label="予約番号" opt><TextIn value={h.confirmation} onChange={v => setHotel({ confirmation: v })} /></Field>
             <Field label="無料キャンセル期限" opt><DateIn value={h.cancelDeadline} onChange={v => setHotel({ cancelDeadline: v })} /></Field>
             <Field label="予約ページのURL" opt><TextIn value={h.url} onChange={v => setHotel({ url: v })} inputMode="url" /></Field>
-            <Field label="住所" opt wide><PlaceIn value={h.address} onChange={v => setHotel({ address: v })} onPick={(r, it) => setHotel({ address: r.address || it.main })} /></Field>
+            <Field label="住所" opt wide><PlaceIn value={h.address} onChange={v => setHotel({ address: v, geo: null })} onPick={(r, it) => setHotel({ address: r.address || it.main, geo: llOf(r) })} /></Field>
           </div>
           <div className="row">
             {safeUrl(h.url) && <a className="btn small" href={safeUrl(h.url)} target="_blank" rel="noopener noreferrer"><Icon n="ext" s={14} />予約ページ</a>}
@@ -323,7 +325,7 @@ function LocalEditor({ t, id, update, close }) {
             <Field label="乗り物" opt><SuggestIn value={l.mode} onChange={v => set({ mode: v })} options={["電車", "地下鉄", "バス", "タクシー", "Uber", "徒歩", "船", "レンタカー", "送迎"]} /></Field>
           </>
         ) : (
-          <Field label="場所・住所" opt wide><PlaceIn value={l.address} onChange={v => set({ address: v })} onPick={(r, it) => set({ address: r.name || it.main })} options={[...sg.addresses, ...sg.cities]} /></Field>
+          <Field label="場所・住所" opt wide><PlaceIn value={l.address} onChange={v => set({ address: v, geo: null })} onPick={(r, it) => set({ address: r.name || it.main, geo: llOf(r) })} options={[...sg.addresses, ...sg.cities]} /></Field>
         )}
         <Field label="金額（円）" opt><NumIn value={l.price} onChange={v => set({ price: v })} /></Field>
         <Field label="人数（金額は何人分か）" opt><select value={l.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
@@ -744,7 +746,7 @@ function dayEvents(t, iso) {
   const ending = stays.find(s => stayEnd(s) === iso), starting = stays.find(s => s.startDate === iso);
   const sleeping = stays.find(s => iso >= s.startDate && iso < stayEnd(s));
   const ev = [];
-  if (ending && !ending.noHotel) { const h = hotelOf(t, ending) || {}; ev.push({ at: [[h.address, h.name]], k: h.checkoutTime || "10:00", co: !h.checkoutTime, time: h.checkoutTime, icon: "bed", title: "チェックアウト", sub: h.name || `${splitCity(ending.city).main}の宿`, edit: { kind: "stay", id: ending.id } }); }
+  if (ending && !ending.noHotel) { const h = hotelOf(t, ending) || {}; ev.push({ at: [[h.address, h.name]], ll: h.geo || null, k: h.checkoutTime || "10:00", co: !h.checkoutTime, time: h.checkoutTime, icon: "bed", title: "チェックアウト", sub: h.name || `${splitCity(ending.city).main}の宿`, edit: { kind: "stay", id: ending.id } }); }
   transitsOf(t).forEach(x => {
     const from = splitCity(x.fromCity).main, to = splitCity(x.toCity).main, dur = calcDuration(x), st = transitState(x);
     if (!isLeg(x)) {
@@ -761,7 +763,7 @@ function dayEvents(t, iso) {
     }
   });
   (t.localTransport || []).filter(l => l.date === iso).forEach(l => ev.push({
-    at: l.category === "移動" ? [[l.fromAddress], [l.toAddress]] : [[l.address, l.desc]],
+    at: l.category === "移動" ? [[l.fromAddress], [l.toAddress]] : [[l.address, l.desc]], ll: l.category === "移動" ? null : l.geo || null,
     k: l.startTime || "13:00", time: l.startTime ? l.startTime + (l.endTime ? `〜${l.endTime}` : "") : "", icon: l.category === "移動" ? "route" : l.category === "食事" ? "food" : l.category === "観光" ? "pin" : l.category === "買い物" ? "bag" : "ticket", title: l.desc || l.category,
     sub: [l.category, l.category === "移動" ? [l.fromAddress, l.toAddress].filter(Boolean).join(" → ") : l.address].filter(Boolean).join(" ・ "), st: localState(l), edit: { kind: "local", id: l.id },
     map: l.category !== "移動" && l.address ? l.address : "",
@@ -770,7 +772,7 @@ function dayEvents(t, iso) {
     const h = hotelOf(t, starting) || {};
     ev.push(starting.noHotel
       ? { at: [[starting.city]], k: h.checkinTime || "18:00", icon: "home", title: `${starting.lodgingLabel || "宿不要"}へ`, sub: splitCity(starting.city).main, edit: { kind: "stay", id: starting.id } }
-      : { at: [[h.address, h.name]], k: h.checkinTime || "15:00", ci: !h.checkinTime, time: h.checkinTime, icon: "bed", title: "チェックイン", sub: h.name || "宿未定", st: stayState(t, starting), edit: { kind: "stay", id: starting.id }, map: h.address || "" });
+      : { at: [[h.address, h.name]], ll: h.geo || null, k: h.checkinTime || "15:00", ci: !h.checkinTime, time: h.checkinTime, icon: "bed", title: "チェックイン", sub: h.name || "宿未定", st: stayState(t, starting), edit: { kind: "stay", id: starting.id }, map: h.address || "" });
   }
   // 時刻のないチェックアウトはその日の最初の出発より前、チェックインは最後の到着より後に置く
   const deps = ev.filter(e => e.dep).map(e => e.k).sort(), arrs = ev.filter(e => e.arr).map(e => e.k).sort();
@@ -834,8 +836,9 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
     const opts = { time: betweenTime(a && a.time, b && b.time), from: placeOf(a, true), to: placeOf(b, false) };
     // 前後の場所の位置が分かれば、移動の目安を出す（どちらかがすでに移動なら出さない）
     const isMove = (e) => e && ((e.edit && e.edit.kind === "transit") || e.icon === "route");
-    const namesOf = (e, last) => { const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; return (grp || []).map(n => String(n || "").trim()).filter(n => n && !/未定/.test(n)); };
-    const geoOf = (e, last) => { for (const n of namesOf(e, last)) { const ll = geoNear(n, t.geo); if (ll) return { name: n, ll }; } return null; };
+    // 予定は「場所」が入っていればそれだけで探す（予定の名前に残った古い位置を使わないように）
+    const namesOf = (e, last) => { const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; const ns = (grp || []).map(n => String(n || "").trim()).filter(n => n && !/未定/.test(n)); return e.edit && e.edit.kind === "local" && String((grp || [])[0] || "").trim() ? ns.slice(0, 1) : ns; };
+    const geoOf = (e, last) => { if (e.ll) return { name: namesOf(e, last)[0] || e.title, ll: e.ll }; for (const n of namesOf(e, last)) { const ll = geoNear(n, t.geo); if (ll) return { name: n, ll }; } return null; };
     const both = b && !isMove(a) && !isMove(b);
     const pa = both && geoOf(a, true), pb = both && geoOf(b, false);
     const est = pa && pb && pa.name !== pb.name ? moveEstimates(pa.ll, pb.ll) : null;
@@ -847,7 +850,7 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
         let fail = 0;
         for (const ns of missing) {
           let r = null;
-          for (const n of ns) { try { r = await Places.locate(n); } catch (e) { r = null; } if (r) { saveGeo([...ns, r.name], [Math.round(r.lat * 1e4) / 1e4, Math.round(r.lng * 1e4) / 1e4]); break; } }
+          for (const n of ns) { try { r = await Places.locate(n); } catch (e) { r = null; } if (r) { saveGeo([n], llOf(r)); break; } }
           if (!r) fail++;
         }
         setLocating(null);
@@ -870,7 +873,7 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
         <div key={"g" + i} className="tl-move">
           <button className="tl-gap" style={{ margin: 0, width: "auto", padding: 0 }} aria-label={`${a.title} と ${b.title} の間に追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>
           <span className="tl-move-body">
-            <span className="tl-move-lbl">目安</span>
+            <span className="tl-move-lbl" title={`${pa.name} → ${pb.name}`}>目安（約{est.km < 10 ? est.km.toFixed(1) : Math.round(est.km)}km）</span>
             {est.out.map(o => <button key={o.mode} className="tl-move-chip" title={`${o.mode}の移動として追加`} onClick={() => add(o)}><Icon n={o.icon} s={12} />{o.mode} 約{o.min}分</button>)}
             <a className="tl-move-chip" href={url} target="_blank" rel="noopener noreferrer">経路<Icon n="ext" s={11} /></a>
             {gapMin != null && gapMin >= 0 && gapMin < best && <span className="tl-move-warn">移動に約{best}分かかりますが、間は{gapMin}分です</span>}

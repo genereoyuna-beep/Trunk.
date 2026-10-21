@@ -90,12 +90,22 @@ function rawMail(from, to, subject, text) {
 }
 async function notifyFeedback(req, env) {
   if (!env.NOTIFY_SECRET || !env.NOTIFY_TO || req.headers.get("x-notify-secret") !== env.NOTIFY_SECRET) return new Response("forbidden", { status: 403 });
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(env.NOTIFY_TO)) return new Response("send failed: NOTIFY_TO is not an email address", { status: 500 });
   const j = await req.json().catch(() => ({}));
   const r = j.record || j;
   const when = new Date(r.created_at || Date.now()).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
   const text = `Trunk. に要望が届きました。\n\n${String(r.body || "").slice(0, 4000)}\n\n----\n送られた場所：${r.where_from || "（不明）"}\n日時：${when}\n\n一覧は Supabase の feedback の表で見られます。`;
-  const from = "notify@trunk-travelplanner.com";
-  await env.MAILER.send(new EmailMessage(from, env.NOTIFY_TO, rawMail(from, env.NOTIFY_TO, "Trunk. に要望が届きました", text)));
+  // 送り主は Email Routing が有効なドメイン（in.trunk-travelplanner.com）のアドレスにする
+  const from = "notify@in.trunk-travelplanner.com";
+  try {
+    await env.MAILER.send(new EmailMessage(from, env.NOTIFY_TO, rawMail(from, env.NOTIFY_TO, "Trunk. に要望が届きました", text)));
+  } catch (e) {
+    // 失敗の理由をデータベースの記録（net._http_response）で見られるように返す。アドレスは含めない
+    // 理由は種類だけ返す（エラー文には設定した値がそのまま入ることがあるので、そのままは返さない）
+    const m = String((e && e.message) || e);
+    const why = /mail from/i.test(m) ? "sender" : /rcpt to|destination|not verified/i.test(m) ? "destination" : "other";
+    return new Response("send failed: " + why, { status: 500 });
+  }
   return new Response("ok");
 }
 

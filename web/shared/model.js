@@ -150,7 +150,7 @@ function upgradeTrip(t) {
     itin = [...itin, ...oldMoves.map(localToMove)];
     out.localTransport = (t.localTransport || []).filter(l => l.category !== "移動");
   }
-  out.itinerary = markLegs(itin);
+  out.itinerary = markLegs(fixStayOverlaps(itin, t.hotels || []));
   // かばんは固定にせず、旅行ごとに自分で決める。旧版で使っていたかばんは引き継ぐ
   if (!Array.isArray(t.bags)) out.bags = [...new Set(Object.values(t.packing || {}).flat().map(i => i.bag).filter(Boolean))];
   // 予算の「移動費」と「現地交通」は「交通費」1つに
@@ -222,7 +222,8 @@ function normalizeItinerary(list) {
     const row = cur.type === "transit" ? cur : { ...cur, dates: cur.startDate ? `${md(cur.startDate)}(${wdOf(cur.startDate)})-${md(stayEnd(cur))}(${wdOf(stayEnd(cur))})` : "" };
     out.push(row);
     const nxt = sorted[i + 1];
-    if (row.type !== "transit" && row.city && nxt && nxt.type !== "transit" && nxt.city) {
+    // 同じ都市の中で宿を移るだけなら、都市間の移動は足さない
+    if (row.type !== "transit" && row.city && nxt && nxt.type !== "transit" && nxt.city && townOf(row.city) !== townOf(nxt.city)) {
       const d = row.startDate ? stayEnd(row) : (nxt.startDate || "");
       out.push({ id: uid(), type: "transit", mode: "未定", fromCity: row.city, toCity: nxt.city, departDate: d, departTime: "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い" });
     }
@@ -230,6 +231,31 @@ function normalizeItinerary(list) {
   return markLegs(sortItinerary(out));
 }
 
+// 滞在の日付が重なっていたら直す（宿が入っている滞在の日付を優先し、もう一方をずらす・縮める）。
+// あわせて、同じ都市の滞在のあいだに自動で入った「手段未定」の移動（何も入っていないもの）を外す
+function fixStayOverlaps(list, hotels) {
+  const hasH = (s) => !s.noHotel && hotels.some(h => h.linkedStayId === s.id && (h.name || h.address || Number(h.total) > 0));
+  let items = list.map(r => r);
+  const stays = () => items.filter(r => r.type !== "transit" && isISO(r.startDate)).sort((a, b) => a.startDate.localeCompare(b.startDate) || (hasH(b) ? 1 : 0) - (hasH(a) ? 1 : 0));
+  for (let guard = 0; guard < 20; guard++) {
+    const st = stays();
+    let changed = false;
+    for (let i = 0; i < st.length - 1 && !changed; i++) {
+      const a = st[i], b = st[i + 1], aEnd = stayEnd(a), bEnd = stayEnd(b);
+      if (b.startDate >= aEnd) continue;
+      const keepA = hasH(a) || !hasH(b);
+      // 宿が入っている方はそのまま。もう一方は、重ならない所だけ残す（残りがなく宿もなければ外す）
+      const loser = keepA ? b : a, winner = keepA ? a : b, wEnd = stayEnd(winner), lEnd = stayEnd(loser);
+      let ns = null;
+      if (loser.startDate < winner.startDate) ns = { ...loser, nights: dayDiff(loser.startDate, winner.startDate) };
+      else if (lEnd > wEnd) ns = { ...loser, startDate: wEnd, nights: dayDiff(wEnd, lEnd) };
+      items = ns && ns.nights > 0 ? items.map(r => r.id === loser.id ? ns : r) : hasH(loser) ? items : items.filter(r => r.id !== loser.id);
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return items.filter(r => !(r.type === "transit" && r.mode === "未定" && townOf(r.fromCity) && townOf(r.fromCity) === townOf(r.toCity) && !r.departTime && !Number(r.price) && !String(r.airline || "").trim() && !String(r.memo || "").trim() && !isBooked(r.status)));
+}
 // 旅の出発地と最後に着く所。都市間の移動だけを時刻順に見る（街の中のタクシーや徒歩は使わない）
 function tripEnds(t) {
   const legs = transitsOf(t).filter(x => isLeg(x) && !SHORT_MODES.includes(x.mode) && isISO(x.departDate)).sort((a, b) => (a.departDate + (a.departTime || "")).localeCompare(b.departDate + (b.departTime || "")));

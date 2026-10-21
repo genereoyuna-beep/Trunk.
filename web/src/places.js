@@ -22,6 +22,13 @@ const Places = {
     if (this.broken) return Promise.resolve([]);
     return Promise.race([this._suggest(input, kind), new Promise(ok => setTimeout(() => ok([]), 5000))]);
   },
+  // 名前や住所から位置を調べる（候補の1件目の位置。移動の目安を出すときに使う）
+  async locate(q) {
+    const xs = await this.suggest(q);
+    if (!xs.length) return null;
+    const r = await xs[0].pick();
+    return r && r.lat != null && r.lng != null ? r : null;
+  },
   // kind: "city"（都市）／それ以外（施設・住所）
   async _suggest(input, kind) {
     const q = String(input || "").trim();

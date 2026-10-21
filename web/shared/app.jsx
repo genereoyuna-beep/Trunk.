@@ -812,8 +812,19 @@ function moveEstimates(a, b) {
   return { km, out };
 }
 const hhmm = (s) => { const m = String(s || "").match(/\d{1,2}:\d{2}/g); return m ? m : []; };
+// 保存してある位置を探す。名前が少し違っても（「○○ホテル」と「○○ホテル, 住所…」など）同じ場所として見る
+function geoNear(n, saved) {
+  if (!n || !saved) return null;
+  if (saved[n]) return saved[n];
+  const low = n.toLowerCase();
+  // 短い名前（都市名など）は広すぎるので、少し長い名前どうしだけ比べる
+  const k = Object.keys(saved).find(k => k.length >= 8 && (low.includes(k.toLowerCase()) || (n.length >= 8 && k.toLowerCase().includes(low))));
+  return k ? saved[k] : null;
+}
 function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
   const { ev, sleeping, night } = dayEvents(t, iso);
+  const saveGeo = React.useContext(GeoCtx);
+  const [locating, setLocating] = useState(null);
   // 予定と予定の間の「＋」。押すと、時刻と前後の場所が入った追加の画面が開く（予定／移動は画面の上で切り替える）
   const gap = (i) => {
     if (!onInsert) return null;
@@ -823,9 +834,32 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
     const opts = { time: betweenTime(a && a.time, b && b.time), from: placeOf(a, true), to: placeOf(b, false) };
     // 前後の場所の位置が分かれば、移動の目安を出す（どちらかがすでに移動なら出さない）
     const isMove = (e) => e && ((e.edit && e.edit.kind === "transit") || e.icon === "route");
-    const geoOf = (e, last) => { const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; for (const n of (grp || [])) { const ll = n && geoFor(n, t.geo); if (ll) return { name: String(n).trim(), ll }; } return null; };
-    const pa = b && !isMove(a) && !isMove(b) && geoOf(a, true), pb = pa && geoOf(b, false);
+    const namesOf = (e, last) => { const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; return (grp || []).map(n => String(n || "").trim()).filter(n => n && !/未定/.test(n)); };
+    const geoOf = (e, last) => { for (const n of namesOf(e, last)) { const ll = geoNear(n, t.geo); if (ll) return { name: n, ll }; } return null; };
+    const both = b && !isMove(a) && !isMove(b);
+    const pa = both && geoOf(a, true), pb = both && geoOf(b, false);
     const est = pa && pb && pa.name !== pb.name ? moveEstimates(pa.ll, pb.ll) : null;
+    // 位置が分からない場所があれば、押したときだけ Google で調べる（1日の回数に限りがあるので自動では調べない）
+    const missing = both && !(pa && pb) && typeof Places !== "undefined" && saveGeo ? [[a, true, pa], [b, false, pb]].filter(([e, l, p]) => !p && namesOf(e, l).length).map(([e, l]) => namesOf(e, l)) : [];
+    if (missing.length && missing.length + (pa ? 1 : 0) + (pb ? 1 : 0) === 2) {
+      const look = async () => {
+        setLocating(i);
+        let fail = 0;
+        for (const ns of missing) {
+          let r = null;
+          for (const n of ns) { try { r = await Places.locate(n); } catch (e) { r = null; } if (r) { saveGeo([...ns, r.name], [Math.round(r.lat * 1e4) / 1e4, Math.round(r.lng * 1e4) / 1e4]); break; } }
+          if (!r) fail++;
+        }
+        setLocating(null);
+        if (fail) alert("場所の位置が見つかりませんでした。予定を開いて、場所を候補から選び直すと出せるようになります。");
+      };
+      return (
+        <div key={"g" + i} className="tl-move">
+          <button className="tl-gap" style={{ margin: 0, width: "auto", padding: 0 }} aria-label={`${a.title} と ${b.title} の間に追加`} onClick={() => onInsert("local", opts)}><span><Icon n="plus" s={12} /></span></button>
+          <span className="tl-move-body"><button className="tl-move-chip" disabled={locating != null} onClick={look}>{locating === i ? "調べています…" : "移動の目安を出す"}</button></span>
+        </div>
+      );
+    }
     if (est && est.out.length) {
       const endA = hhmm(a.time).pop(), startB = hhmm(b.time)[0];
       const gapMin = endA && startB ? toMin(startB) - toMin(endA) : null;

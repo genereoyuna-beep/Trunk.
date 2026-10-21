@@ -151,6 +151,11 @@ function upgradeTrip(t) {
     out.localTransport = (t.localTransport || []).filter(l => l.category !== "移動");
   }
   out.itinerary = markLegs(fixStayOverlaps(itin, t.hotels || []));
+  // 外貨で入れた金額は、レートがあれば円の金額を入れ直す（あとからレートを入れたときのため）
+  const reYen = (x, f) => x && x.priceCur && x.priceCur !== "JPY" && Number(x.priceAmt) > 0 && Number((t.rates || {})[x.priceCur]) > 0 ? { ...x, [f]: Math.round(Number(x.priceAmt) * Number(t.rates[x.priceCur])) } : x;
+  out.itinerary = out.itinerary.map(r => r.type === "transit" ? reYen(r, "price") : r);
+  out.localTransport = (out.localTransport || []).map(l => reYen(l, "price"));
+  out.hotels = (out.hotels || []).map(h => reYen(h, "total"));
   // かばんは固定にせず、旅行ごとに自分で決める。旧版で使っていたかばんは引き継ぐ
   if (!Array.isArray(t.bags)) out.bags = [...new Set(Object.values(t.packing || {}).flat().map(i => i.bag).filter(Boolean))];
   // 予算の「移動費」と「現地交通」は「交通費」1つに

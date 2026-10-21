@@ -110,6 +110,39 @@ function PlaceIn({ value, onChange, onPick, kind, options, placeholder }) {
   );
 }
 // 金額・人数などの数。0より下にはしない（矢印キーや上下のボタンでうっかり -1 にならないように）
+// 金額と通貨。外貨なら元の金額（priceAmt）と通貨（priceCur）を持ち、円の金額（price / total）はレートで換算して入れる
+function MoneyIn({ t, item, field = "price", onChange, update }) {
+  const curs = ["JPY", ...tripCurrencies(t)];
+  const cur = item.priceCur && item.priceCur !== "JPY" ? item.priceCur : "JPY";
+  const amt = cur === "JPY" ? item[field] : item.priceAmt;
+  // 外貨を選んでレートがまだなければ、今日の目安のレートを取ってきて入れる（無料・キー不要の ExchangeRate-API）
+  const tried = useRef(""), latest = useRef(item);
+  latest.current = item; // レートが届いた時点の金額で換算する（届くまでに打ち直していることがあるため）
+  useEffect(() => {
+    if (cur === "JPY" || hasRate(t, cur) || !update || FEATURES.ai || tried.current === cur) return;
+    tried.current = cur;
+    fetch("https://open.er-api.com/v6/latest/JPY").then(r => r.json()).then(d => {
+      const v = Number(d && d.rates && d.rates[cur]);
+      if (!(v > 0)) return;
+      const rate = Math.round(10000 / v) / 10000;
+      update(tr => ({ ...tr, rates: { ...(tr.rates || {}), [cur]: rate }, ratesAsOf: tr.ratesAsOf || todayISO() }));
+      const a = Number(latest.current.priceAmt);
+      if (a > 0 && latest.current.priceCur === cur) onChange({ [field]: Math.round(a * rate) });
+    }).catch(() => {});
+  }, [cur]);
+  const put = (v, c) => onChange(c === "JPY" ? { [field]: v, priceCur: "", priceAmt: 0 } : { priceAmt: v, priceCur: c, [field]: hasRate(t, c) ? Math.round(toJPY(t, v, c)) : 0 });
+  return (
+    <>
+      <div className="row" style={{ flexWrap: "nowrap", gap: 6 }}>
+        <NumIn value={amt} onChange={v => put(v, cur)} style={{ flex: 1, minWidth: 0 }} />
+        <select aria-label="通貨" style={{ width: 82, flex: "none" }} value={cur} onChange={e => put(Number(amt) || 0, e.target.value)}>{uniq([...curs, cur]).map(c => <option key={c} value={c}>{c === "JPY" ? "円" : c}</option>)}</select>
+      </div>
+      {cur !== "JPY" && Number(amt) > 0 && <span className="xs muted" style={{ display: "block", marginTop: 2 }}>{hasRate(t, cur) ? `≒ ${yen(Math.round(toJPY(t, amt, cur)))}（予算や合計は円で計算します）` : "この通貨のレートが未入力のため、合計に入りません（お金 → 支出 の「通貨の換算」で入れられます）"}</span>}
+    </>
+  );
+}
+// 一覧に出す金額：外貨なら「16,000 KRW（≒¥1,700）」
+const priceText = (x, field = "price") => x.priceCur && x.priceCur !== "JPY" && Number(x.priceAmt) > 0 ? `${Number(x.priceAmt).toLocaleString("ja-JP")} ${x.priceCur}${Number(x[field]) > 0 ? `（≒${yen(x[field])}）` : ""}` : yen(x[field]);
 function NumIn({ value, onChange, ...p }) { return <input type="number" inputMode="numeric" min="0" value={value === 0 || value ? value : ""} onWheel={e => e.target.blur()} onChange={e => onChange(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value) || 0))} {...p} />; }
 function DateIn({ value, onChange }) { return <input type="date" value={value || ""} onChange={e => onChange(e.target.value)} />; }
 function TimeIn({ value, onChange }) { return <input type="time" value={value || ""} onChange={e => onChange(e.target.value)} />; }
@@ -212,7 +245,7 @@ function StayEditor({ t, id, update, close }) {
           {typeof FEATURES !== "undefined" && typeof FEATURES.hotelSearch === "function" && !isBooked(h.status) && s.city && <AffLink href={FEATURES.hotelSearch(splitCity(s.city).main)} label={`アゴダで${splitCity(s.city).main}の宿を探す`} />}
           <div className="fgrid">
             <Field label="宿泊先名" wide><PlaceIn value={h.name} onChange={v => setHotel({ name: v })} onPick={(r, it) => setHotel({ name: r.name || it.main, ...(r.address ? { address: r.address } : {}), geo: llOf(r) })} placeholder="候補の宿もここに" /></Field>
-            <Field label="総額（円）"><NumIn value={h.total} onChange={v => setHotel({ total: v, perNight: Math.round(v / n) })} /></Field>
+            <Field label="総額"><MoneyIn t={t} update={update} item={h} field="total" onChange={p => setHotel({ ...p, perNight: Math.round((Number(p.total) || 0) / n) })} /></Field>
             <Field label="人数（総額は何人分か）" opt><select value={h.guests || guessGuests(t)} onChange={e => setHotel({ guests: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
             {/* 宿の決まり（予約ページやメールに書いてある時刻）と、実際に行く予定の時刻は分けて持つ */}
             <div className="wide xs muted" style={{ marginBottom: -4 }}>宿の決まり（予約ページに書いてある時刻）</div>
@@ -295,7 +328,7 @@ function TransitEditor({ t, id, update, close }) {
         }) : <div className="field wide opt"><span>時差<em className="opt-tag">任意</em></span><button className="btn small" style={{ justifySelf: "start" }} onClick={() => setShowTZ(true)}>なし（{fmtTZ(effTZ(x, "depart"))}）・直す</button></div>}
         {!short && <Field label="クラス・席" opt><SuggestIn value={x.cls} onChange={v => set({ cls: v })} options={CLASSES[mode] || CLASSES["飛行機"]} /></Field>}
         {!short && <Field label="経由" opt><PlaceIn value={x.transitStops} onChange={v => set({ transitStops: v })} onPick={(r, it) => set({ transitStops: r.name || it.main })} /></Field>}
-        <Field label="金額（円）" opt><NumIn value={x.price} onChange={v => set({ price: v })} /></Field>
+        <Field label="金額" opt><MoneyIn t={t} update={update} item={x} onChange={set} /></Field>
         <Field label="人数（金額は何人分か）" opt><select value={x.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
         <div className="field"><span>所要時間</span><div className="mono" style={{ padding: "9px 0" }}>{dur || "—"}</div></div>
       </div>
@@ -343,7 +376,7 @@ function LocalEditor({ t, id, update, close }) {
         ) : (
           <Field label="場所・住所" opt wide><PlaceIn value={l.address} onChange={v => set({ address: v, geo: null })} onPick={(r, it) => set({ address: r.name || it.main, geo: llOf(r) })} options={[...sg.addresses, ...sg.cities]} /></Field>
         )}
-        <Field label="金額（円）" opt><NumIn value={l.price} onChange={v => set({ price: v })} /></Field>
+        <Field label="金額" opt><MoneyIn t={t} update={update} item={l} onChange={set} /></Field>
         <Field label="人数（金額は何人分か）" opt><select value={l.people || 1} onChange={e => set({ people: Number(e.target.value) })}>{Array.from({ length: 10 }, (_, i) => <option key={i} value={i + 1}>{i + 1}人</option>)}</select></Field>
       </div>
       <Toggle checked={l.needsBooking} onChange={v => set({ needsBooking: v })}>事前の予約が必要</Toggle>
@@ -1173,9 +1206,9 @@ function MailCard({ t, update, inbox, scan, onScan, onPaste, onApply, onDecide }
 }
 function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
   const items = [];
-  staysOf(t).forEach(s => { if (s.noHotel) return; const h = hotelOf(t, s); const cm = splitCity(s.city).main; items.push({ type: "stay", date: s.startDate, icon: "bed", title: h && h.name ? h.name : stayTitle(s, "宿"), sub: `${md(s.startDate)}〜${md(stayEnd(s))} ・ ${nightsOf(s)}泊${h && h.name && cm ? " ・ " + cm : ""}`, st: stayState(t, s), price: h ? h.total : 0, people: h ? peopleOf(h) : 1, edit: { kind: "stay", id: s.id } }); });
-  transitsOf(t).forEach(x => items.push({ type: "transit", town: !isLeg(x) && transitState(x).key === "free", date: x.departDate, icon: modeIcon(x.mode), title: moveTitle(x), sub: `${md(x.departDate)}${x.departTime ? " " + x.departTime : ""} ・ ${x.mode || "未定"}${x.airline ? " ・ " + x.airline : ""}`, st: transitState(x), price: x.price, people: peopleOf(x), edit: { kind: "transit", id: x.id } }));
-  (t.localTransport || []).forEach(l => items.push({ type: "local", date: l.date, icon: catIcon(l.category), title: l.desc || l.category, sub: `${md(l.date)}${l.startTime ? " " + l.startTime : ""} ・ ${l.category}`, st: localState(l), price: l.price, people: peopleOf(l), edit: { kind: "local", id: l.id } }));
+  staysOf(t).forEach(s => { if (s.noHotel) return; const h = hotelOf(t, s); const cm = splitCity(s.city).main; items.push({ type: "stay", date: s.startDate, icon: "bed", title: h && h.name ? h.name : stayTitle(s, "宿"), sub: `${md(s.startDate)}〜${md(stayEnd(s))} ・ ${nightsOf(s)}泊${h && h.name && cm ? " ・ " + cm : ""}`, st: stayState(t, s), price: h ? h.total : 0, ptext: h ? priceText(h, "total") : "", foreign: !!(h && h.priceCur && Number(h.priceAmt) > 0), people: h ? peopleOf(h) : 1, edit: { kind: "stay", id: s.id } }); });
+  transitsOf(t).forEach(x => items.push({ type: "transit", town: !isLeg(x) && transitState(x).key === "free", date: x.departDate, icon: modeIcon(x.mode), title: moveTitle(x), sub: `${md(x.departDate)}${x.departTime ? " " + x.departTime : ""} ・ ${x.mode || "未定"}${x.airline ? " ・ " + x.airline : ""}`, st: transitState(x), price: x.price, ptext: priceText(x), foreign: !!(x.priceCur && Number(x.priceAmt) > 0), people: peopleOf(x), edit: { kind: "transit", id: x.id } }));
+  (t.localTransport || []).forEach(l => items.push({ type: "local", date: l.date, icon: catIcon(l.category), title: l.desc || l.category, sub: `${md(l.date)}${l.startTime ? " " + l.startTime : ""} ・ ${l.category}`, st: localState(l), price: l.price, ptext: priceText(l), foreign: !!(l.priceCur && Number(l.priceAmt) > 0), people: peopleOf(l), edit: { kind: "local", id: l.id } }));
   const tk = (x) => x.type === "transit" ? (transitsOf(t).find(r => r.id === (x.edit && x.edit.id)) || {}).departTime || "" : x.type === "local" ? ((t.localTransport || []).find(r => r.id === (x.edit && x.edit.id)) || {}).startTime || "" : "";
   items.sort((a, b) => (a.date || "9").localeCompare(b.date || "9") || tk(a).localeCompare(tk(b)));
   // 予約の要らない街の中の移動（タクシー・徒歩など）は、「その他の条件」で選んだときだけ出す
@@ -1210,7 +1243,7 @@ function BookView({ t, filter, setFilter, onEdit, onAddLocal, mail, entry }) {
           <button key={n} className="bookrow" onClick={() => onEdit(i.edit)}>
             <span className={"ico " + (i.st.tone === "open" ? "open" : i.st.tone === "none" ? "" : "blue")} style={i.st.tone === "none" ? { background: "var(--sunk)" } : i.st.tone === "paid" ? { background: "var(--ink)", color: "#fff" } : undefined}><Icon n={i.icon} /></span>
             <span style={{ minWidth: 0 }}><span className="t1">{i.title}</span><span className="t2">{i.sub}</span></span>
-            <span style={{ textAlign: "right" }}><Pill st={i.st} />{Number(i.price) > 0 && <div className="mono small muted" style={{ marginTop: 4 }}>{yen(i.price)}{i.people > 1 && <span className="xs">（{i.people}人分）</span>}</div>}</span>
+            <span style={{ textAlign: "right" }}><Pill st={i.st} />{(Number(i.price) > 0 || i.foreign) && <div className="mono small muted" style={{ marginTop: 4 }}>{i.ptext}{i.people > 1 && <span className="xs">（{i.people}人分）</span>}</div>}</span>
           </button>
         ))}
       </div>

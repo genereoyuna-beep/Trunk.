@@ -909,11 +909,18 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
         </div>
       ), gap(i)])}
       {showNight && sleeping && (
-        <div className="row between" style={{ padding: "10px 14px", flexWrap: "nowrap", background: "#FAFAF8" }}>
-          <span style={{ minWidth: 0 }}><span className="xs muted">この夜の宿</span><span className="t1" style={{ fontSize: 13 }}>{night.name || "宿未定"}</span>
+        <div className="row between" style={{ padding: "10px 14px", flexWrap: "nowrap", background: "#FAFAF8", cursor: onInsert ? "pointer" : undefined }} onClick={onInsert ? (ev) => { if (ev.target.closest("a")) return; onEdit({ kind: "stay", id: sleeping.id }); } : undefined}>
+          <span style={{ minWidth: 0 }}><span className="xs muted">この夜の宿{onInsert ? "（押すと入力・変更）" : ""}</span><span className="t1" style={{ fontSize: 13 }}>{night.name || "宿未定"}</span>
             {night.address && <a className="xs" href={`https://www.google.com/maps?q=${encodeURIComponent(night.address)}`} target="_blank" rel="noopener noreferrer">{night.address}</a>}
             {night.confirmation && <span className="xs muted" style={{ display: "block" }}>予約番号 <span className="mono">{night.confirmation}</span></span>}</span>
           <Pill st={stayState(t, sleeping)} />
+        </div>
+      )}
+      {/* 泊まる滞在がない夜（旅行の最終日は除く）は、ここから宿を入れられるように */}
+      {showNight && !sleeping && onInsert && (() => { const r = tripRange(t); return r && iso < r.end; })() && (
+        <div className="row between" style={{ padding: "10px 14px", flexWrap: "nowrap", background: "#FAFAF8" }}>
+          <span style={{ minWidth: 0 }}><span className="xs muted">この夜の宿</span><span className="t1" style={{ fontSize: 13 }}>まだ入っていません</span></span>
+          <button className="btn small" onClick={() => onInsert("local", { stay: true })}><Icon n="plus" s={14} />宿を入れる</button>
         </div>
       )}
     </>
@@ -1751,9 +1758,27 @@ function App() {
     update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); setSheet({ kind: "transit", id: x.id, back, init: JSON.stringify(x), fresh: !!onDay, opts: o || null });
   };
   // 追加したばかりの予定と移動を切り替える。入れた日付・時刻・場所は引き継ぐ
+  // その日の夜の宿を入れる：泊まる滞在があればそれを開き、なければその日から1泊の滞在を作って開く
+  const addStayOn = (date, back) => {
+    const tr0 = draftRef.current, stays = sortItinerary(staysOf(tr0)).filter(s => isISO(s.startDate));
+    const d = isISO(date) ? date : todayISO();
+    const cur = stays.find(s => d >= s.startDate && d < stayEnd(s));
+    if (cur) { setSheet({ kind: "stay", id: cur.id, back }); return; }
+    const prev = [...stays].reverse().find(s => stayEnd(s) <= d), next = stays.find(s => s.startDate > d);
+    const nights = next ? Math.max(1, dayDiff(d, next.startDate)) : 1;
+    const s = { id: uid(), type: "stay", city: (prev || next || {}).city || "", startDate: d, nights, memo: "", status: "未確定", noHotel: false };
+    update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, s]) })); setSheet({ kind: "stay", id: s.id, back });
+  };
   const switchNew = (to) => {
     if (!sheet || !sheet.fresh || sheet.kind === to) return;
     const tr0 = draftRef.current, o = sheet.opts || {};
+    if (to === "stay") {
+      const l = (tr0.localTransport || []).find(x => x.id === sheet.id), x = (tr0.itinerary || []).find(r => r.id === sheet.id);
+      if (l) update(tr => ({ ...tr, localTransport: (tr.localTransport || []).filter(y => y.id !== l.id) }));
+      if (x) update(tr => ({ ...tr, itinerary: tr.itinerary.filter(r => r.id !== x.id) }));
+      addStayOn(l ? l.date : x ? x.departDate : "", sheet.back);
+      return;
+    }
     if (to === "transit") {
       const l = (tr0.localTransport || []).find(x => x.id === sheet.id);
       if (!l) return;
@@ -1772,6 +1797,7 @@ function App() {
     const stay = staysOf(tr0).find(s => s.startDate && d >= s.startDate && d < stayEnd(s));
     const l = { id: uid(), linkedStayId: stay ? stay.id : null, category: "観光", desc: "", address: "", fromAddress: "", toAddress: "", date: d, startTime: (o && o.time) || "", endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: "", paymentStatus: "未払い", status: "候補" };
     // 移動の目安から押したときは、画面を開かずにそのまま入れる
+    if (o && o.stay) { addStayOn(d, back); return; }
     if (o && o.hideHint) { update(tr => ({ ...tr, moveHintsOff: [...new Set([...(tr.moveHintsOff || []), o.hideHint])] })); return; }
     if (o && o.quick) {
       const q = o.quick, same = (tr0.localTransport || []).some(x => x.category === "移動" && x.date === d && x.fromAddress === q.fromAddress && x.toAddress === q.toAddress && (x.startTime || "") === (q.startTime || ""));
@@ -2017,6 +2043,7 @@ function App() {
             <div className="seg" role="tablist" aria-label="追加するもの" style={{ marginBottom: 12 }}>
               <button role="tab" aria-selected={sheet.kind === "local"} onClick={() => switchNew("local")}>予定</button>
               <button role="tab" aria-selected={sheet.kind === "transit"} onClick={() => switchNew("transit")}>移動</button>
+              <button role="tab" aria-selected={false} onClick={() => switchNew("stay")}>宿泊</button>
             </div>
           )}
           {sheet.kind === "transit" && <TransitEditor t={t} id={sheet.id} update={update} close={closeSheet} />}

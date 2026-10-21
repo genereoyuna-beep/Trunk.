@@ -243,9 +243,15 @@ function tripEnds(t) {
 const townOf = (c) => String(splitCity(c).main || "").split(/[・(（]/)[0].trim();
 function splitStaysByMove(t, moveId) {
   const x = transitsOf(t).find(r => r.id === moveId);
-  if (!x || !isISO(x.departDate) || SHORT_MODES.includes(x.mode)) return null;
+  // 都市をまたぐ乗り物だけ（車・タクシー・徒歩・未定などは、街の中の移動とみなす）
+  if (!x || !isISO(x.departDate) || !["飛行機", "鉄道", "夜行列車", "バス", "フェリー", "夜行フェリー"].includes(x.mode)) return null;
   const to = townOf(x.toCity), d = x.arriveDate && isISO(x.arriveDate) ? x.arriveDate : x.departDate;
   if (!to) return null;
+  // 位置が分かるなら、30km より近い所への移動は分けない（同じ街の中の駅や会場など）
+  const g = typeof geoFor === "function" ? [geoFor(x.fromCity, t.geo), geoFor(x.toCity, t.geo)] : [];
+  // 位置が分からないときは、飛行機のときだけ分ける（バスや電車で行く街の中の場所を、都市とまちがえないように）
+  if (g[0] && g[1]) { if (Math.hypot(g[0][0] - g[1][0], (g[0][1] - g[1][1]) * Math.cos(g[0][0] * Math.PI / 180)) * 111 < 30) return null; }
+  else if (x.mode !== "飛行機") return null;
   const s = staysOf(t).find(s => isISO(s.startDate) && s.startDate < d && d < stayEnd(s));
   if (!s || townOf(s.city) === to) return null;
   const back = transitsOf(t).some(r => r.id !== x.id && r.departDate === x.departDate && townOf(r.fromCity) === to && townOf(r.toCity) === townOf(s.city));

@@ -1926,6 +1926,7 @@ function App() {
   const mine = myShare(t);
   const openDay = (iso) => setSheet({ kind: "day", iso });
   const closeSheet = () => {
+    let removedMove = false;
     // 何も入力せずに閉じた予定は残さない
     if (sheet && sheet.kind === "local") {
       const l = (draftRef.current.localTransport || []).find(x => x.id === sheet.id);
@@ -1940,10 +1941,10 @@ function App() {
       const empty = x && !String(x.toCity || "").trim() && !x.departTime && !Number(x.price) && !String(x.airline || "").trim() && !String(x.desc || "").trim() && !String(x.memo || "").trim();
       const keys = ["fromCity", "toCity", "mode", "departDate", "departTime", "arriveTime", "airline", "desc", "price", "cls", "memo", "status", "paymentStatus"];
       const pick = (o) => JSON.stringify(keys.map(k => o[k] == null ? "" : String(o[k])));
-      if (x && (empty || pick(x) === pick(JSON.parse(sheet.init)))) update(tr => ({ ...tr, itinerary: tr.itinerary.filter(r => r.id !== sheet.id) }));
+      if (x && (empty || pick(x) === pick(JSON.parse(sheet.init)))) { removedMove = true; update(tr => ({ ...tr, itinerary: tr.itinerary.filter(r => r.id !== sheet.id) })); }
     }
-    // 滞在の途中で別の都市へ移る移動なら、その日から滞在を分ける
-    if (sheet && sheet.kind === "transit") {
+    // 滞在の途中で別の都市へ移る移動なら、その日から滞在を分ける（何も入れずに消した移動では分けない）
+    if (sheet && sheet.kind === "transit" && !removedMove) {
       const sp = splitStaysByMove(draftRef.current, sheet.id);
       if (sp) { update(tr => { const r = splitStaysByMove(tr, sheet.id); return r ? r.trip : tr; }); toast(`${md(sp.date)}から${sp.city}の滞在にしました（${sp.from}の宿は${md(sp.date)}にチェックアウト）`); }
     }

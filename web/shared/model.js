@@ -315,10 +315,11 @@ function tripStats(t) {
   const tr = transitsOf(t), legs = tr.filter(x => transitState(x).key !== "free");
   const moves = { total: legs.length, booked: 0, decided: 0, unknown: 0 };
   legs.forEach(x => { const st = transitState(x); if (st.tone !== "open") moves.booked++; else if (st.key === "unknown") moves.unknown++; else moves.decided++; });
-  const hotelSum = (t.hotels || []).filter(h => !staysOf(t).find(s => s.id === h.linkedStayId && s.noHotel)).reduce((a, h) => a + (Number(h.total) || 0), 0);
-  const moveSum = tr.reduce((a, x) => a + (Number(x.price) || 0), 0);
-  const localMove = (t.localTransport || []).filter(l => l.category === "移動").reduce((a, l) => a + (Number(l.price) || 0), 0);
-  const localAct = (t.localTransport || []).filter(l => l.category !== "移動").reduce((a, l) => a + (Number(l.price) || 0), 0);
+  const amt = (v) => Math.max(0, Number(v) || 0); // 金額は0円より下にしない
+  const hotelSum = (t.hotels || []).filter(h => !staysOf(t).find(s => s.id === h.linkedStayId && s.noHotel)).reduce((a, h) => a + amt(h.total), 0);
+  const moveSum = tr.reduce((a, x) => a + amt(x.price), 0);
+  const localMove = (t.localTransport || []).filter(l => l.category === "移動").reduce((a, l) => a + amt(l.price), 0);
+  const localAct = (t.localTransport || []).filter(l => l.category !== "移動").reduce((a, l) => a + amt(l.price), 0);
   const paid = [...(t.hotels || []), ...tr, ...(t.localTransport || [])].filter(x => x.paymentStatus === "支払い済み")
     .reduce((a, x) => a + (Number(x.total ?? x.price) || 0), 0);
   const cities = new Set(stays.map(s => splitCity(s.city).main).filter(Boolean));
@@ -331,7 +332,7 @@ const peopleOf = (x) => Math.max(1, Number(x.people ?? x.guests) || 1);
 function myShare(t) {
   const noHotel = new Set(staysOf(t).filter(s => s.noHotel).map(s => s.id));
   const hs = (t.hotels || []).filter(h => !noHotel.has(h.linkedStayId));
-  const sum = (list, key) => list.reduce((a, x) => a + (Number(x[key]) || 0) / peopleOf(x), 0);
+  const sum = (list, key) => list.reduce((a, x) => a + Math.max(0, Number(x[key]) || 0) / peopleOf(x), 0);
   const loc = t.localTransport || [];
   const r = { mode: "people", hotel: sum(hs, "total"), flight: sum(transitsOf(t), "price"), localTransport: sum(loc.filter(l => l.category === "移動"), "price"), localActivity: sum(loc.filter(l => l.category !== "移動"), "price") };
   r.total = r.hotel + r.flight + r.localTransport + r.localActivity;

@@ -6,8 +6,13 @@ window.__demo = { view: DQ.get("view"), book: DQ.get("book"), sheet: DQ.get("she
 (async () => {
   const d = await (await fetch("trip.json")).json();
   Store.session = { user: { id: "demo" } };
-  Store.watchTrips = (cb) => { Store.cache = new Map([["demo", d]]); Store.meta = new Map([["demo", { version: 1, pass: false, joined: false }]]); cb([{ id: "demo", data: d, pass: false, joined: false }]); return () => {}; };
-  Store.saveTrip = async (id, data) => data;
+  // 手元の確認用：?empty=1 で旅行が1つもない状態（初めて使う人）から始める。作った旅行はこの画面の中だけで保存する
+  const EMPTY = DQ.get("empty") === "1" && !location.pathname.startsWith("/demo");
+  const trips = new Map(EMPTY ? [] : [["demo", d]]);
+  let listener = null;
+  const emit = () => { Store.cache = new Map(trips); Store.meta = new Map([...trips.keys()].map(k => [k, { version: 1, pass: false, joined: false }])); listener && listener([...trips].map(([id, data]) => ({ id, data, pass: false, joined: false }))); };
+  Store.watchTrips = (cb) => { listener = cb; emit(); return () => {}; };
+  Store.saveTrip = async (id, data) => { const isNew = !trips.has(id); trips.set(id, data); if (isNew) emit(); return data; };
   Store.loadPrivate = async () => ({}); Store.savePrivate = async () => {};
   Store.loadPasses = async () => {}; Store.people = async () => []; Store.share = async () => null;
   // 予約メールの取り込み（?mail=1 で使える状態と見本のメールを出す）

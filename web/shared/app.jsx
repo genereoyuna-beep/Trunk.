@@ -101,7 +101,8 @@ function PlaceIn({ value, onChange, onPick, kind, options, placeholder }) {
     </div>
   );
 }
-function NumIn({ value, onChange, ...p }) { return <input type="number" inputMode="numeric" value={value === 0 || value ? value : ""} onWheel={e => e.target.blur()} onChange={e => onChange(e.target.value === "" ? 0 : Number(e.target.value))} {...p} />; }
+// 金額・人数などの数。0より下にはしない（矢印キーや上下のボタンでうっかり -1 にならないように）
+function NumIn({ value, onChange, ...p }) { return <input type="number" inputMode="numeric" min="0" value={value === 0 || value ? value : ""} onWheel={e => e.target.blur()} onChange={e => onChange(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value) || 0))} {...p} />; }
 function DateIn({ value, onChange }) { return <input type="date" value={value || ""} onChange={e => onChange(e.target.value)} />; }
 function TimeIn({ value, onChange }) { return <input type="time" value={value || ""} onChange={e => onChange(e.target.value)} />; }
 function Toggle({ checked, onChange, children }) {

@@ -780,7 +780,9 @@ function dayEvents(t, iso) {
   // 時刻のないチェックアウトはその日の最初の出発より前、チェックインは最後の到着より後に置く
   const deps = ev.filter(e => e.dep).map(e => e.k).sort(), arrs = ev.filter(e => e.arr || e.arrK).map(e => e.arr ? e.k : e.arrK).sort();
   ev.forEach(e => { if (e.co && deps.length && deps[0] < e.k) e.k = deps[0]; if (e.ci && arrs.length && arrs[arrs.length - 1] >= e.k) e.k = arrs[arrs.length - 1] + "~"; });
-  ev.sort((a, b) => a.k.localeCompare(b.k));
+  // 同じ時刻なら「着く」→ 予定（チェックインなど）→ 出発する移動 の順。移動はその場所での予定のあとに出る
+  const rank = (e) => e.arr ? 0 : e.mv ? 2 : 1;
+  ev.sort((a, b) => a.k.localeCompare(b.k) || rank(a) - rank(b));
   const arrivals = transitsOf(t).filter(x => isLeg(x) && x.arriveDate === iso && x.departDate && x.departDate < iso);
   const dep = transitsOf(t).filter(x => isLeg(x) && x.departDate === iso).sort((a, b) => (a.departTime || "").localeCompare(b.departTime || ""));
   // 見出し：移動のある日は「出発した所 → その日の最後に着く所」、同じ都市で宿を移る日は「◯◯（宿を移動）」
@@ -1769,7 +1771,10 @@ function App() {
     const l = { id: uid(), linkedStayId: stay ? stay.id : null, category: "観光", desc: "", address: "", fromAddress: "", toAddress: "", date: d, startTime: (o && o.time) || "", endTime: "", mode: "", price: 0, people: 1, needsBooking: false, memo: "", paymentStatus: "未払い", status: "候補" };
     // 移動の目安から押したときは、画面を開かずにそのまま入れる
     if (o && o.hideHint) { update(tr => ({ ...tr, moveHintsOff: [...new Set([...(tr.moveHintsOff || []), o.hideHint])] })); return; }
-    if (o && o.quick) { update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), { ...l, ...o.quick }] })); toast(`${o.quick.mode}の移動を入れました（目安の時間です）`); return; }
+    if (o && o.quick) {
+      const q = o.quick, same = (tr0.localTransport || []).some(x => x.category === "移動" && x.date === d && x.fromAddress === q.fromAddress && x.toAddress === q.toAddress && (x.startTime || "") === (q.startTime || ""));
+      if (same) { toast("同じ移動がもう入っています"); return; }
+      update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), { ...l, ...o.quick }] })); toast(`${o.quick.mode}の移動を入れました（目安の時間です）`); return; }
     update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l] })); setSheet({ kind: "local", id: l.id, back, fresh: true, opts: o || null, init: JSON.stringify(l) });
   };
 

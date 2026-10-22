@@ -400,18 +400,24 @@ function DayWeather({ t, iso }) {
   return (
     <div className="wx-row">
       <div className="row between" style={{ flexWrap: "nowrap", gap: 8 }}>
-        <span className="small" style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-          {w.kind === "forecast" ? <WxIcon sym={w.symbol} /> : <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 6, padding: "0 5px" }}>平年</span>}
-          <b className="mono">{w.max}° / {w.min}°</b>
-          <span className="xs muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{place.city}{w.kind === "forecast" ? (w.rain >= 1 ? ` ・ 雨 ${w.rain}mm` : "") : " ・ この時期の目安"}</span>
-        </span>
+        {w.kind === "forecast" ? (
+          <span className="small" style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+            <WxIcon sym={w.symbol} />
+            <b className="mono">{w.max}° / {w.min}°</b>
+            <span className="xs muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{place.city}{w.rain >= 1 ? ` ・ 雨 ${w.rain}mm` : ""}</span>
+          </span>
+        ) : (
+          // 予報がまだ出ていない日は、予報と見まちがえないように天気のマークを出さず「ふだんは」の書き方にする
+          <span className="small muted" style={{ minWidth: 0 }}>{Number(iso.slice(5, 7))}月の{place.city}はふだん <b className="mono" style={{ color: "var(--ink)" }}>{w.max}° / {w.min}°</b>{w.rain >= 1 ? "・雨の多い時期" : ""}</span>
+        )}
       </div>
       <div className="wear">
         {wear.keys.map(k => <span key={k} className="wear-chip"><WearIcon k={k} />{WEAR_NAME[k]}</span>)}
       </div>
       {wear.tip && <div className="xs muted" style={{ marginTop: 4 }}>{wear.tip}</div>}
       {/* 予報は MET Norway の決まり（CC BY 4.0）で出所を書く。平年値は書かない */}
-      {w.kind === "forecast" && <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>天気：MET Norway</div>}
+      {w.kind === "forecast" ? <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>天気：MET Norway</div>
+        : <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>天気予報は出発の9日前から出ます</div>}
     </div>
   );
 }

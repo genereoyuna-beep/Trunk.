@@ -410,7 +410,8 @@ function DayWeather({ t, iso }) {
         {wear.keys.map(k => <span key={k} className="wear-chip"><WearIcon k={k} />{WEAR_NAME[k]}</span>)}
       </div>
       {wear.tip && <div className="xs muted" style={{ marginTop: 4 }}>{wear.tip}</div>}
-      <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>{w.kind === "forecast" ? "天気：MET Norway" : "平年値：NASA POWER"}</div>
+      {/* 予報は MET Norway の決まり（CC BY 4.0）で出所を書く。平年値は書かない */}
+      {w.kind === "forecast" && <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>天気：MET Norway</div>}
     </div>
   );
 }

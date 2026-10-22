@@ -338,7 +338,7 @@ function wxPlace(t, iso) {
   if (!s) return null;
   const h = hotelOf(t, s) || {};
   const ll = h.geo || (typeof geoFor === "function" && (geoFor(h.name, t.geo) || geoFor(s.city, t.geo)));
-  if (!ll) return null;
+  if (!ll) return { need: s.city };
   const tz = tzMatch(s.city);
   const jp = tz ? tz.zone === "Asia/Tokyo" : false;
   return { ll, tz: tz ? tzOffset(tz.zone, iso) : 9, city: splitCity(s.city).main, office: jp ? jmaOffice(s.city + " " + (h.address || "")) : "" };
@@ -397,9 +397,26 @@ const WxIcon = ({ sym, s = 20 }) => {
     {k === "snow" && <><path d="M7 15a4 4 0 0 1 .5-8A5 5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z" stroke="#5A6470" /><path d="M9 19h.01M13 20h.01M17 19h.01" stroke="var(--blue)" strokeWidth="3" /></>}
   </svg>;
 };
+// 場所が分からない都市は、Google でその都市の場所を1回だけ調べて保存する（同じ都市は二度調べない）
+const WX_LOOKED = new Set();
+function useCityGeo(cities) {
+  const saveGeo = React.useContext(GeoCtx);
+  const key = cities.filter(Boolean).join("|");
+  useEffect(() => {
+    if (!saveGeo || typeof Places === "undefined" || !Places.locate) return;
+    cities.filter(c => c && !WX_LOOKED.has(c)).forEach(c => {
+      WX_LOOKED.add(c);
+      const main = splitCity(c).main;
+      Places.locate(main).then(r => { if (r && r.lat != null) saveGeo([c, main], [Math.round(r.lat * 1e4) / 1e4, Math.round(r.lng * 1e4) / 1e4]); }).catch(() => {});
+    });
+  }, [key]);
+}
 function DayWeather({ t, iso }) {
   const base = typeof FEATURES !== "undefined" && FEATURES.weatherBase;
-  const place = useMemo(() => base ? wxPlace(t, iso) : null, [t, iso, base]);
+  const found = useMemo(() => base ? wxPlace(t, iso) : null, [t, iso, base]);
+  const ahead0 = dayDiff(todayISO(), iso);
+  useCityGeo(found && found.need && ahead0 <= 9 && ahead0 >= -1 ? [found.need] : []);
+  const place = found && !found.need ? found : null;
   const [w, setW] = useState(null);
   const key = place ? `${place.ll[0].toFixed(1)},${place.ll[1].toFixed(1)},${iso}` : "";
   useEffect(() => {
@@ -452,16 +469,19 @@ function HomeClimate({ t }) {
   const r = tripRange(t);
   const spots = useMemo(() => {
     if (!base || !r) return [];
-    const out = [], seen = new Set();
+    const out = [], seen = new Set(), need = new Set();
+    out.need = need;
     for (let d = r.start; d < r.end || d === r.start; d = addDays(d, 1)) {
       const p = wxPlace(t, d);
-      if (!p) { if (d >= r.end) break; continue; }
+      if (!p || p.need) { if (p && p.need) need.add(p.need); if (d >= r.end) break; continue; }
       const k = p.city + "|" + d.slice(5, 7);
       if (!seen.has(k)) { seen.add(k); out.push({ ...p, month: Number(d.slice(5, 7)) }); }
       if (d >= r.end) break;
     }
-    return out.slice(0, 4);
+    const res = out.slice(0, 4); res.need = [...need];
+    return res;
   }, [t, base]);
+  useCityGeo(r && dayDiff(todayISO(), r.start) > 9 ? spots.need || [] : []);
   const [rows, setRows] = useState([]);
   const key = spots.map(x => `${x.city}${x.month}`).join(",");
   useEffect(() => {

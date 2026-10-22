@@ -389,11 +389,11 @@ function DayWeather({ t, iso }) {
     const ahead = dayDiff(todayISO(), iso);
     if (ahead < -1) return; // 終わった日は出さない
     const [lat, lon] = place.ll;
+    // 出発の9日前からは天気予報。それより前か、予報にまだその日がないときは平年値
+    const normal = () => wxGet(`${base}/climate?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}`).then(j => { const m = j && (j.months || []).find(x => x.month === Number(iso.slice(5, 7))); if (m) setW({ max: m.max, min: m.min, rain: m.rain >= 4 ? 1 : 0, symbol: m.rain >= 4 ? "rain" : "", kind: "normal" }); });
     if (ahead <= 9) {
-      wxGet(`${base}/weather?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}&tz=${Math.round(place.tz || 9)}`).then(j => { const d = j && (j.days || []).find(x => x.date === iso); if (d) setW({ ...d, kind: "forecast" }); });
-    } else {
-      wxGet(`${base}/climate?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}`).then(j => { const m = j && (j.months || []).find(x => x.month === Number(iso.slice(5, 7))); if (m) setW({ max: m.max, min: m.min, rain: m.rain >= 4 ? 1 : 0, symbol: m.rain >= 4 ? "rain" : "", kind: "normal" }); });
-    }
+      wxGet(`${base}/weather?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}&tz=${Math.round(place.tz || 9)}`).then(j => { const d = j && (j.days || []).find(x => x.date === iso); if (d) setW({ ...d, kind: "forecast" }); else normal(); });
+    } else normal();
   }, [key]);
   if (!w) return null;
   const wear = wearFor(w);

@@ -202,6 +202,22 @@ async function weatherForecast(req, ctx, lat, lon, tz) {
   });
   return new Response(JSON.stringify(body || { days: [] }), { status: body ? 200 : 502, headers: wxHeaders(req, 1800) });
 }
+// 気象庁の週間天気予報（日本国内）。地方ごとのコード（例：大阪 270000）で取る。信頼度 A・B・C と降水確率つき
+async function weatherJma(req, ctx, office) {
+  const body = await cachedJSON(ctx, `https://wx.cache/v2/j/${office}`, 3600, async () => {
+    const r = await fetch(`https://www.jma.go.jp/bosai/forecast/data/forecast/${office}.json`, { headers: { "user-agent": WX_UA } });
+    if (!r.ok) return null;
+    const j = await r.json(), wk = j[1] && j[1].timeSeries;
+    if (!wk || !wk[0] || !wk[1]) return null;
+    const a = wk[0].areas[0] || {}, b = wk[1].areas[0] || {};
+    // 気温の欄が空の日（今日など）は気温なしになるので外す（その日はノルウェー気象局の予報を使う）
+    const num = (v) => v === "" || v == null ? null : Number(v);
+    const days = wk[0].timeDefines.map((t, i) => ({ date: String(t).slice(0, 10), code: (a.weatherCodes || [])[i] || "", pop: num((a.pops || [])[i]), rel: (a.reliabilities || [])[i] || "", max: num((b.tempsMax || [])[i]), min: num((b.tempsMin || [])[i]) }))
+      .filter(d => d.code && d.max != null && d.min != null);
+    return { source: "気象庁", area: (a.area && a.area.name) || "", days };
+  });
+  return new Response(JSON.stringify(body || { days: [] }), { status: body ? 200 : 502, headers: wxHeaders(req, 1800) });
+}
 // 平年値（1月〜12月）
 async function weatherClimate(req, ctx, lat, lon) {
   const body = await cachedJSON(ctx, `https://wx.cache/v2/c/${lat}/${lon}`, 2592000, async () => {
@@ -219,6 +235,11 @@ async function weatherClimate(req, ctx, lat, lon) {
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    if (url.pathname === "/jma") {
+      const office = String(url.searchParams.get("office") || "");
+      if (!/^\d{6}$/.test(office)) return new Response("bad office", { status: 400 });
+      return weatherJma(req, ctx, office);
+    }
     if (url.pathname === "/weather" || url.pathname === "/climate") {
       const lat = Math.round(Number(url.searchParams.get("lat")) * 10) / 10, lon = Math.round(Number(url.searchParams.get("lon")) * 10) / 10;
       if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return new Response("bad place", { status: 400 });

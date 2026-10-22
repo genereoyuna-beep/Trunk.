@@ -340,8 +340,27 @@ function wxPlace(t, iso) {
   const ll = h.geo || (typeof geoFor === "function" && (geoFor(h.name, t.geo) || geoFor(s.city, t.geo)));
   if (!ll) return null;
   const tz = tzMatch(s.city);
-  return { ll, tz: tz ? tzOffset(tz.zone, iso) : 9, city: splitCity(s.city).main };
+  const jp = tz ? tz.zone === "Asia/Tokyo" : false;
+  return { ll, tz: tz ? tzOffset(tz.zone, iso) : 9, city: splitCity(s.city).main, office: jp ? jmaOffice(s.city + " " + (h.address || "")) : "" };
 }
+// 国内の旅行は気象庁の週間予報を使う。都市名から気象庁の地方（府県予報区）のコードを引く
+const JMA_OFFICE = [
+  ["稚内|宗谷|利尻|礼文", "011000"], ["旭川|富良野|美瑛|留萌|上川", "012000"], ["網走|北見|紋別|知床", "013000"], ["帯広|十勝", "014030"], ["釧路|根室|阿寒", "014100"],
+  ["室蘭|苫小牧|登別|洞爺|胆振|日高", "015000"], ["函館|渡島|檜山", "017000"], ["札幌|小樽|ニセコ|千歳|石狩|空知|後志|北海道", "016000"],
+  ["青森|弘前|八戸", "020000"], ["岩手|盛岡|平泉", "030000"], ["宮城|仙台|松島", "040000"], ["秋田", "050000"], ["山形|蔵王", "060000"], ["福島|会津|郡山|いわき", "070000"],
+  ["茨城|水戸|つくば", "080000"], ["栃木|宇都宮|日光|那須", "090000"], ["群馬|前橋|高崎|草津|伊香保", "100000"], ["埼玉|さいたま|川越|秩父", "110000"], ["千葉|舞浜|成田|幕張", "120000"],
+  ["東京|羽田|新宿|渋谷|浅草|銀座|池袋", "130000"], ["神奈川|横浜|川崎|鎌倉|箱根|湘南|江ノ島", "140000"], ["新潟|佐渡|湯沢", "150000"], ["富山|立山", "160000"], ["石川|金沢|能登|加賀", "170000"],
+  ["福井|敦賀", "180000"], ["山梨|甲府|河口湖|富士吉田", "190000"], ["長野|松本|軽井沢|白馬|上高地", "200000"], ["岐阜|高山|白川郷|下呂", "210000"], ["静岡|浜松|熱海|伊豆", "220000"],
+  ["愛知|名古屋|中部国際|セントレア", "230000"], ["三重|伊勢|鳥羽|志摩", "240000"], ["滋賀|大津|彦根", "250000"], ["京都|嵐山|宇治", "260000"], ["大阪|関西空港|USJ|ユニバーサル", "270000"],
+  ["兵庫|神戸|姫路|有馬|淡路", "280000"], ["奈良", "290000"], ["和歌山|白浜|高野山", "300000"], ["鳥取", "310000"], ["島根|松江|出雲", "320000"], ["岡山|倉敷", "330000"],
+  ["広島|宮島|尾道", "340000"], ["山口|下関", "350000"], ["徳島", "360000"], ["香川|高松|小豆島|直島", "370000"], ["愛媛|松山|道後", "380000"], ["高知", "390000"],
+  ["福岡|博多|北九州|太宰府", "400000"], ["佐賀|嬉野", "410000"], ["長崎|佐世保|ハウステンボス|五島", "420000"], ["熊本|阿蘇", "430000"], ["大分|別府|由布院|湯布院", "440000"], ["宮崎|高千穂", "450000"],
+  ["奄美", "460040"], ["鹿児島|屋久島|指宿", "460100"], ["宮古島|宮古", "473000"], ["石垣|八重山|竹富|西表", "474000"], ["沖縄|那覇|美ら海|恩納", "471000"],
+];
+const jmaOffice = (city) => { const c = String(city || ""); const hit = JMA_OFFICE.find(([w]) => new RegExp(w).test(c)); return hit ? hit[1] : ""; };
+// 気象庁の天気コード（100番台 晴れ、200番台 くもり、300番台 雨、400番台 雪）を、画面の天気のマークに
+const jmaSymbol = (code, pop) => { const c = Number(code) || 0, h = Math.floor(c / 100); if (h === 4) return "snow"; if (h === 3) return "rain"; if (pop >= 50) return "rain"; if (h === 1) return c === 100 ? "clearsky_day" : "partlycloudy_day"; return "cloudy"; };
+
 // 服装の目安（最高・最低気温と雨から）
 function wearFor(w) {
   const k = [], hi = w.max, lo = w.min;
@@ -390,7 +409,13 @@ function DayWeather({ t, iso }) {
     if (ahead < -1) return; // 終わった日は出さない
     const [lat, lon] = place.ll;
     // 日ごとのカードには、実際の天気予報だけを出す（出発の9日前から）。それより前の平年値は、ホームに都市ごとに出す
-    if (ahead <= 9) wxGet(`${base}/weather?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}&tz=${Math.round(place.tz || 9)}`).then(j => { const d = j && (j.days || []).find(x => x.date === iso); if (d) setW({ ...d, kind: "forecast" }); });
+    // 予報の確かさ（海外）：ノルウェー気象局の予報には信頼度がないので、何日先かで出す
+    const conf = ahead <= 3 ? "高い" : ahead <= 6 ? "ふつう" : "低い";
+    const met = () => wxGet(`${base}/weather?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}&tz=${Math.round(place.tz || 9)}`).then(j => { const d = j && (j.days || []).find(x => x.date === iso); if (d) setW({ ...d, kind: "forecast", src: "met", conf }); });
+    if (ahead > 9) return;
+    // 国内は気象庁の週間予報（信頼度 A・B・C つき）。気象庁にその日がなければ（今日や8日目以降）ノルウェー気象局
+    if (place.office) wxGet(`${base}/jma?office=${place.office}`).then(j => { const d = j && (j.days || []).find(x => x.date === iso); if (d) setW({ max: d.max, min: d.min, rain: d.pop >= 50 ? 1 : 0, pop: d.pop, symbol: jmaSymbol(d.code, d.pop), rel: d.rel, kind: "forecast", src: "jma" }); else met(); });
+    else met();
   }, [key]);
   if (!w) return null;
   const wear = wearFor(w);
@@ -401,7 +426,9 @@ function DayWeather({ t, iso }) {
           <span className="small" style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
             <WxIcon sym={w.symbol} />
             <b className="mono">{w.max}° / {w.min}°</b>
-            <span className="xs muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{place.city}{w.rain >= 1 ? ` ・ 雨 ${w.rain}mm` : ""}</span>
+            <span className="xs muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{place.city}{w.src === "jma" ? (w.pop != null ? ` ・ 降水確率 ${w.pop}%` : "") : w.rain >= 1 ? ` ・ 雨 ${w.rain}mm` : ""}</span>
+            {w.src === "jma" && w.rel && <span className={"wx-rel rel-" + w.rel} title="気象庁の信頼度（A：確度が高い、B：やや高い、C：やや低い）">信頼度 {w.rel}</span>}
+            {w.src === "met" && <span className="xs muted" style={{ whiteSpace: "nowrap" }}>予報の確かさ：{w.conf}</span>}
           </span>
         ) : (
           // 予報がまだ出ていない日は、予報と見まちがえないように天気のマークを出さず「ふだんは」の書き方にする
@@ -413,7 +440,7 @@ function DayWeather({ t, iso }) {
       </div>
       {wear.tip && <div className="xs muted" style={{ marginTop: 4 }}>{wear.tip}</div>}
       {/* 予報は MET Norway の決まり（CC BY 4.0）で出所を書く。平年値は書かない */}
-      {w.kind === "forecast" ? <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>天気：MET Norway</div>
+      {w.kind === "forecast" ? <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>{w.src === "jma" ? "天気：気象庁" : "天気：MET Norway"}</div>
         : <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>天気予報は出発の9日前から出ます</div>}
     </div>
   );

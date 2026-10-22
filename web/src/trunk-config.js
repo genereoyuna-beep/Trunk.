@@ -51,3 +51,5 @@ FEATURES.articleFor = (t) => {
 
 // 初めての人向け：旅行がまだないときに「見本の旅行を見てみる」を出す
 FEATURES.demoUrl = "/demo/#home";
+// 天気と服装の目安：s.trunk-travelplanner.com の /weather（予報）と /climate（平年値）。?wxlocal=1 なら手元の wrangler dev を使う
+FEATURES.weatherBase = /[?&]wxlocal=1/.test(location.search) ? "http://localhost:8787" : "https://s.trunk-travelplanner.com";

@@ -751,6 +751,7 @@ function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
                 <button className="btn small" onClick={() => onAddLocal(d)}><Icon n="plus" s={14} />追加</button>
               </span>
             </div>
+            {typeof DayWeather === "function" && <DayWeather t={t} iso={d} />}
             <DayTimeline t={t} iso={d} onEdit={onEdit} onInsert={(k, o) => k === "move" ? onAddMove(d, o) : onAddLocal(d, o)} />
           </section>
         );

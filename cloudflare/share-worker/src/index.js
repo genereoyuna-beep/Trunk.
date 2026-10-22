@@ -161,9 +161,71 @@ async function notifyDaily(req, env) {
   return new Response("ok");
 }
 
+// ===== 天気（アプリの日ごとの画面の「☀️ 18°/9°」と服装の目安） =====
+// 予報：MET Norway（お金を取るサービスでも無料。出所を書く・アプリ名を名乗る・結果を保存して取りすぎない、が決まり）。約9日先まで
+// それより先：NASA POWER の平年値（月ごとの平均の最高・最低気温と雨の量。公開データ）
+// どちらも場所を 0.1 度（約10km）に丸めて、Cloudflare に保存して使い回す
+const WX_ORIGINS = /^(https:\/\/trunk-travelplanner\.com|http:\/\/localhost(:\d+)?|http:\/\/127\.0\.0\.1(:\d+)?)$/;
+const WX_UA = "Trunk. travel planner https://trunk-travelplanner.com/";
+function wxHeaders(req, maxAge) {
+  const o = req.headers.get("origin") || "";
+  return { "content-type": "application/json; charset=utf-8", "cache-control": `public, max-age=${maxAge}`, ...(WX_ORIGINS.test(o) ? { "access-control-allow-origin": o, vary: "origin" } : {}) };
+}
+async function cachedJSON(ctx, key, maxAge, make) {
+  const cache = caches.default, ck = new Request(key);
+  const hit = await cache.match(ck);
+  if (hit) return hit.json();
+  const body = await make();
+  if (body) ctx.waitUntil(cache.put(ck, new Response(JSON.stringify(body), { headers: { "cache-control": `public, max-age=${maxAge}` } })));
+  return body;
+}
+// 予報を、その土地の日付ごとにまとめる（最高・最低気温、雨の量、昼ごろの天気）
+async function weatherForecast(req, ctx, lat, lon, tz) {
+  const body = await cachedJSON(ctx, `https://wx.cache/v2/f/${lat}/${lon}/${tz}`, 3600, async () => {
+    const r = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, { headers: { "user-agent": WX_UA } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const days = {};
+    for (const p of (j.properties && j.properties.timeseries) || []) {
+      const local = new Date(Date.parse(p.time) + tz * 3600e3);
+      const date = local.toISOString().slice(0, 10), hour = local.getUTCHours();
+      const t = p.data && p.data.instant && p.data.instant.details && p.data.instant.details.air_temperature;
+      const d = days[date] || (days[date] = { date, max: -99, min: 99, rain: 0, symbol: "", sh: 99 });
+      if (typeof t === "number") { d.max = Math.max(d.max, t); d.min = Math.min(d.min, t); }
+      const n1 = p.data.next_1_hours, n6 = p.data.next_6_hours;
+      if (n1 && n1.details) d.rain += n1.details.precipitation_amount || 0;
+      else if (n6 && n6.details && hour % 6 === 0) d.rain += n6.details.precipitation_amount || 0;
+      const sym = (n1 && n1.summary && n1.summary.symbol_code) || (n6 && n6.summary && n6.summary.symbol_code) || "";
+      if (sym && Math.abs(hour - 13) < d.sh) { d.symbol = sym; d.sh = Math.abs(hour - 13); }
+    }
+    return { source: "MET Norway", days: Object.values(days).filter(d => d.max > -99).map(({ sh, ...d }) => ({ ...d, max: Math.round(d.max), min: Math.round(d.min), rain: Math.round(d.rain * 10) / 10 })) };
+  });
+  return new Response(JSON.stringify(body || { days: [] }), { status: body ? 200 : 502, headers: wxHeaders(req, 1800) });
+}
+// 平年値（1月〜12月）
+async function weatherClimate(req, ctx, lat, lon) {
+  const body = await cachedJSON(ctx, `https://wx.cache/v2/c/${lat}/${lon}`, 2592000, async () => {
+    const r = await fetch(`https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=T2M,T2M_RANGE,PRECTOTCORR&community=RE&longitude=${lon}&latitude=${lat}&format=JSON`, { headers: { "user-agent": WX_UA } });
+    if (!r.ok) return null;
+    const j = await r.json(), p = (j.properties && j.properties.parameter) || {};
+    const M = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    // 平均気温と、1日の寒暖差の平均から、ふつうの日の最高・最低を出す（T2M_MAX・T2M_MIN は月の極端な値なので使わない）
+    const months = M.map((m, i) => { const t = (p.T2M || {})[m], rg = (p.T2M_RANGE || {})[m]; return { month: i + 1, max: Math.round(t + rg / 2), min: Math.round(t - rg / 2), rain: Math.round(((p.PRECTOTCORR || {})[m] || 0) * 10) / 10 }; });
+    return months.every(m => Number.isFinite(m.max)) ? { source: "NASA POWER", months } : null;
+  });
+  return new Response(JSON.stringify(body || { months: [] }), { status: body ? 200 : 502, headers: wxHeaders(req, 86400) });
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    if (url.pathname === "/weather" || url.pathname === "/climate") {
+      const lat = Math.round(Number(url.searchParams.get("lat")) * 10) / 10, lon = Math.round(Number(url.searchParams.get("lon")) * 10) / 10;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return new Response("bad place", { status: 400 });
+      if (url.pathname === "/climate") return weatherClimate(req, ctx, lat, lon);
+      const tz = Math.max(-12, Math.min(14, Math.round(Number(url.searchParams.get("tz")) || 0)));
+      return weatherForecast(req, ctx, lat, lon, tz);
+    }
     if (url.pathname === "/notify/daily" && req.method === "POST") return notifyDaily(req, env);
     if (url.pathname === "/notify/feedback" && req.method === "POST") return notifyFeedback(req, env);
     if (url.pathname === "/notify/signup" && req.method === "POST") return notifySignup(req, env);

@@ -325,3 +325,92 @@ function EmergencyView({ t, update, canEdit }) {
 }
 // 帰国日から6か月未満か
 function r6(t, exp) { const r = tripRange(t); return r && isISO(exp) && dayDiff(r.end, exp) < 183; }
+
+
+// ================= 天気と服装の目安（日ごとの画面） =================
+// FEATURES.weatherBase（Trunk. は s.trunk-travelplanner.com）から、予報（約9日先まで）か、それより先なら平年値を取る
+const WX_MEMO = new Map();
+const wxGet = (url) => { if (!WX_MEMO.has(url)) WX_MEMO.set(url, fetch(url).then(r => r.ok ? r.json() : null).catch(() => null)); return WX_MEMO.get(url); };
+// その日にいる場所：泊まる宿の都市、最終日は前の晩の宿の都市
+function wxPlace(t, iso) {
+  const stays = staysOf(t).filter(s => isISO(s.startDate));
+  const s = stays.find(x => iso >= x.startDate && iso < stayEnd(x)) || stays.find(x => stayEnd(x) === iso);
+  if (!s) return null;
+  const h = hotelOf(t, s) || {};
+  const ll = h.geo || (typeof geoFor === "function" && (geoFor(h.name, t.geo) || geoFor(s.city, t.geo)));
+  if (!ll) return null;
+  const tz = tzMatch(s.city);
+  return { ll, tz: tz ? tzOffset(tz.zone, iso) : 9, city: splitCity(s.city).main };
+}
+// 服装の目安（最高・最低気温と雨から）
+function wearFor(w) {
+  const k = [], hi = w.max, lo = w.min;
+  if (hi >= 25) k.push("tshirt"); else if (hi >= 20) k.push("longsleeve"); else if (hi >= 15) k.push("longsleeve", "cardigan"); else if (hi >= 10) k.push("sweater"); else if (hi >= 5) k.push("coat"); else k.push("coat", "warm");
+  if (hi >= 20 && hi - lo >= 8 && !k.includes("cardigan")) k.push("cardigan");
+  if (w.rain >= 1 || /rain|sleet|snow|shower/.test(w.symbol || "")) k.push("umbrella");
+  else if (hi >= 25 && /clearsky|fair/.test(w.symbol || "")) k.push("hat");
+  const tip = w.rain >= 1 || /rain|shower/.test(w.symbol || "") ? "雨の予報です。折りたたみ傘があると安心です。"
+    : hi - lo >= 10 ? "朝晩は冷えます。羽織るものがあると安心です。"
+    : hi >= 28 ? "暑くなりそうです。帽子と水分を忘れずに。"
+    : hi < 5 ? "かなり冷えます。手袋やマフラーがあると安心です。" : "";
+  return { keys: k.slice(0, 3), tip };
+}
+const WEAR_NAME = { tshirt: "半袖", longsleeve: "長袖", cardigan: "薄手の上着", sweater: "セーター", coat: "コート", warm: "マフラー・手袋", hat: "帽子", umbrella: "折りたたみ傘" };
+const WEAR_SVG = {
+  tshirt: <><path d="M24 10l-12 6-6 12 9 4 3-6v28h28V26l3 6 9-4-6-12-12-6" /><path d="M24 10c2 4 5 6 8 6s6-2 8-6" /></>,
+  longsleeve: <><path d="M24 10l-11 5-6 32h7l4-24v31h28V23l4 24h7l-6-32-11-5" /><path d="M24 10c2 4 5 6 8 6s6-2 8-6" /><path d="M8 43h6M50 43h6" /></>,
+  cardigan: <><path d="M24 9l-11 5-6 33h7l4-24v32h28V23l4 24h7l-6-33-11-5" /><path d="M24 9l8 18 8-18" /><path d="M32 27v27" /><circle cx="35" cy="34" r="1.2" fill="currentColor" /><circle cx="35" cy="42" r="1.2" fill="currentColor" /></>,
+  sweater: <><path d="M24 11l-11 5-6 31h7l4-22v29h28V25l4 22h7l-6-31-11-5" /><path d="M24 11c1 5 4 7 8 7s7-2 8-7" /><path d="M18 50h28M8 47h6M50 47h6" /><path d="M22 30h20M22 37h20" stroke="var(--blue)" strokeDasharray="3 3" /></>,
+  coat: <><path d="M23 8l-10 5-6 35h7l3-22v32h30V26l3 22h7l-6-35-10-5" /><path d="M23 8l-3 8 7 6 5-6 5 6 7-6-3-8" /><path d="M32 16v42" /><circle cx="28" cy="30" r="1.4" fill="currentColor" /><circle cx="28" cy="40" r="1.4" fill="currentColor" /><path d="M38 38h6" /></>,
+  warm: <><path d="M10 18c4 6 14 9 22 9s16-3 20-9" /><path d="M10 18c0-3 2-5 4-5 4 4 11 6 18 6s14-2 18-6c2 0 4 2 4 5" /><path d="M22 26l-4 24h9l2-22" /><path d="M18 46h9M19 41h8M19 50v4M23 50v4M27 50v4" stroke="var(--blue)" /><path d="M42 34c0-3 2-5 5-5s5 2 5 5v12h-10z" /><path d="M42 40l-3-2c-2-1-4 1-3 3l4 5" /><path d="M42 46h10v4H42z" /></>,
+  hat: <><path d="M20 36c0-10 5-18 12-18s12 8 12 18" /><path d="M8 38c4 4 14 6 24 6s20-2 24-6c-4-2-12-2-12-2H20s-8 0-12 2z" /><path d="M20 32h24" stroke="var(--blue)" /></>,
+  umbrella: <><path d="M8 32c0-13 11-22 24-22s24 9 24 22c-3-3-6-3-8 0-2-3-6-3-8 0-2-3-6-3-8 0-2-3-6-3-8 0-2-3-5-3-8 0z" /><path d="M32 32v18a5 5 0 0 1-10 0" /><path d="M14 46l-2 4M50 44l-2 4M44 52l-2 4" stroke="var(--blue)" /></>,
+};
+const WearIcon = ({ k, s = 28 }) => <svg width={s} height={s} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{WEAR_SVG[k]}</svg>;
+const WxIcon = ({ sym, s = 20 }) => {
+  const k = /snow|sleet/.test(sym) ? "snow" : /rain|shower/.test(sym) ? "rain" : /cloudy|fog/.test(sym) && !/partly/.test(sym) ? "cloud" : /partly/.test(sym) ? "part" : "sun";
+  const sun = <g stroke="#E8892B"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></g>;
+  const cloud = <path d="M7 17a4 4 0 0 1 .5-8A5 5 0 0 1 17 10a3.5 3.5 0 0 1 0 7z" stroke="#5A6470" />;
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {k === "sun" && sun}{k === "cloud" && cloud}
+    {k === "part" && <><g transform="translate(-3 -3) scale(.8)">{sun}</g><path d="M9 19a3.5 3.5 0 0 1 .4-7A4.5 4.5 0 0 1 18 13a3 3 0 0 1 0 6z" stroke="#5A6470" fill="var(--surface)" /></>}
+    {k === "rain" && <><path d="M7 15a4 4 0 0 1 .5-8A5 5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z" stroke="#5A6470" /><path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2" stroke="var(--blue)" /></>}
+    {k === "snow" && <><path d="M7 15a4 4 0 0 1 .5-8A5 5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z" stroke="#5A6470" /><path d="M9 19h.01M13 20h.01M17 19h.01" stroke="var(--blue)" strokeWidth="3" /></>}
+  </svg>;
+};
+function DayWeather({ t, iso }) {
+  const base = typeof FEATURES !== "undefined" && FEATURES.weatherBase;
+  const place = useMemo(() => base ? wxPlace(t, iso) : null, [t, iso, base]);
+  const [w, setW] = useState(null);
+  const key = place ? `${place.ll[0].toFixed(1)},${place.ll[1].toFixed(1)},${iso}` : "";
+  useEffect(() => {
+    setW(null);
+    if (!place) return;
+    const ahead = dayDiff(todayISO(), iso);
+    if (ahead < -1) return; // 終わった日は出さない
+    const [lat, lon] = place.ll;
+    if (ahead <= 9) {
+      wxGet(`${base}/weather?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}&tz=${Math.round(place.tz || 9)}`).then(j => { const d = j && (j.days || []).find(x => x.date === iso); if (d) setW({ ...d, kind: "forecast" }); });
+    } else {
+      wxGet(`${base}/climate?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}`).then(j => { const m = j && (j.months || []).find(x => x.month === Number(iso.slice(5, 7))); if (m) setW({ max: m.max, min: m.min, rain: m.rain >= 4 ? 1 : 0, symbol: m.rain >= 4 ? "rain" : "", kind: "normal" }); });
+    }
+  }, [key]);
+  if (!w) return null;
+  const wear = wearFor(w);
+  return (
+    <div className="wx-row">
+      <div className="row between" style={{ flexWrap: "nowrap", gap: 8 }}>
+        <span className="small" style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          {w.kind === "forecast" ? <WxIcon sym={w.symbol} /> : <span className="xs muted" style={{ border: "1px solid var(--line)", borderRadius: 6, padding: "0 5px" }}>平年</span>}
+          <b className="mono">{w.max}° / {w.min}°</b>
+          <span className="xs muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{place.city}{w.kind === "forecast" ? (w.rain >= 1 ? ` ・ 雨 ${w.rain}mm` : "") : " ・ この時期の目安"}</span>
+        </span>
+      </div>
+      <div className="wear">
+        {wear.keys.map(k => <span key={k} className="wear-chip"><WearIcon k={k} />{WEAR_NAME[k]}</span>)}
+      </div>
+      {wear.tip && <div className="xs muted" style={{ marginTop: 4 }}>{wear.tip}</div>}
+      <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>{w.kind === "forecast" ? "天気：MET Norway" : "平年値：NASA POWER"}</div>
+    </div>
+  );
+}

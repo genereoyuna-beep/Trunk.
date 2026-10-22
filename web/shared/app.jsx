@@ -497,6 +497,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
             ))}
           </div>
         </section>
+        {typeof HomeClimate === "function" && <HomeClimate t={t} />}
         {r && r.days <= 10 && (
           <section className="card flush divide">
             <div className="row" style={{ padding: "12px 14px", justifyContent: "space-between", alignItems: "center" }}><h3>日程</h3>{openSettings && <button className="btn small" onClick={openSettings}>日程をずらす</button>}</div>

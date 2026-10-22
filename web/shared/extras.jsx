@@ -389,11 +389,8 @@ function DayWeather({ t, iso }) {
     const ahead = dayDiff(todayISO(), iso);
     if (ahead < -1) return; // 終わった日は出さない
     const [lat, lon] = place.ll;
-    // 出発の9日前からは天気予報。それより前か、予報にまだその日がないときは平年値
-    const normal = () => wxGet(`${base}/climate?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}`).then(j => { const m = j && (j.months || []).find(x => x.month === Number(iso.slice(5, 7))); if (m) setW({ max: m.max, min: m.min, rain: m.rain >= 4 ? 1 : 0, symbol: m.rain >= 4 ? "rain" : "", kind: "normal" }); });
-    if (ahead <= 9) {
-      wxGet(`${base}/weather?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}&tz=${Math.round(place.tz || 9)}`).then(j => { const d = j && (j.days || []).find(x => x.date === iso); if (d) setW({ ...d, kind: "forecast" }); else normal(); });
-    } else normal();
+    // 日ごとのカードには、実際の天気予報だけを出す（出発の9日前から）。それより前の平年値は、ホームに都市ごとに出す
+    if (ahead <= 9) wxGet(`${base}/weather?v=2&lat=${lat.toFixed(1)}&lon=${lon.toFixed(1)}&tz=${Math.round(place.tz || 9)}`).then(j => { const d = j && (j.days || []).find(x => x.date === iso); if (d) setW({ ...d, kind: "forecast" }); });
   }, [key]);
   if (!w) return null;
   const wear = wearFor(w);
@@ -419,5 +416,44 @@ function DayWeather({ t, iso }) {
       {w.kind === "forecast" ? <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>天気：MET Norway</div>
         : <div className="xs" style={{ color: "var(--faint)", marginTop: 2 }}>天気予報は出発の9日前から出ます</div>}
     </div>
+  );
+}
+
+// ホームの「旅行先の気候」：出発の10日以上前に、泊まる都市ごと（月ごと）の平年の気温と服装の目安を1回ずつ出す
+function HomeClimate({ t }) {
+  const base = typeof FEATURES !== "undefined" && FEATURES.weatherBase;
+  const r = tripRange(t);
+  const spots = useMemo(() => {
+    if (!base || !r) return [];
+    const out = [], seen = new Set();
+    for (let d = r.start; d < r.end || d === r.start; d = addDays(d, 1)) {
+      const p = wxPlace(t, d);
+      if (!p) { if (d >= r.end) break; continue; }
+      const k = p.city + "|" + d.slice(5, 7);
+      if (!seen.has(k)) { seen.add(k); out.push({ ...p, month: Number(d.slice(5, 7)) }); }
+      if (d >= r.end) break;
+    }
+    return out.slice(0, 4);
+  }, [t, base]);
+  const [rows, setRows] = useState([]);
+  const key = spots.map(x => `${x.city}${x.month}`).join(",");
+  useEffect(() => {
+    setRows([]);
+    if (!spots.length || !r || dayDiff(todayISO(), r.start) <= 9) return;
+    Promise.all(spots.map(x => wxGet(`${base}/climate?v=2&lat=${x.ll[0].toFixed(1)}&lon=${x.ll[1].toFixed(1)}`).then(j => { const m = j && (j.months || []).find(y => y.month === x.month); return m ? { ...x, w: { max: m.max, min: m.min, rain: m.rain >= 4 ? 1 : 0, symbol: m.rain >= 4 ? "rain" : "" }, wet: m.rain >= 4 } : null; }))).then(a => setRows(a.filter(Boolean)));
+  }, [key]);
+  if (!rows.length) return null;
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h3>旅行先の気候</h3>
+      {rows.map(x => { const wear = wearFor(x.w); return (
+        <div key={x.city + x.month}>
+          <div className="small muted">{x.month}月の{x.city}はふだん <b className="mono" style={{ color: "var(--ink)" }}>{x.w.max}° / {x.w.min}°</b>{x.wet ? "・雨の多い時期" : ""}</div>
+          <div className="wear">{wear.keys.map(k => <span key={k} className="wear-chip"><WearIcon k={k} />{WEAR_NAME[k]}</span>)}</div>
+          {wear.tip && <div className="xs muted" style={{ marginTop: 4 }}>{wear.tip}</div>}
+        </div>
+      ); })}
+      <div className="xs" style={{ color: "var(--faint)" }}>実際の天気予報は、出発の9日前から旅程の日ごとの画面に出ます</div>
+    </section>
   );
 }

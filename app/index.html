@@ -137,7 +137,8 @@ a.btn.ghost{color:var(--muted)}
 .ico.urgent{background:var(--danger-soft);color:var(--danger)}
 .t1{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t2{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.homegrid{display:grid;gap:14px;grid-template-areas:"a" "b" "c"}
+.homegrid{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);grid-template-areas:"a" "b" "c"}
+.homegrid > *{min-width:0}
 .h-a{grid-area:a}.h-b{grid-area:b}.h-c{grid-area:c}
 @media (min-width:900px){.homegrid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"a b" "c b";align-items:start}}
 
@@ -1716,7 +1717,7 @@ const pending=(()=>{try{return sessionStorage.getItem("trunk-join");}catch(e){re
 </script>
 <script>
 // 新しい版が出ていたら知らせる（ブラウザが前のページを覚えていて、更新がすぐ届かないことがあるため）
-(function(){var B="58158400ac",shown=false;function check(){if(shown||document.hidden)return;fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(v){if(!v||!v.build||v.build===B||shown)return;shown=true;var d=document.createElement("div");d.setAttribute("role","status");d.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:90;background:#15202B;color:#F3F4F1;padding:10px 14px;border-radius:12px;font-size:13px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:calc(100% - 32px)";d.innerHTML='<span>新しいバージョンがあります</span><button style="border:0;background:#F3F4F1;color:#15202B;border-radius:8px;padding:6px 10px;font-weight:600;white-space:nowrap">更新する</button>';d.querySelector("button").onclick=function(){location.reload()};document.body.appendChild(d)}).catch(function(){})}document.addEventListener("visibilitychange",check);setInterval(check,300000);setTimeout(check,20000)})();
+(function(){var B="3bdecff20d",shown=false;function check(){if(shown||document.hidden)return;fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(v){if(!v||!v.build||v.build===B||shown)return;shown=true;var d=document.createElement("div");d.setAttribute("role","status");d.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:90;background:#15202B;color:#F3F4F1;padding:10px 14px;border-radius:12px;font-size:13px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:calc(100% - 32px)";d.innerHTML='<span>新しいバージョンがあります</span><button style="border:0;background:#F3F4F1;color:#15202B;border-radius:8px;padding:6px 10px;font-weight:600;white-space:nowrap">更新する</button>';d.querySelector("button").onclick=function(){location.reload()};document.body.appendChild(d)}).catch(function(){})}document.addEventListener("visibilitychange",check);setInterval(check,300000);setTimeout(check,20000)})();
 </script>
 </body>
 </html>

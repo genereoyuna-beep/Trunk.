@@ -138,7 +138,8 @@ a.btn.ghost{color:var(--muted)}
 .ico.urgent{background:var(--danger-soft);color:var(--danger)}
 .t1{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t2{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.homegrid{display:grid;gap:14px;grid-template-areas:"a" "b" "c"}
+.homegrid{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);grid-template-areas:"a" "b" "c"}
+.homegrid > *{min-width:0}
 .h-a{grid-area:a}.h-b{grid-area:b}.h-c{grid-area:c}
 @media (min-width:900px){.homegrid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"a b" "c b";align-items:start}}
 

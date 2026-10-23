@@ -464,7 +464,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
         {r && onPlanAI && today < r.start && (t.localTransport || []).length < 3 && !(t.startGuide && !t.startGuideOff && !(t.localTransport || []).length) && (
           <button className="card row" style={{ width: "100%", textAlign: "left", border: 0, flexWrap: "nowrap", gap: 12, boxShadow: "0 0 0 1.5px var(--blue)" }} onClick={onPlanAI}>
             <span className="ico blue"><Icon n="star" /></span>
-            <span style={{ flex: 1, minWidth: 0 }}><span className="t1">予定の案をAIに出してもらう</span><span className="t2" style={{ whiteSpace: "normal" }}>{(t.scenes || []).length ? `${t.scenes.join("・")}の旅に合わせて、` : ""}いつもの ChatGPT・Claude・Gemini に聞いて、答えをそのまま取り込めます</span></span>
+            <span style={{ flex: 1, minWidth: 0 }}><span className="t1">予定の案をAIに出してもらう</span><span className="t2" style={{ whiteSpace: "normal" }}>{(t.scenes || []).length ? `${t.scenes.join("・")}の旅に合わせて、` : ""}いつもの ChatGPT・Claude・Gemini・Muse に聞いて、答えをそのまま取り込めます</span></span>
             <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>
           </button>
         )}

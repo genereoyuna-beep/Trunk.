@@ -1,4 +1,4 @@
-// ================= AIに相談（利用者自身の ChatGPT・Claude・Gemini を使う） =================
+// ================= AIに相談（利用者自身の ChatGPT・Claude・Gemini・Muse を使う） =================
 // Trunk. からは AI を呼ばない。相談文を作って利用者の AI を開き、返ってきた答えを貼り付けてもらって取り込む。
 // 相談文には、緊急時の情報（パスポート・保険など）や立て替えの明細は入れない。
 
@@ -6,6 +6,8 @@ const CONSULT_AIS = [
   { key: "chatgpt", label: "ChatGPT", url: (q) => `https://chatgpt.com/?q=${q}`, home: "https://chatgpt.com/" },
   { key: "claude", label: "Claude", url: (q) => `https://claude.ai/new?q=${q}`, home: "https://claude.ai/new" },
   { key: "gemini", label: "Gemini", url: null, home: "https://gemini.google.com/app" },
+  // Meta の Muse（2026-10-23 日本で提供開始）。相談文を入れて開くアドレスがないので、コピーして開く
+  { key: "muse", label: "Muse", url: null, home: "https://muse.ai/" },
 ];
 // 旅のタイプ（旅行を作るときと、予定の相談で使う）
 const TRIP_SCENES = ["観光・街歩き", "グルメ", "買い物", "自然・景色", "温泉・のんびり", "体験・アクティビティ", "家族・子ども連れ", "友だちと", "ひとり旅", "記念日"];
@@ -186,7 +188,7 @@ function ConsultView({ t, update, initialTopic, initialIso, done }) {
   };
   return (
     <div className="stack" style={{ gap: 14 }}>
-      <p className="small muted" style={{ margin: 0 }}>あなたの ChatGPT・Claude・Gemini に、この旅程を見せて相談できます。Trunk. から AI に直接送ることはなく、パスポートなどの緊急時の情報は相談文に入りません。</p>
+      <p className="small muted" style={{ margin: 0 }}>あなたの ChatGPT・Claude・Gemini・Muse に、この旅程を見せて相談できます。Trunk. から AI に直接送ることはなく、パスポートなどの緊急時の情報は相談文に入りません。</p>
       <div className="formsec">何を相談する？</div>
       <div className="card flush divide">
         {topics.map(o => (

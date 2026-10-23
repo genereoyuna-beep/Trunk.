@@ -12,14 +12,14 @@ const Store = {
   // pass：パスで準備している旅行、joined：招待されて参加した旅行。どちらも無料の枠には数えない
   emit() { const list = [...this.cache].map(([id, data]) => ({ id, data, pass: !!(this.meta.get(id) || {}).pass, joined: this.isJoined(id) })); this.listeners.forEach(f => f(list)); },
   async load() {
-    const { data, error } = await SB.from("trips").select("id,data,pass_id,version,owner_id,started_on,planned_end,postponed,updated_at").order("updated_at", { ascending: false });
+    const { data, error } = await SB.from("trips").select("id,data,pass_id,version,owner_id,started_on,planned_end,postponed,updated_at,created_at").order("updated_at", { ascending: false });
     if (error) throw error;
     const me = this.userId(), cache = new Map(), meta = new Map();
     data.forEach(r => {
       // 保存中の旅行は、手元の内容と版番号をそのまま使う（保存が終われば揃う）
       if (this.inFlight.has(r.id) && this.cache.has(r.id)) { cache.set(r.id, this.cache.get(r.id)); meta.set(r.id, this.meta.get(r.id)); return; }
       cache.set(r.id, r.data);
-      meta.set(r.id, { version: r.version, pass: !!r.pass_id, passId: r.pass_id, joined: r.owner_id !== me, startedOn: r.started_on, plannedEnd: r.planned_end, postponed: r.postponed });
+      meta.set(r.id, { version: r.version, pass: !!r.pass_id, passId: r.pass_id, joined: r.owner_id !== me, startedOn: r.started_on, plannedEnd: r.planned_end, postponed: r.postponed, createdOn: r.created_at ? new Date(Date.parse(r.created_at) + 9 * 3600e3).toISOString().slice(0, 10) : null });
     });
     this.cache = cache; this.meta = meta;
     await this.loadPasses().catch(() => {});
@@ -138,7 +138,9 @@ const Store = {
     const m = this.meta.get(id), prev = this.cache.get(id);
     if (!m || !prev || m.joined) return null;
     const today = todayISO(), r = tripRange(next), o = tripRange(prev);
-    const startedOn = m.startedOn || (o && o.start <= today ? o.start : null);
+    // 作ったその日の旅行は「始まった」としない（日付なしで作ると最初の日付が「今日」になるため。保存先の trips_guard と同じ考え方）
+    const createdToday = !m.createdOn || m.createdOn >= today;
+    const startedOn = m.startedOn || (o && (o.start < today || (o.start === today && !createdToday)) ? o.start : null);
     const plannedEnd = m.plannedEnd || (o ? o.end : null);
     const fmt = (iso) => { const [y, mo, d] = iso.split("-"); return y + "年" + Number(mo) + "月" + Number(d) + "日"; };
     if (startedOn && (!r || r.start > today || (plannedEnd && r.end > addDays(plannedEnd, 30)))) {

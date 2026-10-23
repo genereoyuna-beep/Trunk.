@@ -232,7 +232,7 @@ function StayEditor({ t, id, update, close }) {
       <div className="fgrid">
         <Field label="都市" wide><PlaceIn kind="city" value={s.city} onChange={v => setStay({ city: v })} onPick={(r, it) => setStay({ city: it.main })} options={sg.cities} placeholder="例：プラハ" /></Field>
         <Field label="到着日（泊まり始め）"><DateIn value={s.startDate} onChange={v => setStay({ startDate: v })} /></Field>
-        <Field label="泊数"><select value={nightsOf(s)} onChange={e => setStay({ nights: Number(e.target.value) })}>{Array.from({ length: 31 }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り（0泊）" : `${i}泊`}</option>)}</select></Field>
+        <Field label="泊数"><select value={nightsOf(s)} onChange={e => setStay({ nights: Number(e.target.value) })}>{Array.from({ length: Math.max(31, nightsOf(s) + 1, 61) }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り（0泊）" : `${i}泊`}</option>)}</select></Field>
         <Field label="メモ" opt wide><textarea value={s.memo || ""} onChange={e => setStay({ memo: e.target.value })} /></Field>
       </div>
       <Toggle checked={s.noHotel} onChange={v => setStay({ noHotel: v, lodgingLabel: v ? (s.lodgingLabel || "宿不要") : s.lodgingLabel })}>宿の手配はいらない（家族・友人宅など）</Toggle>
@@ -990,8 +990,12 @@ function geoNear(n, saved) {
   const k = Object.keys(saved).find(k => k.length >= 8 && (low.includes(k.toLowerCase()) || (n.length >= 8 && k.toLowerCase().includes(low))));
   return k ? saved[k] : null;
 }
+// 次の日に着く移動（夜行列車・夜行フェリー・夜の便）があれば、その夜は宿のいらない夜
+const overnightMove = (t, iso) => transitsOf(t).find(x => x.departDate === iso && ((isISO(x.arriveDate) && x.arriveDate > iso) || (/^夜行/.test(x.mode || "") && !(isISO(x.arriveDate) && x.arriveDate === iso))));
+const overnightLabel = (m) => /フェリー|船/.test(m || "") ? "船中泊" : /飛行機/.test(m || "") ? "機内泊" : /バス/.test(m || "") ? "車中泊（夜行バス）" : "車中泊";
 function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
   const { ev, sleeping, night } = dayEvents(t, iso);
+  const overnight = !sleeping ? overnightMove(t, iso) : null;
   const saveGeo = React.useContext(GeoCtx);
   const [locating, setLocating] = useState(null);
   // 予定と予定の間の「＋」。押すと、時刻と前後の場所が入った追加の画面が開く（予定／移動は画面の上で切り替える）
@@ -1076,8 +1080,15 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
           <Pill st={stayState(t, sleeping)} />
         </div>
       )}
+      {/* 夜行列車・夜行フェリー・夜の便など、次の日に着く移動の夜は「車中泊」などとして出す（宿の未手配にしない） */}
+      {showNight && !sleeping && overnight && (
+        <div className="row between" style={{ padding: "10px 14px", flexWrap: "nowrap", background: "#FAFAF8" }}>
+          <span style={{ minWidth: 0 }}><span className="xs muted">この夜</span><span className="t1" style={{ fontSize: 13 }}>{overnightLabel(overnight.mode)}（{splitCity(overnight.fromCity).main} → {splitCity(overnight.toCity).main}）</span></span>
+          <span className="pill tone-none">宿は不要</span>
+        </div>
+      )}
       {/* 泊まる滞在がない夜（旅行の最終日は除く）は、ここから宿を入れられるように */}
-      {showNight && !sleeping && onInsert && (() => { const r = tripRange(t); return r && iso < r.end; })() && (
+      {showNight && !sleeping && !overnight && onInsert && (() => { const r = tripRange(t); return r && iso < r.end; })() && (
         <div className="row between" style={{ padding: "10px 14px", flexWrap: "nowrap", background: "#FAFAF8" }}>
           <span style={{ minWidth: 0 }}><span className="xs muted">この夜の宿</span><span className="t1" style={{ fontSize: 13 }}>まだ入っていません</span></span>
           <button className="btn small" onClick={() => onInsert("local", { stay: true })}><Icon n="plus" s={14} />宿を入れる</button>
@@ -1604,7 +1615,9 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited, a
           <div className="fgrid">
             <Field label="行き先" wide><PlaceIn kind="city" value={form.dest} onChange={v => setForm({ ...form, dest: v })} onPick={(r, it) => setForm({ ...form, dest: it.main })} placeholder="例：台北、ソウル、京都" /></Field>
             <Field label="出発日"><DateIn value={form.start} onChange={v => setForm({ ...form, start: v })} /></Field>
-            <Field label="泊数"><select value={form.nights} onChange={e => setForm({ ...form, nights: Number(e.target.value) })}>{Array.from({ length: 31 }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り" : `${i}泊`}</option>)}</select></Field>
+            <Field label="泊数"><select value={form.nights} onChange={e => setForm({ ...form, nights: Number(e.target.value) })}>{Array.from({ length: 121 }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り" : `${i}泊`}</option>)}</select></Field>
+            {/* 長い旅行は「いつからいつまで」で考えることが多いので、帰る日でも決められるように（泊数と連動） */}
+            <Field label="帰る日" opt><DateIn value={form.start ? addDays(form.start, Number(form.nights) || 0) : ""} onChange={v => { if (!form.start || !isISO(v)) return; const n = dayDiff(form.start, v); if (n >= 0 && n <= 120) setForm({ ...form, nights: n }); else if (n > 120) alert("120泊までの旅行が作れます。それより長い旅行は、いくつかの旅行に分けてください。"); }} /></Field>
             {FEATURES.mail && <Field label="Gmailのラベル（任意）"><TextIn value={form.label} onChange={v => setForm({ ...form, label: v })} placeholder="例：2027 TAIWAN" /></Field>}
             <Field label="どこから出発？" opt wide><PlaceIn value={form.home} onChange={v => setForm({ ...form, home: v })} onPick={(r, it) => setForm({ ...form, home: r.name || it.main })} options={AIRPORTS} placeholder="例：羽田空港(HND)、東京駅" /></Field>
             {form.home.trim() && form.dest.trim() && form.start && <div className="xs muted wide" style={{ marginTop: -4 }}>行きと帰りの移動を「未予約」で入れておきます。</div>}

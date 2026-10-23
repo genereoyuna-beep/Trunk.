@@ -153,7 +153,7 @@ async function notifyDaily(req, env) {
     `パスの購入：${n("passes_new")}件`,
     `予約メールの取り込み：${n("mail_new")}通`,
     "",
-    "数には、本人とテスト用のアカウントも入っています。",
+    n("staff") > 0 ? `本人・テスト用のアカウント（${n("staff")}件）は除いています。` : "数には、本人とテスト用のアカウントも入っています。",
   ].join("\n");
   const from = "notify@in.trunk-travelplanner.com";
   try { await env.MAILER.send(new EmailMessage(from, env.NOTIFY_TO, rawMail(from, env.NOTIFY_TO, `Trunk. ${day} の数字（新規${n("users_new")}・編集${n("editors")}）`, text))); }

@@ -726,7 +726,84 @@ function DayTabs({ days, sel, setSel, today }) {
 }
 // 最初に開く日：旅行中なら今日、そうでなければ1日目
 const firstDay = (r) => { const today = todayISO(); return r ? (today >= r.start && today <= r.end ? today : r.start) : null; };
-function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
+// ===== 行きたいところ（日付を決めずに置いておくリスト） =====
+// t.wishlist = [{ id, title, address, geo, memo, len: "1h"|"half"|"day"|"", needsBooking }]
+const WISH_LEN = { "1h": "1時間ほど", half: "半日", day: "1日がかり" };
+function WishList({ t, update }) {
+  const list = t.wishlist || [];
+  const [open, setOpen] = useState(list.length > 0);
+  const [form, setForm] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const save = () => {
+    const title = String(form.title || "").trim();
+    if (!title) return;
+    const item = { id: form.id || uid(), title, address: form.address || "", geo: form.geo || null, memo: form.memo || "", len: form.len || "", needsBooking: !!form.needsBooking };
+    update(tr => { const cur = tr.wishlist || []; return { ...tr, wishlist: cur.some(x => x.id === item.id) ? cur.map(x => x.id === item.id ? item : x) : [...cur, item] }; });
+    setForm(null); setEditId(null);
+  };
+  const remove = (id) => update(tr => ({ ...tr, wishlist: (tr.wishlist || []).filter(x => x.id !== id) }));
+  const editor = (
+    <div className="stack" style={{ gap: 8, background: "var(--sunk)", borderRadius: 12, padding: 12 }}>
+      <div className="fgrid">
+        <Field label="行きたいところ・やりたいこと" wide><TextIn value={form ? form.title : ""} onChange={v => setForm(f => ({ ...f, title: v }))} placeholder="例：USJ、道頓堀で食べ歩き" /></Field>
+        <Field label="場所" opt wide><PlaceIn value={form ? form.address : ""} onChange={v => setForm(f => ({ ...f, address: v, geo: null }))} onPick={(r, it) => setForm(f => ({ ...f, address: r.name || it.main, geo: llOf(r) }))} /></Field>
+        <Field label="かかる時間の目安" opt><select value={form ? form.len : ""} onChange={e => setForm(f => ({ ...f, len: e.target.value }))}><option value="">決めない</option>{Object.entries(WISH_LEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
+        <Field label="メモ" opt><TextIn value={form ? form.memo : ""} onChange={v => setForm(f => ({ ...f, memo: v }))} placeholder="例：平日の方が空いている" /></Field>
+      </div>
+      <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={!!(form && form.needsBooking)} onChange={e => setForm(f => ({ ...f, needsBooking: e.target.checked }))} />予約やチケットが必要（日付が決まる前でも「今やること」に出します）</label>
+      <div className="row"><button className="btn primary small" disabled={!form || !String(form.title || "").trim()} onClick={save}>{form && form.id ? "保存" : "リストに入れる"}</button><button className="btn small ghost" onClick={() => { setForm(null); setEditId(null); }}>やめる</button></div>
+    </div>
+  );
+  return (
+    <section className="card stack" style={{ gap: 8 }}>
+      <button className="row between" style={{ border: 0, background: "none", padding: 0, width: "100%", textAlign: "left", cursor: "pointer", flexWrap: "nowrap" }} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span><b>行きたいところ</b><span className="xs muted" style={{ marginLeft: 8 }}>{list.length ? `${list.length}件 ・ まだ日を決めていないもの` : "日を決めずに置いておけます"}</span></span>
+        <span style={{ transform: open ? "rotate(180deg)" : "none", display: "inline-flex" }}><Icon n="down" s={16} /></span>
+      </button>
+      {open && <>
+        {list.length === 0 && !form && <p className="xs muted" style={{ margin: 0 }}>「USJ には絶対行きたいけど、何日目かはまだ」のようなものを入れておき、各日の「行きたいところから」でその日に入れられます。</p>}
+        <div className="divide">
+          {list.map(w => editId === w.id ? <div key={w.id} style={{ padding: "6px 0" }}>{editor}</div> : (
+            <div key={w.id} className="row between" style={{ flexWrap: "nowrap", padding: "8px 0", gap: 8 }}>
+              <button style={{ minWidth: 0, flex: 1, textAlign: "left", background: "none", border: 0, padding: 0, color: "inherit", cursor: "pointer" }} onClick={() => { setForm({ ...w }); setEditId(w.id); }}>
+                <span className="t1">{w.title}</span>
+                <span className="xs muted">{[w.address, WISH_LEN[w.len], w.memo].filter(Boolean).join(" ・ ")}</span>
+                {w.needsBooking && <span className="pill tone-open" style={{ marginTop: 4 }}><i />予約が必要</span>}
+              </button>
+              <button className="iconbtn" aria-label={`${w.title}をリストから外す`} onClick={() => remove(w.id)}><Icon n="x" s={14} /></button>
+            </div>
+          ))}
+        </div>
+        {form && !editId ? editor : !form && <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={() => setForm({ title: "", address: "", memo: "", len: "", needsBooking: false })}><Icon n="plus" s={14} />行きたいところを入れる</button>}
+      </>}
+    </section>
+  );
+}
+// その日に入れる：行きたいところを選ぶと、その日の予定（時刻は未定）に移す
+function WishPicker({ t, iso, update, done }) {
+  const list = t.wishlist || [];
+  const move = (w) => {
+    const stay = staysOf(t).find(s => s.startDate && iso >= s.startDate && iso < stayEnd(s));
+    const l = { id: uid(), linkedStayId: stay ? stay.id : null, category: "観光", desc: w.title, address: w.address || "", geo: w.geo || null, fromAddress: "", toAddress: "", date: iso, startTime: "", endTime: "", mode: "", price: 0, people: 1, needsBooking: !!w.needsBooking, memo: [WISH_LEN[w.len], w.memo].filter(Boolean).join(" ・ "), paymentStatus: "未払い", status: "候補" };
+    update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l], wishlist: (tr.wishlist || []).filter(x => x.id !== w.id) }));
+    done(w.title);
+  };
+  if (!list.length) return <p className="empty">行きたいところはまだありません。旅程の「日ごと」の画面の上にある「行きたいところ」から入れられます。</p>;
+  return (
+    <div className="stack" style={{ gap: 8 }}>
+      <p className="small muted" style={{ margin: 0 }}>{md(iso)}（{wdOf(iso)}）に入れるものを選んでください。時刻はあとから決められます。</p>
+      <div className="card flush divide">
+        {list.map(w => (
+          <button key={w.id} className="bookrow" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }} onClick={() => move(w)}>
+            <span style={{ minWidth: 0 }}><span className="t1">{w.title}</span><span className="t2">{[w.address, WISH_LEN[w.len], w.needsBooking ? "予約が必要" : ""].filter(Boolean).join(" ・ ")}</span></span>
+            <span className="btn small">この日に入れる</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest, update, onWish }) {
   const r = tripRange(t);
   const [sel, setSel] = useState(() => (window.__demo && window.__demo.day) || firstDay(r));
   useEffect(() => { if (r && (!sel || sel < r.start || sel > r.end)) setSel(firstDay(r)); }, [r && r.start, r && r.end]);
@@ -737,6 +814,7 @@ function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
   const cur = sel && sel >= r.start && sel <= r.end ? sel : days[0];
   return (
     <div className="stack">
+      {update && <WishList t={t} update={update} />}
       <DayTabs days={days} sel={cur} setSel={setSel} today={today} />
       {days.map((d, i) => d !== cur ? null : (() => {
         const { head } = dayEvents(t, d);
@@ -749,6 +827,7 @@ function DayView({ t, onEdit, onAddLocal, onAddMove, onSuggest }) {
               </span>
               <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
                 {onSuggest && <button className="btn small" onClick={() => onSuggest(d)}>{FEATURES.ai ? "提案" : "AIに相談"}</button>}
+                {onWish && (t.wishlist || []).length > 0 && <button className="btn small" onClick={() => onWish(d)}>行きたいところから</button>}
                 <button className="btn small" onClick={() => onAddLocal(d)}><Icon n="plus" s={14} />追加</button>
               </span>
             </div>
@@ -796,7 +875,7 @@ function MapView({ t, onPick, onGuess, guessing }) {
     </div>
   );
 }
-function PlanView({ t, view, setView, onEdit, onAdd, onAddStay, onAddLocal, onAddMove, onGuessGeo, guessing, onSuggest }) {
+function PlanView({ t, view, setView, onEdit, onAdd, onAddStay, onAddLocal, onAddMove, onGuessGeo, guessing, onSuggest, update, onWish }) {
   const [onlyOpen, setOnlyOpen] = useState(false);
   const openCount = (t.itinerary || []).filter(r => isOpenState(r.type === "transit" ? transitState(r) : stayState(t, r))).length;
   return (
@@ -813,7 +892,7 @@ function PlanView({ t, view, setView, onEdit, onAdd, onAddStay, onAddLocal, onAd
       )}
       {view === "list" && <ListView t={t} onEdit={onEdit} onlyOpen={onlyOpen} />}
       {view === "month" && <MonthView t={t} onEdit={onEdit} />}
-      {view === "day" && <DayView t={t} onEdit={onEdit} onAddLocal={onAddLocal} onAddMove={onAddMove} onSuggest={onSuggest} />}
+      {view === "day" && <DayView t={t} onEdit={onEdit} onAddLocal={onAddLocal} onAddMove={onAddMove} onSuggest={onSuggest} update={update} onWish={onWish} />}
       {view === "map" && <MapView t={t} onPick={onEdit} onGuess={onGuessGeo} guessing={guessing} />}
     </div>
   );
@@ -2070,7 +2149,7 @@ function App() {
   };
   const openCount = staysOf(t).filter(s => isOpenState(stayState(t, s))).length + transitsOf(t).filter(x => isOpenState(transitState(x))).length + (t.localTransport || []).filter(l => isOpenState(localState(l))).length;
   const mail = <MailCard t={t} update={update} inbox={inbox} scan={scan} onScan={scanGmail} onPaste={pasteImport} onApply={applyInbox} onDecide={decide} />;
-  const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", shift: "日程をずらす", settings: sheet.section === "share" ? "共有" : sheet.section === "account" ? "アカウント" : "この旅行の設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", shiori: "旅のしおり", suggest: "予定の提案", consult: "AIに相談", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
+  const sheetTitle = sheet && ({ stay: "滞在と宿", transit: "移動", local: "予定", trips: "旅行", shift: "日程をずらす", settings: sheet.section === "share" ? "共有" : sheet.section === "account" ? "アカウント" : "この旅行の設定", import: "ファイルの読み込み", add: "追加する", day: "その日の動き", wish: "行きたいところから入れる", shiori: "旅のしおり", suggest: "予定の提案", consult: "AIに相談", phrases: "旅のフレーズ集", emergency: "緊急時の情報" })[sheet.kind];
 
   return (
     <GeoCtx.Provider value={(names, ll) => update(tr => ({ ...tr, geo: { ...(tr.geo || {}), ...Object.fromEntries(names.filter(Boolean).map(n => [n, ll])) } }))}>
@@ -2094,7 +2173,7 @@ function App() {
         {tab === "home" && typeof TrunkRequestsBanner === "function" && <TrunkRequestsBanner tripId={tripId} onOpen={() => setSheet({ kind: "settings", section: "share" })} />}
         {tab === "home" && typeof TrunkAfterTrip === "function" && <TrunkAfterTrip t={t} tripId={tripId} />}
         {tab === "home" && <HomeView onShare={() => { update(tr => ({ ...tr, startShared: true })); setSheet({ kind: "settings", section: "share" }); }} onHideGuide={() => update(tr => ({ ...tr, startGuideOff: true }))} t={t} stats={stats} mine={mine} openDay={openDay} openPhrases={() => setSheet({ kind: "phrases" })} openEmergency={() => setSheet({ kind: "emergency" })} openShiori={() => setSheet({ kind: "shiori" })} openSettings={() => setSheet({ kind: "shift" })} onExpense={() => { setMoneyMode("expense"); setTab("money"); }} onPlanAI={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "plan" })} todos={todos} onTodo={onTodo} inboxCount={inbox.length} scan={scan} onScan={scanGmail} go={setTab} />}
-        {tab === "plan" && <PlanView t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddStay={addStay} onAddLocal={(d, o) => addLocal(d, undefined, o)} onAddMove={(d, o) => addTransit(d, undefined, o)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
+        {tab === "plan" && <PlanView update={update} onWish={(d) => setSheet({ kind: "wish", iso: d })} t={t} view={planView} setView={setPlanView} onEdit={setSheet} onAdd={() => setSheet({ kind: "add" })} onAddStay={addStay} onAddLocal={(d, o) => addLocal(d, undefined, o)} onAddMove={(d, o) => addTransit(d, undefined, o)} onGuessGeo={guessGeo} guessing={guessing} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d })} />}
         {tab === "book" && <BookView t={t} filter={bookFilter} setFilter={setBookFilter} onEdit={setSheet} onAddLocal={() => setSheet({ kind: "add" })} mail={FEATURES.mail ? mail : FEATURES.mailImport && typeof TrunkMailCard === "function" ? <TrunkMailCard t={t} update={update} toast={toast} trips={trips} tripId={tripId} onPick={pickTrip} onCreate={createTrip} onEdit={setSheet} /> : null} entry={FEATURES.ai ? <EntryChecks t={t} update={update} /> : null} />}
         {tab === "money" && <MoneyView t={meName === t.myName ? t : { ...t, myName: meName }} stats={stats} update={update} mode={moneyMode} setMode={setMoneyMode} tripId={tripId} setMe={setMe} />}
         {tab === "pack" && <PackView t={packT} update={packUpdate} />}
@@ -2129,6 +2208,7 @@ function App() {
           {sheet.kind === "consult" && <ConsultView t={t} update={update} initialTopic={sheet.topic} initialIso={sheet.iso} done={(m) => { toast(m); closeSheet(); }} />}
           {sheet.kind === "phrases" && <PhraseView t={t} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} onConsult={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "phrase" })} />}
           {sheet.kind === "suggest" && <DaySuggest t={t} iso={sheet.iso} update={update} done={(n) => { toast(`${n}件の予定を追加しました`); closeSheet(); }} />}
+          {sheet.kind === "wish" && <WishPicker t={t} iso={sheet.iso} update={update} done={(name) => { toast(`「${name}」を${md(sheet.iso)}に入れました`); closeSheet(); }} />}
           {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d, o) => addLocal(d, d, o)} onAddMove={(d, o) => addTransit(d, d, o)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d, back: d })} />}
           {sheet.kind === "stay" && <StayEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
           {sheet.fresh && (sheet.kind === "local" || sheet.kind === "transit") && (

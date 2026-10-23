@@ -430,6 +430,9 @@ function budgetActual(b, stats, mine, t) {
 // ================= 今やること =================
 function buildTodos(t, inboxCount) {
   const todos = [];
+  // 行きたいところのうち、予約が必要なもの（日付が決まっていなくても早めに知らせる）
+  const wishBook = (t.wishlist || []).filter(w => w.needsBooking);
+  if (wishBook.length) todos.push({ icon: "ticket", title: wishBook.length === 1 ? `${wishBook[0].title}の予約` : `行きたいところの予約（${wishBook.length}件）`, sub: wishBook.length === 1 ? "行く日はまだ。売り切れる前に、日を決めて取っておくと安心です" : wishBook.map(w => w.title).slice(0, 3).join("・"), tag: "日付未定", go: { tab: "plan" } });
   // 海外旅行で出発の30日前から：入国審査用のページ（しおりの最後）に足りないものがあれば出す
   const er = tripRange(t), eDays = er ? dayDiff(todayISO(), er.start) : null;
   const eMiss = typeof entryChecks === "function" && eDays != null && eDays >= 0 && eDays <= 30 && (t.shioriParts || {}).en !== false ? entryChecks(t) : [];

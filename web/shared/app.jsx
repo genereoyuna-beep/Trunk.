@@ -2111,7 +2111,7 @@ function App() {
   );
   if (!draft) return <div className="empty" style={{ paddingTop: 80 }}>読み込み中…</div>;
 
-  const t = withBuiltinPhrases({ ...draft, phrases: { ...(draft.phrases || {}), ...Object.fromEntries(phraseDocs.map(p => [p.lang, p])) } });
+  const t = withCustomPhrases(withBuiltinPhrases({ ...draft, phrases: { ...(draft.phrases || {}), ...Object.fromEntries(phraseDocs.map(p => [p.lang, p])) } }));
   // 緊急時の情報は人ごと（Trunk. の Store.loadPrivate）：一緒に編集する人にも見えない表に置く
   const priv = Store.loadPrivate ? (privEm[tripId] || {}) : null;
   const emT = priv ? { ...t, emergency: priv } : t;
@@ -2224,7 +2224,7 @@ function App() {
           {sheet.kind === "shiori" && <ShioriView t={priv ? { ...packT, emergency: priv } : packT} canExport update={update} />}
           {sheet.kind === "emergency" && <EmergencyView t={emT} update={emUpdate} canEdit />}
           {sheet.kind === "consult" && <ConsultView t={t} update={update} initialTopic={sheet.topic} initialIso={sheet.iso} done={(m) => { toast(m); closeSheet(); }} />}
-          {sheet.kind === "phrases" && <PhraseView t={t} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} onConsult={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "phrase" })} />}
+          {sheet.kind === "phrases" && <PhraseView t={t} update={update} onSave={((tid) => (p) => Store.setPhrase(tid, p))(tripId)} canGenerate={FEATURES.ai} onConsult={FEATURES.ai ? null : () => setSheet({ kind: "consult", topic: "phrase" })} />}
           {sheet.kind === "suggest" && <DaySuggest t={t} iso={sheet.iso} update={update} done={(n) => { toast(`${n}件の予定を追加しました`); closeSheet(); }} />}
           {sheet.kind === "wish" && <WishPicker t={t} iso={sheet.iso} update={update} done={(name) => { toast(`「${name}」を${md(sheet.iso)}に入れました`); closeSheet(); }} />}
           {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d, o) => addLocal(d, d, o)} onAddMove={(d, o) => addTransit(d, d, o)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d, back: d })} />}

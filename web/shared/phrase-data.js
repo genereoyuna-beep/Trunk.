@@ -849,6 +849,19 @@ function builtinPhrases(lang) {
   const items = PHRASE_LIST.map(p => { const i = BUILTIN_PHRASE_ORDER.indexOf(p.ja); const [local, reading] = (i < 0 ? "" : rows[i] || "").split("|"); return local ? { cat: p.cat, ja: p.ja, local, reading: reading || "" } : null; }).filter(Boolean);
   return { lang, bcp: d[0], countries: [], items, builtin: true };
 }
+// 自分で足したフレーズ（t.phraseCustom = [{ id, lang, ja, local, reading }]）を、その言語のフレーズ集の先頭に混ぜる
+const PHRASE_CUSTOM_CAT = "自分で足したもの";
+function withCustomPhrases(t) {
+  const list = (t.phraseCustom || []).filter(c => c && c.lang && c.ja && c.local);
+  if (!list.length) return t;
+  const ph = { ...(t.phrases || {}) };
+  [...new Set(list.map(c => c.lang))].forEach(lang => {
+    const mine = list.filter(c => c.lang === lang).map(c => ({ cat: PHRASE_CUSTOM_CAT, ja: c.ja, local: c.local, reading: c.reading || "", custom: c.id }));
+    const cur = ph[lang], l = tripLanguages(t).find(x => x.lang === lang) || {};
+    ph[lang] = cur ? { ...cur, items: [...mine, ...(cur.items || []).filter(i => !i.custom)] } : { lang, bcp: l.bcp || "", countries: l.countries || [], items: mine, customOnly: true };
+  });
+  return { ...t, phrases: ph };
+}
 // 旅行先の言語のうち、まだフレーズ集がないものに、最初から入っている訳を足す
 function withBuiltinPhrases(t) {
   const have = t.phrases || {}, add = {};

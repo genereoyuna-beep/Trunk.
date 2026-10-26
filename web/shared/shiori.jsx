@@ -279,7 +279,9 @@ function shioriUnits(t, opt) {
   const books = Object.values(t.phrases || {}).filter(p => (p.items || []).length && !SKIP_LANGS.has(p.lang));
   const en = (j) => PHRASE_EN[j] || j;
   if (on("ph") && mode !== "none" && books.length) {
-    const pick = (ph) => (ph.items || []).filter(i => i.cat !== "数字" && (mode === "all" || PHRASE_ESSENTIAL.has(i.ja)));
+    const fav = new Set(t.phraseFav || []);
+    // 自分で足したものは、しおりに入れるときはいつも載せる
+    const pick = (ph) => (ph.items || []).filter(i => i.cat !== "数字" && (mode === "all" || i.custom || (mode === "fav" && fav.size ? fav.has(i.ja) : PHRASE_ESSENTIAL.has(i.ja))));
     const base = pick(books[0]).map(i => i.ja);
     const ja = uniq([...base, ...books.slice(1).flatMap(b => pick(b).map(i => i.ja))]);
     const find = (ph, j) => (ph.items || []).find(i => i.ja === j);
@@ -473,6 +475,7 @@ function ShioriView({ t, canExport, update }) {
         <label className="row small" htmlFor="sh-phr-mode" style={{ gap: 8 }}>フレーズ集
           <select id="sh-phr-mode" className="input" style={{ width: "auto" }} value={t.shioriPhrases || "essential"} onChange={e => update(tr => ({ ...tr, shioriPhrases: e.target.value }))}>
             <option value="essential">主要なフレーズだけ（おすすめ）</option>
+            {(t.phraseFav || []).length > 0 && <option value="fav">☆を付けたものだけ（{t.phraseFav.length}）</option>}
             <option value="all">すべて（{PHRASE_LIST.length}フレーズ）</option>
             <option value="none">しおりに入れない</option>
           </select>

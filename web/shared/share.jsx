@@ -105,7 +105,7 @@ function ShareHome({ t, goDay }) {
 }
 function ShareApp({ payload: given, onSend }) {
   const payload = given || window.__TRIP__ || {};
-  const t = withBuiltinPhrases(upgradeTrip(payload.data || {}));
+  const t = withCustomPhrases(withBuiltinPhrases(upgradeTrip(payload.data || {})));
   const r = tripRange(t), today = todayISO();
   const [view, setView] = useState("home");
   const [dayIso, setDayIso] = useState(null);

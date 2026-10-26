@@ -522,7 +522,7 @@ function HomeView({ t, stats, mine, todos, onTodo, inboxCount, scan, onScan, go,
               <div className="legend">{n.open === 0 && n.booked > 0 ? <span style={{ color: "var(--blue)" }}>✓ すべて予約済み</span> : <>{n.booked > 0 && <span><b style={{ color: "var(--blue)" }}>{n.booked}</b> 予約済み</span>}{n.open > 0 && <span><b style={{ color: "var(--orange)" }}>{n.open}</b> 未手配</span>}</>}{n.none > 0 && <span><b className="muted">{n.none}</b> 宿不要</span>}</div>
             </div>
             <div className="card">
-              <div className="row between"><span className="small muted">移動</span><span className="mono small muted">{mv.total}区間</span></div>
+              <div className="row between"><span className="small muted">都市間の移動</span><span className="mono small muted">{mv.total}区間</span></div>
               <div className="bar">{mv.booked > 0 && <span style={{ flex: mv.booked, background: "var(--blue)" }} />}{mv.decided > 0 && <span style={{ flex: mv.decided, background: "var(--orange-bar)" }} />}{mv.unknown > 0 && <span style={{ flex: mv.unknown, background: "repeating-linear-gradient(45deg,#E8892B 0 3px,#FDEBD3 3px 6px)" }} />}</div>
               <div className="legend">{mv.decided + mv.unknown === 0 && mv.booked > 0 ? <span style={{ color: "var(--blue)" }}>✓ すべて予約済み</span> : <>{mv.booked > 0 && <span><b style={{ color: "var(--blue)" }}>{mv.booked}</b> 予約済み</span>}{mv.decided > 0 && <span><b style={{ color: "var(--orange)" }}>{mv.decided}</b> 未予約</span>}{mv.unknown > 0 && <span><b style={{ color: "var(--orange)" }}>{mv.unknown}</b> 手段未定</span>}</>}{mv.total === 0 && <span className="muted">まだありません</span>}</div>
             </div>
@@ -941,9 +941,11 @@ function dayEvents(t, iso) {
   }
   // 時刻のないチェックアウトはその日の最初の出発より前、チェックインは最後の到着より後に置く
   const deps = ev.filter(e => e.dep).map(e => e.k).sort(), arrs = ev.filter(e => e.arr || e.arrK).map(e => e.arr ? e.k : e.arrK).sort();
-  ev.forEach(e => { if (e.co && deps.length && deps[0] < e.k) e.k = deps[0]; if (e.ci && arrs.length && arrs[arrs.length - 1] >= e.k) e.k = arrs[arrs.length - 1] + "~"; });
-  // 同じ時刻なら「着く」→ 予定（チェックインなど）→ 出発する移動 の順。移動はその場所での予定のあとに出る
-  const rank = (e) => e.arr ? 0 : e.mv ? 2 : 1;
+  // 時刻のないチェックアウトは、その日のほかの予定よりも前（朝いちばん）に置く
+  const firstK = ev.filter(e => !e.co && !e.ci && !e.arr).map(e => e.k).sort()[0];
+  ev.forEach(e => { if (e.co && deps.length && deps[0] < e.k) e.k = deps[0]; if (e.co && firstK && firstK < e.k) e.k = firstK; if (e.ci && arrs.length && arrs[arrs.length - 1] >= e.k) e.k = arrs[arrs.length - 1] + "~"; });
+  // 同じ時刻なら「着く」→ 時刻のないチェックアウト → 予定（チェックインなど）→ 出発する移動 の順。移動はその場所での予定のあとに出る
+  const rank = (e) => e.arr ? 0 : e.co ? 0.5 : e.mv ? 2 : 1;
   ev.sort((a, b) => a.k.localeCompare(b.k) || rank(a) - rank(b));
   const arrivals = transitsOf(t).filter(x => isLeg(x) && x.arriveDate === iso && x.departDate && x.departDate < iso);
   const dep = transitsOf(t).filter(x => isLeg(x) && x.departDate === iso).sort((a, b) => (a.departTime || "").localeCompare(b.departTime || ""));
@@ -1003,7 +1005,8 @@ function DayTimeline({ t, iso, onEdit, showNight = true, onInsert }) {
     if (!onInsert) return null;
     const a = ev[i], b = ev[i + 1];
     // 場所は見出し（「○○ 発 → △△」など）ではなく、その予定・移動の本当の場所から取る。前は「終わったあとにいる所」、後ろは「始まる所」
-    const placeOf = (e, last) => { if (!e) return ""; const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; return String((grp && grp.find(Boolean)) || e.map || "").trim(); };
+    const placeOf = (e, last) => { if (!e) return ""; const g = (e.at || []).filter(x => x && x.some(Boolean)); const grp = last ? g[g.length - 1] : g[0]; const v = String((grp && grp.find(Boolean)) || e.map || "").trim();
+      return e.edit && e.edit.kind === "local" && grp && !String(grp[0] || "").trim() ? v.replace(/\s*(を|で|に|へ)?\s*(散策|散歩|観光|見学|めぐり|巡り|ぶらぶら|食べ歩き|昼ごはん|朝ごはん|夜ごはん|ごはん|ランチ|ディナー|食事|買い物|ショッピング|行く|行きたい)\s*$/, "") : v; };
     const opts = { time: betweenTime(a && a.time, b && b.time), from: placeOf(a, true), to: placeOf(b, false) };
     // 前後の場所の位置が分かれば、移動の目安を出す（どちらかがすでに移動なら出さない）
     const isMove = (e) => e && !!e.mv;
@@ -1932,9 +1935,11 @@ function App() {
   };
   const addTransit = (date, back, o) => {
     const t = draftRef.current, stays = sortItinerary(staysOf(t)).filter(s => isISO(s.startDate)), last = stays[stays.length - 1];
-    const onDay = isISO(date), d = onDay ? date : last ? stayEnd(last) : todayISO();
+    const onDay = isISO(date), mvs = transitsOf(t).filter(r => !r.local), endD = last ? stayEnd(last) : "", rng = tripRange(t);
+    const kind = onDay ? "day" : !mvs.length && rng ? "first" : endD && !mvs.some(r => r.departDate === endD) ? "return" : rng ? "other" : "return";
+    const d = onDay ? date : kind === "first" || kind === "other" ? rng.start : endD || todayISO();
     const here = onDay ? stays.find(s => d >= s.startDate && d < stayEnd(s)) : null;
-    const x = { id: uid(), type: "transit", mode: onDay ? "未定" : "飛行機", desc: "", fromCity: o && o.from ? o.from : onDay ? (here ? here.city : "") : last ? last.city : "", toCity: (o && o.to) || "", departDate: d, departTime: (o && o.time) || "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い" };
+    const x = { id: uid(), type: "transit", mode: kind === "first" || kind === "return" ? "飛行機" : "未定", desc: "", fromCity: o && o.from ? o.from : onDay ? (here ? here.city : "") : kind === "return" && last ? last.city : "", toCity: (o && o.to) || "", departDate: d, departTime: (o && o.time) || "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い" };
     update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); setSheet({ kind: "transit", id: x.id, back, init: JSON.stringify(x), fresh: !!onDay, opts: o || null });
   };
   // 追加したばかりの予定と移動を切り替える。入れた日付・時刻・場所は引き継ぐ
@@ -2233,6 +2238,9 @@ function App() {
           )}
           {sheet.kind === "transit" && <TransitEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
           {sheet.kind === "local" && <LocalEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
+          {["stay", "transit", "local"].includes(sheet.kind) && (
+            <div className="row between" style={{ gap: 10, marginTop: 4 }}><span className="small muted">入力した内容は、その場で保存されます</span><button className="btn primary" onClick={closeSheet}>完了</button></div>
+          )}
           {sheet.kind === "add" && (
             <div className="card flush divide">
               {[["bed", "滞在（都市・宿）", addStay], ["route", "移動（飛行機・電車・バス・タクシーなど）", () => addTransit()], ["ticket", "予定（観光・食事・ツアーなど）", () => addLocal()]].map(([ic, l, f]) => (

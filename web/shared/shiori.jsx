@@ -15,7 +15,7 @@ const CITY_CODES = { "東京": "TYO", "大阪": "OSA", "札幌": "SPK", "名古�
   "ミラノ": "MIL", "ローマ": "ROM", "ストックホルム": "STO", "ブリュッセル": "BRU", "アムステルダム": "AMS", "フランクフルト": "FRA", "ミュンヘン": "MUC", "ウィーン": "VIE", "プラハ": "PRG", "ヘルシンキ": "HEL", "ドバイ": "DXB" };
 // 地名から3文字コード（「(KIX)」の表記、都市コード、主な空港の一覧の順に探す）
 function codeFor(name) {
-  const n = String(name || ""), m = n.match(/\(([A-Z]{3})\)/);
+  const n = String(name || ""), m = n.match(/[(（]([A-Z]{3})[)）]/);
   if (m) return m[1];
   const city = Object.keys(CITY_CODES).find(k => splitCity(n).main.startsWith(k));
   if (city) return CITY_CODES[city];
@@ -23,7 +23,7 @@ function codeFor(name) {
   const hit = AIRPORTS.find(a => { const ja = a.replace(/\(.*$/, ""); return main && (ja.includes(main) || main.includes(ja.split("・")[0])); });
   return hit ? hit.match(/\(([A-Z]{3})\)/)[1] : "";
 }
-const placeLabel = (n) => splitCity(n).main.replace(/\s*\([A-Z]{3}\)\s*$/, "");
+const placeLabel = (n) => splitCity(n).main.replace(/\s*[(（][A-Z]{3}[)）]\s*$/, "");
 // 旅行名から決まるバーコード風の線
 function Barcode({ seed, w = 150, h = 34 }) {
   let x = 0, k = 0; const bars = [];

@@ -109,6 +109,10 @@ await check("予算：支出を食費に入れると実費に出る", async () =
     const row=[...document.querySelectorAll('.brow2')].find(r=>{const b=r.querySelector('.brow2-h b'); return b && b.innerText==='食費';}); return row ? row.innerText : 'no row';`);
   if (!/支出から（1件）/.test(r) || !/¥1,000/.test(r)) throw new Error(r.replace(/\n/g, " ").slice(0, 120));
 });
+await check("フレーズ集：最初から入っている訳が日本語と合っている", async () => {
+  const r = await js(`const m = (lang, ja) => (builtinPhrases(lang).items.find(x => x.ja === ja) || {}).local; return [m("中国語（繁体字）","もう一度言ってください"), m("中国語（繁体字）","お名前はなんですか？"), m("韓国語","いくらですか？"), m("タイ語","左") ? "ok" : ""].join(",");`);
+  if (r !== "請再說一次,你叫什麼名字？,얼마예요?,ok") throw new Error(r);
+});
 await check("LP・ガイド・記事が開く", async () => {
   for (const p of ["/", "/guide.html", "/articles/shiori.html", "/articles/seoul-3n4d.html", "/privacy.html"]) { const res = await fetch(BASE + p); if (!res.ok) throw new Error(p + " " + res.status); const t = await res.text(); if (/広告なし</.test(t)) throw new Error(p + "：「広告なし」が残っている"); }
 });

@@ -768,7 +768,7 @@ function guessCategory(desc) {
   const d = String(desc || "");
   if (/ランチ|ディナー|朝食|夕食|昼食|レストラン|カフェ|食堂|ごはん|ご飯|居酒屋|屋台|夜市|バー|小籠包|ラーメン|寿司/.test(d)) return "食事";
   if (/ツアー|tour|Tour|ガイド/.test(d)) return "ツアー";
-  if (/入場|チケット|美術館|博物館|博物院|museum|Museum|ミュージアム|コンサート|ライブ|観劇|劇場|テーマパーク|ディズニー|USJ/.test(d)) return "入場券";
+  if (/入場券|チケット|コンサート|ライブ|観劇|劇場|テーマパーク|ディズニー|USJ/.test(d)) return "入場券";
   if (/買い物|ショッピング|お土産|市場|モール|アウトレット/.test(d)) return "買い物";
   return "";
 }

@@ -406,11 +406,19 @@ function StartGuide({ t, onTodo, go, onPlanAI, onShare, onHide }) {
     <section className="card flush divide" style={{ boxShadow: "0 0 0 1.5px var(--blue)" }}>
       <div className="row between" style={{ padding: "10px 14px", flexWrap: "nowrap" }}><h3>はじめにやること<span className="xs muted" style={{ marginLeft: 8 }}>あと{left}つ</span></h3><button className="iconbtn" aria-label="はじめにやることを閉じる" onClick={onHide}><Icon n="x" s={14} /></button></div>
       {steps.map((x, i) => (
-        <button key={i} className="todo" onClick={x.act} disabled={x.done} style={x.done ? { opacity: .55 } : undefined}>
-          <span className={"ico " + (x.done ? "blue" : "open")}><Icon n={x.done ? "check" : ["bed", "ticket", "share"][i]} /></span>
-          <span style={{ minWidth: 0 }}><span className="t1" style={x.done ? { textDecoration: "line-through" } : undefined}>{x.title}</span><span className="t2" style={{ whiteSpace: "normal" }}>{x.sub}</span></span>
-          {!x.done && <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>}
+        x.done ? (
+          <div key={i} className="todo todo-done">
+            <span className="ico blue"><Icon n="check" /></span>
+            <span className="t1">{x.title}</span>
+            <span className="xs" style={{ color: "var(--blue)" }}>済み</span>
+          </div>
+        ) : (
+        <button key={i} className="todo" onClick={x.act}>
+          <span className="ico open"><Icon n={["bed", "ticket", "share"][i]} /></span>
+          <span style={{ minWidth: 0 }}><span className="t1">{x.title}</span><span className="t2" style={{ whiteSpace: "normal" }}>{x.sub}</span></span>
+          <span style={{ transform: "rotate(-90deg)", display: "inline-flex" }}><Icon n="down" s={16} /></span>
         </button>
+        )
       ))}
     </section>
   );
@@ -1617,7 +1625,7 @@ function TripsSheet({ trips, currentId, onPick, onCreate, onSettings, limited, a
           {!autoOpen && <h3>新しい旅行</h3>}
           <div className="fgrid">
             <Field label="行き先" wide><PlaceIn kind="city" value={form.dest} onChange={v => setForm({ ...form, dest: v })} onPick={(r, it) => setForm({ ...form, dest: it.main })} placeholder="例：台北、ソウル、京都" /></Field>
-            <Field label="出発日"><DateIn value={form.start} onChange={v => setForm({ ...form, start: v })} /></Field>
+            <Field label="出発日" wide><DateIn value={form.start} onChange={v => setForm({ ...form, start: v })} /></Field>
             <Field label="泊数"><select value={form.nights} onChange={e => setForm({ ...form, nights: Number(e.target.value) })}>{Array.from({ length: 121 }, (_, i) => <option key={i} value={i}>{i === 0 ? "日帰り" : `${i}泊`}</option>)}</select></Field>
             {/* 長い旅行は「いつからいつまで」で考えることが多いので、帰る日でも決められるように（泊数と連動） */}
             <Field label="帰る日" opt><DateIn value={form.start ? addDays(form.start, Number(form.nights) || 0) : ""} onChange={v => { if (!form.start || !isISO(v)) return; const n = dayDiff(form.start, v); if (n >= 0 && n <= 120) setForm({ ...form, nights: n }); else if (n > 120) alert("120泊までの旅行が作れます。それより長い旅行は、いくつかの旅行に分けてください。"); }} /></Field>
@@ -1931,7 +1939,7 @@ function App() {
     const t = draftRef.current, stays = sortItinerary(staysOf(t)).filter(s => isISO(s.startDate));
     const last = stays[stays.length - 1];
     const s = { id: uid(), type: "stay", city: "", startDate: last ? stayEnd(last) : todayISO(), nights: 1, memo: "", status: "未確定", noHotel: false };
-    update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, s]) })); setSheet({ kind: "stay", id: s.id });
+    setSheet({ kind: "stay", id: s.id, pending: s });
   };
   const addTransit = (date, back, o) => {
     const t = draftRef.current, stays = sortItinerary(staysOf(t)).filter(s => isISO(s.startDate)), last = stays[stays.length - 1];
@@ -1940,7 +1948,7 @@ function App() {
     const d = onDay ? date : kind === "first" || kind === "other" ? rng.start : endD || todayISO();
     const here = onDay ? stays.find(s => d >= s.startDate && d < stayEnd(s)) : null;
     const x = { id: uid(), type: "transit", mode: kind === "first" || kind === "return" ? "飛行機" : "未定", desc: "", fromCity: o && o.from ? o.from : onDay ? (here ? here.city : "") : kind === "return" && last ? last.city : "", toCity: (o && o.to) || "", departDate: d, departTime: (o && o.time) || "", departTZ: 9, arriveDate: d, arriveTime: "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い" };
-    update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); setSheet({ kind: "transit", id: x.id, back, init: JSON.stringify(x), fresh: !!onDay, opts: o || null });
+    setSheet({ kind: "transit", id: x.id, back, init: JSON.stringify(x), fresh: !!onDay, opts: o || null, pending: x });
   };
   // 追加したばかりの予定と移動を切り替える。入れた日付・時刻・場所は引き継ぐ
   // その日の夜の宿を入れる：泊まる滞在があればそれを開き、なければその日から1泊の滞在を作って開く
@@ -1952,11 +1960,11 @@ function App() {
     const prev = [...stays].reverse().find(s => stayEnd(s) <= d), next = stays.find(s => s.startDate > d);
     const nights = next ? Math.max(1, dayDiff(d, next.startDate)) : 1;
     const s = { id: uid(), type: "stay", city: (prev || next || {}).city || "", startDate: d, nights, memo: "", status: "未確定", noHotel: false };
-    update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, s]) })); setSheet({ kind: "stay", id: s.id, back });
+    setSheet({ kind: "stay", id: s.id, back, pending: s });
   };
   const switchNew = (to) => {
     if (!sheet || !sheet.fresh || sheet.kind === to) return;
-    const tr0 = draftRef.current, o = sheet.opts || {};
+    const tr0 = withPending(draftRef.current), o = sheet.opts || {};
     if (to === "stay") {
       const l = (tr0.localTransport || []).find(x => x.id === sheet.id), x = (tr0.itinerary || []).find(r => r.id === sheet.id);
       if (l) update(tr => ({ ...tr, localTransport: (tr.localTransport || []).filter(y => y.id !== l.id) }));
@@ -1992,7 +2000,7 @@ function App() {
       const x = { id: uid(), type: "transit", local: true, mode, desc: "", fromCity: q.fromAddress, toCity: q.toAddress, departDate: d, departTime: q.startTime || "", departTZ: 9, arriveDate: d, arriveTime: q.endTime || "", arriveTZ: 9, airline: "", transitStops: "", cls: "", price: 0, miles: false, memo: "", status: "候補", paymentStatus: "未払い", needsBooking: false };
       update(tr => ({ ...tr, itinerary: normalizeItinerary([...tr.itinerary, x]) })); toast(`${q.mode}の移動を入れました（目安の時間です）`); return;
     }
-    update(tr => ({ ...tr, localTransport: [...(tr.localTransport || []), l] })); setSheet({ kind: "local", id: l.id, back, fresh: true, opts: o || null, init: JSON.stringify(l) });
+    setSheet({ kind: "local", id: l.id, back, fresh: true, opts: o || null, init: JSON.stringify(l), pending: l });
   };
 
   // 予約メール
@@ -2140,6 +2148,11 @@ function App() {
   const setMe = (name) => update(tr => typeof trunkSetMe === "function" ? trunkSetMe(tr, name) : ({ ...tr, myName: name }));
   const mine = myShare(t);
   const openDay = (iso) => setSheet({ kind: "day", iso });
+  // 追加の画面で開いている、まだ旅行に入っていない下書き（最初に何か変えたときに入れる）
+  const hasItem = (tr, x) => x.type === "stay" || x.type === "transit" ? (tr.itinerary || []).some(r => r.id === x.id) : (tr.localTransport || []).some(r => r.id === x.id);
+  const putItem = (tr, x) => x.type === "stay" || x.type === "transit" ? { ...tr, itinerary: normalizeItinerary([...(tr.itinerary || []), x]) } : { ...tr, localTransport: [...(tr.localTransport || []), x] };
+  const withPending = (tr) => sheet && sheet.pending && tr && !hasItem(tr, sheet.pending) ? putItem(tr, sheet.pending) : tr;
+  const pendUpdate = (fn) => { const x = sheet && sheet.pending; update(tr => fn(x && !hasItem(tr, x) ? putItem(tr, x) : tr)); };
   const closeSheet = () => {
     let removedMove = false;
     // 何も入力せずに閉じた予定は残さない
@@ -2228,7 +2241,7 @@ function App() {
           {sheet.kind === "suggest" && <DaySuggest t={t} iso={sheet.iso} update={update} done={(n) => { toast(`${n}件の予定を追加しました`); closeSheet(); }} />}
           {sheet.kind === "wish" && <WishPicker t={t} iso={sheet.iso} update={update} done={(name) => { toast(`「${name}」を${md(sheet.iso)}に入れました`); closeSheet(); }} />}
           {sheet.kind === "day" && <DayDetail t={t} iso={sheet.iso} setIso={(iso) => setSheet({ kind: "day", iso })} onEdit={(e) => setSheet({ ...e, back: sheet.iso })} onAddLocal={(d, o) => addLocal(d, d, o)} onAddMove={(d, o) => addTransit(d, d, o)} onSuggest={FEATURES.ai ? (d) => setSheet({ kind: "suggest", iso: d, back: d }) : (d) => setSheet({ kind: "consult", topic: "day", iso: d, back: d })} />}
-          {sheet.kind === "stay" && <StayEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
+          {sheet.kind === "stay" && <StayEditor t={withPending(t)} id={sheet.id} update={pendUpdate} close={closeSheet} />}
           {sheet.fresh && (sheet.kind === "local" || sheet.kind === "transit") && (
             <div className="seg" role="tablist" aria-label="追加するもの" style={{ marginBottom: 12 }}>
               <button role="tab" aria-selected={sheet.kind === "local"} onClick={() => switchNew("local")}>予定</button>
@@ -2236,8 +2249,8 @@ function App() {
               <button role="tab" aria-selected={false} onClick={() => switchNew("stay")}>宿泊</button>
             </div>
           )}
-          {sheet.kind === "transit" && <TransitEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
-          {sheet.kind === "local" && <LocalEditor t={t} id={sheet.id} update={update} close={closeSheet} />}
+          {sheet.kind === "transit" && <TransitEditor t={withPending(t)} id={sheet.id} update={pendUpdate} close={closeSheet} />}
+          {sheet.kind === "local" && <LocalEditor t={withPending(t)} id={sheet.id} update={pendUpdate} close={closeSheet} />}
           {["stay", "transit", "local"].includes(sheet.kind) && (
             <div className="row between" style={{ gap: 10, marginTop: 4 }}><span className="small muted">入力した内容は、その場で保存されます</span><button className="btn primary" onClick={closeSheet}>完了</button></div>
           )}

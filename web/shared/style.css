@@ -410,3 +410,9 @@ details > summary{cursor:pointer}
 .wx-rel.rel-A{color:var(--blue);border-color:#BFD0F5}
 .wx-rel.rel-C{color:var(--orange);border-color:#F3D3AE}
 .phrase-star{font-size:18px;color:var(--muted)}.phrase-star.on{color:var(--orange)}
+.sh-jump{position:sticky;top:-16px;z-index:3;background:var(--ground);padding:8px 0;margin:-8px 0 4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.sh-jump::-webkit-scrollbar{display:none}
+.sh-jump .chip{flex:none}
+.todo-done{grid-template-columns:36px minmax(0,1fr) auto;min-height:44px;padding:8px 14px;opacity:.6}
+.todo-done:hover{background:none}
+.todo-done .t1{text-decoration:line-through}

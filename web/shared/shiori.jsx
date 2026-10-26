@@ -109,7 +109,7 @@ function shioriUnits(t, opt) {
   const U = [];
   const on = (k) => shioriOn(t, k);
   const r = tripRange(t);
-  const H = (key, title, sub, en) => U.push({ key, keepNext: true, el: <div className="sh-h2"><span className="sh-h2t"><span className="sh-stamp">{en}</span>{title}</span>{sub && <small className="mono">{sub}</small>}</div> });
+  const H = (key, title, sub, en) => U.push({ key, keepNext: true, sec: title, el: <div className="sh-h2"><span className="sh-h2t"><span className="sh-stamp">{en}</span>{title}</span>{sub && <small className="mono">{sub}</small>}</div> });
   // 表紙（1ページまるごと）
   const route = uniq(sortItinerary(staysOf(t)).filter(s => s.city).map(s => splitCity(s.city).main));
   // 出発地と最後に着く所は、都市間の移動だけで決める（街の中のタクシーや徒歩は使わない）
@@ -377,8 +377,15 @@ function Shiori({ t, exportRef, entry }) {
         {units.map(u => <div key={u.key} className="sh-u">{u.el}</div>)}
       </div>
       {!pages && <p className="empty">しおりを組んでいます…</p>}
+      {pages && pages.length > 2 && (
+        <div className="chips sh-jump" role="navigation" aria-label="しおりのページへ飛ぶ">
+          {[{ t: "表紙", pi: 0 }, ...pages.flatMap((list, pi) => list.filter(i => units[i].sec).map(i => ({ t: units[i].sec, pi }))).filter((s, k, a) => a.findIndex(x => x.t === s.t) === k)].map(s => (
+            <button key={s.t} className="chip" onClick={() => { const el = wrapRef.current && wrapRef.current.querySelector(`[data-pi="${s.pi}"]`); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{s.t}</button>
+          ))}
+        </div>
+      )}
       {pages && pages.map((list, pi) => (
-        <div key={pi} className="sh-view" style={{ width: PAGE_W * scale, height: PAGE_H * scale }}>
+        <div key={pi} data-pi={pi} className="sh-view" style={{ width: PAGE_W * scale, height: PAGE_H * scale, scrollMarginTop: 56 }}>
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
             {units[list[0]].page ? <div className="sh-page sh-cover-page" style={{ width: PAGE_W, height: PAGE_H, padding: PAGE_PAD }}>{units[list[0]].el}</div>
               : <ShioriPage t={t} n={pi + 1} total={pages.length}>{render(list, pi)}</ShioriPage>}
